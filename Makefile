@@ -18,7 +18,10 @@ JFLAGS	:= -sourcepath $(SOURCE_DIR) -d $(OUTPUT_DIR) -cp lib/antlr-4.4-complete.
 
 # the make rules
 
-all: rules
+all: testGo
+
+testGo:
+	/vol/bitbucket/leg13/go/bin/go
 
 # runs the antlr build script then attempts to compile all .java files within src
 rules:
