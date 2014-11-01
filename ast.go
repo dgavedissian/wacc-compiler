@@ -44,6 +44,10 @@ type ExitStmt struct {
 	Result Expr // result expression
 }
 
+type SkipStmt struct {
+	SkipPos Pos
+}
+
 func (*BasicLit) exprNode() {}
 
 func (x *BasicLit) Pos() Pos { return x.ValuePos }
@@ -56,12 +60,19 @@ func (s *ExitStmt) End() Pos {
 	if s.Result != nil {
 		return s.Result.End()
 	}
-	return s.Result.Pos() + 4 // len("exit")
+	return s.Result.Pos() + Pos(len("exit"))
 }
 
 func (*ProgStmt) stmtNode() {}
 
 func (s *ProgStmt) Pos() Pos { return s.BeginKw }
 func (s *ProgStmt) End() Pos {
-	return s.EndKw + 3 // len("end")
+	return s.EndKw + Pos(len("end"))
+}
+
+func (*SkipStmt) stmtNode() {}
+
+func (s *SkipStmt) Pos() Pos { return s.SkipPos }
+func (s *SkipStmt) End() Pos {
+	return s.SkipPos + Pos(len("skip"))
 }

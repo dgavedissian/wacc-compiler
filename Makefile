@@ -26,8 +26,8 @@ parser.go: wacc.y
 lexer.go: wacc.nex
 	nex -o lexer.go wacc.nex
 
-frontend: parser.go lexer.go
-	go build -o frontend lexer.go parser.go ast.go
+frontend: parser.go lexer.go ast.go
+	go build -o frontend $^
 
 clean:
 	go clean
