@@ -72,7 +72,7 @@ func (s *ProgStmt) End() Pos {
 
 func (*SkipStmt) stmtNode() {}
 
-func (s *SkipStmt) Pos() Pos { return s.SkipPos }
+func (s *SkipStmt) Pos() Pos { return s.Skip }
 func (s *SkipStmt) End() Pos {
-	return s.SkipPos + Pos(len("skip"))
+	return s.Skip + Pos(len("skip"))
 }
