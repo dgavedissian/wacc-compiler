@@ -5,9 +5,8 @@
 %}
 
 %union {
-    BasicLit BasicLit
-    ProgStmt ProgStmt
-    ExitStmt ExitStmt
+    Node Node
+    Expr Expr
     Value string
     Stmts []Stmt
     Stmt  Stmt
@@ -35,7 +34,7 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.ProgStmt = ProgStmt{0, $3.Stmts, 0} }
+    : BEGIN func_list statement_list END { $$.Node = &ProgStmt{0, $3.Stmts, 0} }
     ;
 
 func_list
@@ -79,7 +78,7 @@ statement_list
 
 statement
     : SKIP
-    | EXIT expression { $$.Stmt = &ExitStmt{0, &$2.BasicLit} }
+    | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | program
     ;
 
@@ -92,8 +91,8 @@ expression
     ;
 
 expr
-    : INT_LITER       { $$.BasicLit = BasicLit{0, INT_LITER, $1.Value} }
-    | BOOL_LITER      { $$.BasicLit = BasicLit{0, BOOL_LITER, $1.Value }}
+    : INT_LITER       { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
+    | BOOL_LITER      { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value }}
     | CHAR_LITER
     | STR_LITER
     | PAIR_LITER

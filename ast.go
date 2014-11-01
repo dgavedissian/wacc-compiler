@@ -34,9 +34,9 @@ type BasicLit struct {
 }
 
 type ProgStmt struct {
-	Begin Pos // position of "begin" keyword
-	Body  []Stmt
-	End   Pos // position of "end keyword
+	BeginKw Pos // position of "begin" keyword
+	Body    []Stmt
+	EndKw   Pos // position of "end keyword
 }
 
 type ExitStmt struct {
@@ -57,4 +57,11 @@ func (s *ExitStmt) End() Pos {
 		return s.Result.End()
 	}
 	return s.Result.Pos() + 4 // len("exit")
+}
+
+func (*ProgStmt) stmtNode() {}
+
+func (s *ProgStmt) Pos() Pos { return s.BeginKw }
+func (s *ProgStmt) End() Pos {
+	return s.EndKw + 3 // len("end")
 }
