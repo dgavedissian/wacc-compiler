@@ -22,23 +22,18 @@
 %token INT BOOL CHAR STRING
 %token PAIR PAIR_SEP
 %token EQUALS
+%token BASE_TYPE
 %%
 program
     : BEGIN statement_list END
     ;
 
 type
-    : base_type
+    : BASE_TYPE 
     | array_type
     | pair_type
     ;
 
-base_type
-    : INT
-    | BOOL
-    | CHAR
-    | STRING
-    ;
 array_type
     : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
     ;
@@ -46,7 +41,7 @@ pair_type
     : PAIR ROUND_BRACKET_OPEN pair_elem_type PAIR_SEP pair_elem_type ROUND_BRACKET_CLOSE
     ;
 pair_elem_type
-    : base_type
+    : BASE_TYPE
     | array_type
     | PAIR
     ;

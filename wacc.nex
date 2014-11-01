@@ -5,8 +5,18 @@
 /end/ { return END }
 /exit/ { return EXIT }
 /skip/ { return SKIP }
+/null/ { return PAIR_LITER }
+/int|bool|char|string/ { return BASE_TYPE }
+/pair/ { return PAIR }
 /;/ { return STATEMENT_SEPARATOR }
+/!|-|len|ord|chr/ { return UNARY_OPER }
+/\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
+/[_a-zA-Z][_a-zA-Z0-9]*/ { return IDENT }
 /./ { /* wtf is this? */ }
+/\[/ { return SQUARE_BRACKET_OPEN }
+/\]/ { return SQUARE_BRACKET_CLOSE }
+/\(/ { return ROUND_BRACKET_OPEN }
+/\)/ { return ROUND_BRACKET_CLOSE }
 //
 package main
 import ("os"
