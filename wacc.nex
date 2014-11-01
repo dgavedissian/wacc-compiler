@@ -8,15 +8,17 @@
 /null/ { return PAIR_LITER }
 /int|bool|char|string/ { return BASE_TYPE }
 /pair/ { return PAIR }
+/is/ { return FUNC_IS }
 /;/ { return STATEMENT_SEPARATOR }
+/,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }
 /\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
 /[_a-zA-Z][_a-zA-Z0-9]*/ { return IDENT }
-/./ { /* wtf is this? */ }
 /\[/ { return SQUARE_BRACKET_OPEN }
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
 /\)/ { return ROUND_BRACKET_CLOSE }
+/./ { /* wtf is this? */ }
 //
 package main
 import ("os"

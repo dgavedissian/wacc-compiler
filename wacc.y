@@ -25,9 +25,9 @@
 %token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
-%token PAIR PAIR_SEP
-%token EQUALS
+%token PAIR COMMA
 %token BASE_TYPE
+%token FUNC_IS
 %%
 
 top
@@ -35,7 +35,23 @@ top
     ;
 
 program
-    : BEGIN statement_list END { $$.ProgStmt = ProgStmt{0, $2.Stmts, 0} }
+    : BEGIN func_list statement_list END { $$.ProgStmt = ProgStmt{0, $2.Stmts, 0} }
+    ;
+
+func_list
+    : func func_list
+    | func
+    ;
+func
+    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END
+    ;
+param_list
+    : param COMMA param_list
+    | param
+    |
+    ;
+param
+    : type IDENT
     ;
 
 type
@@ -48,7 +64,7 @@ array_type
     : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
     ;
 pair_type
-    : PAIR ROUND_BRACKET_OPEN pair_elem_type PAIR_SEP pair_elem_type ROUND_BRACKET_CLOSE
+    : PAIR ROUND_BRACKET_OPEN pair_elem_type COMMA pair_elem_type ROUND_BRACKET_CLOSE
     ;
 pair_elem_type
     : BASE_TYPE
