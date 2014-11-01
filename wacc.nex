@@ -1,6 +1,7 @@
 /[ \t]/  { /* Skip blanks and tabs. */ }
-/[+\-]?[0-9]+/ { lval.Value = yylex.Text(); return INT_LITER }
-/(false|true)/ { lval.Value = yylex.Text(); return BOOL_LITER }
+/[+\-]?[0-9]+/ { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
+/(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
+/'.'/ { lval.Value = yylex.Text(); lval.Kind = CHAR_LITER; return CHAR_LITER }
 /begin/ { return BEGIN }
 /end/ { return END }
 /exit/ { return EXIT }

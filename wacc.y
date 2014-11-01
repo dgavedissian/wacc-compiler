@@ -9,6 +9,7 @@
     Value string
     Stmts []Stmt
     Stmt  Stmt
+    Kind  int
 }
 
 %{
@@ -92,7 +93,7 @@ expression
 expr
     : INT_LITER       { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER      { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
-    | CHAR_LITER
+    | CHAR_LITER      { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER
     | PAIR_LITER
     | IDENT
