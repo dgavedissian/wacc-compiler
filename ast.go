@@ -45,7 +45,7 @@ type ExitStmt struct {
 }
 
 type SkipStmt struct {
-	SkipPos Pos
+	Skip Pos
 }
 
 func (*BasicLit) exprNode() {}
