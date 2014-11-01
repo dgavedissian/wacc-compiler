@@ -41,6 +41,7 @@ program
 func_list
     : func func_list
     | func
+    |
     ;
 func
     : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END
