@@ -33,6 +33,19 @@ type BasicLit struct {
 	Value    string
 }
 
+type UnaryExpr struct {
+	OperatorPos Pos
+	Operator    string
+	Operand     Expr
+}
+
+type BinaryExpr struct {
+	Left        Expr
+	OperatorPos Pos
+	Operator    string
+	Right       Expr
+}
+
 type ProgStmt struct {
 	BeginKw Pos // position of "begin" keyword
 	Body    []Stmt
@@ -52,6 +65,16 @@ func (*BasicLit) exprNode() {}
 
 func (x *BasicLit) Pos() Pos { return x.ValuePos }
 func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
+
+func (*UnaryExpr) exprNode() {}
+
+func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
+func (x *UnaryExpr) End() Pos { return x.Operand.End() }
+
+func (*BinaryExpr) exprNode() {}
+
+func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
+func (x *BinaryExpr) End() Pos { return x.Right.End() }
 
 func (*ExitStmt) stmtNode() {}
 

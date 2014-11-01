@@ -79,13 +79,13 @@ statement_list
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
-    | program
+    | program { $$.Stmt = $1.Stmt }
     ;
 
 expression
-    : expr BINARY_OPER expression
-    | UNARY_OPER expression
-    | expr
+    : expr BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
+    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
+    | expr { $$.Expr = $1.Expr }
     | array_elem
     | ROUND_BRACKET_OPEN expression ROUND_BRACKET_CLOSE
     ;
