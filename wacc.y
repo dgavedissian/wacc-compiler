@@ -5,7 +5,6 @@
 %}
 
 %union {
-    Node Node
     Expr Expr
     Value string
     Stmts []Stmt
@@ -34,7 +33,7 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.Node = &ProgStmt{0, $3.Stmts, 0} }
+    : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $3.Stmts, 0} }
     ;
 
 func_list
@@ -77,7 +76,7 @@ statement_list
     ;
 
 statement
-    : SKIP
+    : SKIP { $$.Stmt = &SkipStmt{0} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | program
     ;
