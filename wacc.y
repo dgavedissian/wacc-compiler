@@ -91,7 +91,7 @@ expression
 
 expr
     : INT_LITER       { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
-    | BOOL_LITER      { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value }}
+    | BOOL_LITER      { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER
     | STR_LITER
     | PAIR_LITER
