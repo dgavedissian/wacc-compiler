@@ -35,7 +35,7 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.ProgStmt = ProgStmt{0, $2.Stmts, 0} }
+    : BEGIN func_list statement_list END { $$.ProgStmt = ProgStmt{0, $3.Stmts, 0} }
     ;
 
 func_list
