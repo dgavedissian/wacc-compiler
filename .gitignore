@@ -30,3 +30,7 @@
 *.vrb
 *.nav
 *.toc
+*.output
+parser.go
+lexer.go
+frontend

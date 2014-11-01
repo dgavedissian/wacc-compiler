@@ -1,0 +1,16 @@
+/[ \t]/  { /* Skip blanks and tabs. */ }
+/[+\-]?[0-9]+/ { lval.int_liter, _ = strconv.Atoi(yylex.Text()); return INT_LITER }
+/(false|true)/ { lval.bool_liter = yylex.Text() == "true"; return BOOL_LITER }
+/begin/ { return BEGIN }
+/end/ { return END }
+/exit/ { return EXIT }
+/skip/ { return SKIP }
+/./ { /* wtf is this? */ }
+//
+package main
+import ("os"
+        "strconv"
+       )
+func main() {
+    yyParse(NewLexer(os.Stdin))
+}
