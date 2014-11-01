@@ -40,7 +40,6 @@ program
 
 func_list
     : func func_list
-    | func
     |
     ;
 func
