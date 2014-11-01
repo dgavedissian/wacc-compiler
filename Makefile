@@ -27,7 +27,7 @@ lexer.go: wacc.nex
 	nex -o lexer.go wacc.nex
 
 frontend: parser.go lexer.go
-	go build -o frontend lexer.go parser.go
+	go build -o frontend lexer.go parser.go ast.go
 
 clean:
 	go clean

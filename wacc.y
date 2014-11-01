@@ -2,15 +2,20 @@
 
 %{
   package main
-  import ("fmt")
 %}
 
 %union {
-  int_liter  int
-  bool_liter bool
-  char_liter byte
-  str_liter  string
+    BasicLit BasicLit
+    ProgStmt ProgStmt
+    ExitStmt ExitStmt
+    Value string
+    Stmts []Stmt
+    Stmt  Stmt
 }
+
+%{
+    var top yySymType
+%}
 %token BEGIN END EXIT 
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
 %token IDENT
@@ -24,8 +29,13 @@
 %token EQUALS
 %token BASE_TYPE
 %%
+
+top
+    : program { top = $1 }
+    ;
+
 program
-    : BEGIN statement_list END
+    : BEGIN statement_list END { $$.ProgStmt = ProgStmt{0, $2.Stmts, 0} }
     ;
 
 type
@@ -47,13 +57,13 @@ pair_elem_type
     ;
 
 statement_list
-    : statement
-    | statement STATEMENT_SEPARATOR statement_list
+    : statement { $$.Stmts = []Stmt{$1.Stmt} }
+    | statement STATEMENT_SEPARATOR statement_list = { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
     ;
 
 statement
     : SKIP
-    | EXIT expression { fmt.Println($2.int_liter) }
+    | EXIT expression { $$.Stmt = &ExitStmt{0, &$2.BasicLit} }
     | program
     ;
 
@@ -66,8 +76,8 @@ expression
     ;
 
 expr
-    : INT_LITER       { fmt.Println($1.int_liter) }
-    | BOOL_LITER      { fmt.Println($1.bool_liter) }
+    : INT_LITER       { $$.BasicLit = BasicLit{0, INT_LITER, $1.Value} }
+    | BOOL_LITER      { $$.BasicLit = BasicLit{0, BOOL_LITER, $1.Value }}
     | CHAR_LITER
     | STR_LITER
     | PAIR_LITER
