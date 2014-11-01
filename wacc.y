@@ -7,8 +7,12 @@
 %union {
     Expr Expr
     Value string
+    Funcs []Func
+    Func  *Func
     Stmts []Stmt
     Stmt  Stmt
+    Params []Param
+    Param Param
     Kind  int
 }
 
@@ -34,23 +38,25 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $3.Stmts, 0} }
+    : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $2.Funcs, $3.Stmts, 0} }
     ;
 
 func_list
-    : func func_list
+    : func func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
     |
     ;
 func
-    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END
+    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+        $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
+    }
     ;
 param_list
-    : param COMMA param_list
-    | param
+    : param COMMA param_list { $$.Params = append([]Param{$1.Param}, $2.Params...) }
+    | param { $$.Params = []Param{$1.Param} }
     |
     ;
 param
-    : type IDENT
+    : type IDENT { $$.Param = Param{0, $1.Value, $2.Value, 0} }
     ;
 
 type

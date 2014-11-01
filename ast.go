@@ -48,6 +48,7 @@ type BinaryExpr struct {
 
 type ProgStmt struct {
 	BeginKw Pos // position of "begin" keyword
+	Funcs   []Func
 	Body    []Stmt
 	EndKw   Pos // position of "end keyword
 }
@@ -59,6 +60,20 @@ type ExitStmt struct {
 
 type SkipStmt struct {
 	Skip Pos
+}
+
+type Func struct {
+	Start      Pos
+	ReturnType string
+	Name       string
+	Params     []Param
+	Stmts      []Stmt
+}
+type Param struct {
+	Start  Pos
+	Type   string
+	Name   string
+	Finish Pos
 }
 
 func (*BasicLit) exprNode() {}
@@ -99,3 +114,11 @@ func (s *SkipStmt) Pos() Pos { return s.Skip }
 func (s *SkipStmt) End() Pos {
 	return s.Skip + Pos(len("skip"))
 }
+
+func (s *Func) Pos() Pos { return s.Start }
+func (s *Func) End() Pos {
+	return s.Stmts[len(s.Stmts)-1].End()
+}
+
+func (s *Param) Pos() Pos { return s.Start }
+func (s *Param) End() Pos { return s.Finish }
