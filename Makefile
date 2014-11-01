@@ -12,7 +12,6 @@ MKDIR	:= mkdir -p
 NEX     := nex
 GO      := go
 
-$(shell [[ -z `which $(NEX)` ]] && $(GO) get github.com/blynn/nex)
 
 # the make rules
 
@@ -34,4 +33,7 @@ clean:
 	go clean
 	$(RM) parser.go lexer.go
 
-.PHONY: clean all
+nex:
+	$(GO) get github.com/blynn/nex
+
+.PHONY: clean all nex
