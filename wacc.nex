@@ -5,6 +5,7 @@
 /end/ { return END }
 /exit/ { return EXIT }
 /skip/ { return SKIP }
+/;/ { return STATEMENT_SEPARATOR }
 /./ { /* wtf is this? */ }
 //
 package main
