@@ -101,12 +101,12 @@ func (x *BinaryExpr) End() Pos { return x.Right.End() }
 
 func (*ExitStmt) stmtNode() {}
 
-func (s *ExitStmt) Pos() Pos { return s.Result.Pos() }
+func (s *ExitStmt) Pos() Pos { return s.Exit }
 func (s *ExitStmt) End() Pos {
 	if s.Result != nil {
 		return s.Result.End()
 	}
-	return s.Result.Pos() + Pos(len("exit"))
+	return s.Exit + Pos(len("exit"))
 }
 
 func (*ProgStmt) stmtNode() {}
