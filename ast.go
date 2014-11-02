@@ -1,6 +1,9 @@
 package main
 
-import "go/token"
+import (
+	"go/token"
+	"strings"
+)
 
 type Pos token.Pos
 type Position token.Position
@@ -84,6 +87,24 @@ type IfStmt struct {
 	Fi   Pos
 }
 
+// Repr helpers
+// David: Can't make this general to []Node :( @Luke help?
+func ReprFuncs(s []Func) string {
+	statements := []string{}
+	for _, st := range s {
+		statements = append(statements, st.Repr())
+	}
+	return strings.Join(statements, ", ")
+}
+
+func ReprStmts(s []Stmt) string {
+	statements := []string{}
+	for _, st := range s {
+		statements = append(statements, st.Repr())
+	}
+	return strings.Join(statements, ", ")
+}
+
 // Basic Literal
 func (*BasicLit) exprNode()  {}
 func (x *BasicLit) Pos() Pos { return x.ValuePos }
@@ -93,16 +114,21 @@ func (x *BasicLit) Repr() string {
 }
 
 // Unary Expression
-func (*UnaryExpr) exprNode()      {}
-func (x *UnaryExpr) Pos() Pos     { return x.OperatorPos }
-func (x *UnaryExpr) End() Pos     { return x.Operand.End() }
-func (x *UnaryExpr) Repr() string { return "UNARY" }
+func (*UnaryExpr) exprNode()  {}
+func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
+func (x *UnaryExpr) End() Pos { return x.Operand.End() }
+func (x *UnaryExpr) Repr() string {
+	return "UnaryExpr(" + x.Operator + ", " + x.Operand.Repr()
+}
 
 // Binary Expression
-func (*BinaryExpr) exprNode()      {}
-func (x *BinaryExpr) Pos() Pos     { return x.Left.Pos() }
-func (x *BinaryExpr) End() Pos     { return x.Right.End() }
-func (x *BinaryExpr) Repr() string { return "BINARY" }
+func (*BinaryExpr) exprNode()  {}
+func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
+func (x *BinaryExpr) End() Pos { return x.Right.End() }
+func (x *BinaryExpr) Repr() string {
+	return "BinaryExpr(" + x.Operator + ", " +
+		x.Left.Repr() + ", " + x.Right.Repr()
+}
 
 // Exit Statement
 func (*ExitStmt) stmtNode()  {}
@@ -124,14 +150,8 @@ func (s *ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
 func (s *ProgStmt) Repr() string {
-	statements := ""
-	for i := 0; i < len(s.Body); i++ {
-		statements += s.Body[i].Repr()
-		if i < (len(s.Body) - 1) {
-			statements += ", "
-		}
-	}
-	return "ProgStmt(" + statements + ")"
+	return "ProgStmt(" + ReprFuncs(s.Funcs) + ")(" +
+		ReprStmts(s.Body) + ")"
 }
 
 // Skip Statement
@@ -140,7 +160,7 @@ func (s *SkipStmt) Pos() Pos { return s.Skip }
 func (s *SkipStmt) End() Pos {
 	return s.Skip + Pos(len("skip"))
 }
-func (s *SkipStmt) Repr() string { return "SKIP" }
+func (s *SkipStmt) Repr() string { return "Skip" }
 
 // If Statement
 func (*IfStmt) stmtNode()  {}
@@ -148,7 +168,11 @@ func (s *IfStmt) Pos() Pos { return s.If }
 func (s *IfStmt) End() Pos {
 	return s.Fi + Pos(len("Fi"))
 }
-func (s *IfStmt) Repr() string { return "IF" }
+func (s *IfStmt) Repr() string {
+	return "If(" + s.Cond.Repr() +
+		")Then(" + ReprStmts(s.Body) +
+		")Else(" + ReprStmts(s.Else) + ")"
+}
 
 // Function Statement
 func (s *Func) Pos() Pos { return s.Func }
