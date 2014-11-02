@@ -63,7 +63,7 @@ type SkipStmt struct {
 }
 
 type Func struct {
-	Start      Pos
+	Func       Pos
 	ReturnType string
 	Name       string
 	Params     []Param
@@ -130,7 +130,7 @@ func (s *IfStmt) End() Pos {
 	return s.Fi + Pos(len("Fi"))
 }
 
-func (s *Func) Pos() Pos { return s.Start }
+func (s *Func) Pos() Pos { return s.Func }
 func (s *Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
