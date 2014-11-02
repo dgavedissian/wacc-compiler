@@ -60,10 +60,17 @@ type SkipStmt struct {
 	Skip Pos // position of "skip" keyword
 }
 
-type AssignStmt struct {
+type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
-	Left   string
+	Type   string
+	Ident  string
 	Right  Expr
+}
+
+type AssignStmt struct {
+	IdentKw Pos // Position of the identifier
+	Ident   string
+	Right   Expr
 }
 
 type ExitStmt struct {
@@ -164,12 +171,20 @@ func (s *SkipStmt) End() Pos {
 }
 func (s *SkipStmt) Repr() string { return "Skip" }
 
+// Declaration statement
+func (self *DeclStmt) stmtNode() {}
+func (self *DeclStmt) Pos() Pos  { return self.TypeKw }
+func (self *DeclStmt) End() Pos  { return self.Pos() } // TODO
+func (self *DeclStmt) Repr() string {
+	return "Decl(" + self.Type + " " + self.Ident + ", " + self.Right.Repr() + ")"
+}
+
 // Assign Statement
 func (self *AssignStmt) stmtNode() {}
-func (self *AssignStmt) Pos() Pos  { return self.TypeKw }
-func (self *AssignStmt) End() Pos  { return self.Pos() }
+func (self *AssignStmt) Pos() Pos  { return self.IdentKw }
+func (self *AssignStmt) End() Pos  { return self.Pos() } // TODO
 func (self *AssignStmt) Repr() string {
-	return "Assign(" + self.Left + ", " + self.Right.Repr() + ")"
+	return "Assign(" + self.Ident + ", " + self.Right.Repr() + ")"
 }
 
 // Exit Statement

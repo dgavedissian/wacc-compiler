@@ -7,8 +7,9 @@
 /end/ { return END }
 /exit/ { return EXIT }
 /skip/ { return SKIP }
+/=/ { return ASSIGN }
 /null/ { return PAIR_LITER }
-/int|bool|char|string/ { return BASE_TYPE }
+/(int|bool|char|string)/ { lval.Value = yylex.Text(); return BASE_TYPE }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
 /if/ { return IF }
@@ -18,7 +19,6 @@
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }
-/=/ { return ASSIGN }
 /\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
 /[_a-zA-Z][_a-zA-Z0-9]*/ { lval.Value = yylex.Text(); return IDENT }
 /\[/ { return SQUARE_BRACKET_OPEN }
@@ -62,7 +62,7 @@ func processStr(s string) string {
 }
 
 func main() {
-	//yyDebug = 20
+	yyDebug = 20
   yyParse(NewLexer(os.Stdin))
 	fmt.Println(top.Stmt.Repr())
 }

@@ -48,7 +48,7 @@ func_list
     ;
 
 func
-    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+    : 'wat' IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
       }
     ;
@@ -64,7 +64,7 @@ param
     ;
 
 type
-    : BASE_TYPE
+    : BASE_TYPE { $$.Value = $1.Value }
     | array_type
     | pair_type
     ;
@@ -91,28 +91,25 @@ statement_list
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
     | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
+    | type IDENT ASSIGN expression { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | program { $$.Stmt = $1.Stmt }
-    | IF expr THEN statement_list ELSE statement_list FI {
+    | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
     ;
 
 expression
-    : expr BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
-    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
-    | expr { $$.Expr = $1.Expr }
-    | array_elem
-    | ROUND_BRACKET_OPEN expression ROUND_BRACKET_CLOSE
-    ;
-
-expr
     : INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
     | PAIR_LITER
     | IDENT
+    | expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
+    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
+    | array_elem
+    | ROUND_BRACKET_OPEN expression ROUND_BRACKET_CLOSE { $$.Expr = $2.Expr }
     ;
 
 array_elem
