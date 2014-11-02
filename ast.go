@@ -56,13 +56,19 @@ type ProgStmt struct {
 	EndKw   Pos // position of "end keyword
 }
 
+type SkipStmt struct {
+	Skip Pos // position of "skip" keyword
+}
+
+type AssignStmt struct {
+	TypeKw Pos // Position of the type keyword
+	Left   string
+	Right  Expr
+}
+
 type ExitStmt struct {
 	Exit   Pos  // position of "exit" keyword
 	Result Expr // result expression
-}
-
-type SkipStmt struct {
-	Skip Pos // position of "skip" keyword
 }
 
 type Func struct {
@@ -139,19 +145,6 @@ func (x *BinaryExpr) Repr() string {
 		x.Left.Repr() + ", " + x.Right.Repr()
 }
 
-// Exit Statement
-func (*ExitStmt) stmtNode()  {}
-func (s *ExitStmt) Pos() Pos { return s.Exit }
-func (s *ExitStmt) End() Pos {
-	if s.Result != nil {
-		return s.Result.End()
-	}
-	return s.Exit + Pos(len("exit"))
-}
-func (s *ExitStmt) Repr() string {
-	return "Exit(" + s.Result.Repr() + ")"
-}
-
 // Program Statement
 func (*ProgStmt) stmtNode()  {}
 func (s *ProgStmt) Pos() Pos { return s.BeginKw }
@@ -170,6 +163,27 @@ func (s *SkipStmt) End() Pos {
 	return s.Skip + Pos(len("skip"))
 }
 func (s *SkipStmt) Repr() string { return "Skip" }
+
+// Assign Statement
+func (self *AssignStmt) stmtNode() {}
+func (self *AssignStmt) Pos() Pos  { return self.TypeKw }
+func (self *AssignStmt) End() Pos  { return self.Pos() }
+func (self *AssignStmt) Repr() string {
+	return "Assign(" + self.Left + ", " + self.Right.Repr() + ")"
+}
+
+// Exit Statement
+func (*ExitStmt) stmtNode()  {}
+func (s *ExitStmt) Pos() Pos { return s.Exit }
+func (s *ExitStmt) End() Pos {
+	if s.Result != nil {
+		return s.Result.End()
+	}
+	return s.Exit + Pos(len("exit"))
+}
+func (s *ExitStmt) Repr() string {
+	return "Exit(" + s.Result.Repr() + ")"
+}
 
 // If Statement
 func (*IfStmt) stmtNode()  {}
@@ -194,7 +208,7 @@ func (s *Func) Repr() string {
 		"), body:(" + ReprStmts(s.Stmts) + ")"
 }
 
-// Param?
+// Function Parameter
 func (s *Param) Pos() Pos { return s.Start }
 func (s *Param) End() Pos { return s.Finish }
 func (s *Param) Repr() string {

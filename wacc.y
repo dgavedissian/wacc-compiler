@@ -24,7 +24,7 @@
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token STATEMENT_SEPARATOR
-%token SKIP
+%token SKIP ASSIGN
 %token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
@@ -50,7 +50,7 @@ func_list
 func
     : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
-    }
+      }
     ;
 
 param_list
@@ -90,6 +90,7 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
+    | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | program { $$.Stmt = $1.Stmt }
     | IF expr THEN statement_list ELSE statement_list FI {

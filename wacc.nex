@@ -18,8 +18,9 @@
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }
+/=/ { return ASSIGN }
 /\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
-/[_a-zA-Z][_a-zA-Z0-9]*/ { return IDENT }
+/[_a-zA-Z][_a-zA-Z0-9]*/ { lval.Value = yylex.Text(); return IDENT }
 /\[/ { return SQUARE_BRACKET_OPEN }
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
