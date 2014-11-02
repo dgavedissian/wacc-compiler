@@ -76,6 +76,14 @@ type Param struct {
 	Finish Pos
 }
 
+type IfStmt struct {
+	If   Pos
+	Cond Expr
+	Body []Stmt
+	Else []Stmt
+	Fi   Pos
+}
+
 func (*BasicLit) exprNode() {}
 
 func (x *BasicLit) Pos() Pos { return x.ValuePos }
@@ -113,6 +121,13 @@ func (*SkipStmt) stmtNode() {}
 func (s *SkipStmt) Pos() Pos { return s.Skip }
 func (s *SkipStmt) End() Pos {
 	return s.Skip + Pos(len("skip"))
+}
+
+func (*IfStmt) stmtNode() {}
+
+func (s *IfStmt) Pos() Pos { return s.If }
+func (s *IfStmt) End() Pos {
+	return s.Fi + Pos(len("Fi"))
 }
 
 func (s *Func) Pos() Pos { return s.Start }

@@ -19,6 +19,9 @@
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
 /\)/ { return ROUND_BRACKET_CLOSE }
+/if/ { return IF }
+/then/ { return THEN }
+/else/ { return FI }
 /./ { /* wtf is this? */ }
 //
 package main

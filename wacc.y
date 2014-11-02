@@ -31,6 +31,7 @@
 %token PAIR COMMA
 %token BASE_TYPE
 %token FUNC_IS
+%token IF THEN ELSE FI
 %%
 
 top
@@ -86,6 +87,9 @@ statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | program { $$.Stmt = $1.Stmt }
+    | IF expr THEN statement_list ELSE statement_list FI {
+        $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
+      }
     ;
 
 expression
