@@ -29,7 +29,6 @@
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
 %token PAIR COMMA
-%token BASE_TYPE
 %token FUNC_IS
 %token IF THEN ELSE FI
 %%
@@ -42,6 +41,7 @@ program
     : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $2.Funcs, $3.Stmts, 0} }
     ;
 
+/* Functions */
 func_list
     : func func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
     |
@@ -63,26 +63,7 @@ param
     : type IDENT { $$.Param = Param{0, $1.Value, $2.Value, 0} }
     ;
 
-type
-    : BASE_TYPE { $$.Value = $1.Value }
-    | array_type
-    | pair_type
-    ;
-
-array_type
-    : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
-    ;
-
-pair_type
-    : PAIR ROUND_BRACKET_OPEN pair_elem_type COMMA pair_elem_type ROUND_BRACKET_CLOSE
-    ;
-
-pair_elem_type
-    : BASE_TYPE
-    | array_type
-    | PAIR
-    ;
-
+/* Statements */
 statement_list
     : statement { $$.Stmts = []Stmt{$1.Stmt} }
     | statement STATEMENT_SEPARATOR statement_list = { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
@@ -99,6 +80,35 @@ statement
       }
     ;
 
+/* Types */
+type
+    : base_type
+    | array_type
+    | pair_type
+    ;
+
+base_type
+    : INT { $$.Value = $1.Value }
+    | BOOL { $$.Value = $1.Value }
+    | CHAR { $$.Value = $1.Value }
+    | STRING { $$.Value = $1.Value }
+    ;
+
+array_type
+    : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
+    ;
+
+pair_type
+    : PAIR ROUND_BRACKET_OPEN pair_elem_type COMMA pair_elem_type ROUND_BRACKET_CLOSE
+    ;
+
+pair_elem_type
+    : base_type
+    | array_type
+    | PAIR
+    ;
+
+/* Expression */
 expression
     : INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }

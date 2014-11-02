@@ -9,7 +9,10 @@
 /skip/ { return SKIP }
 /=/ { return ASSIGN }
 /null/ { return PAIR_LITER }
-/(int|bool|char|string)/ { lval.Value = yylex.Text(); return BASE_TYPE }
+/int/ { lval.Value = yylex.Text(); return INT }
+/bool/ { lval.Value = yylex.Text(); return BOOL }
+/char/ { lval.Value = yylex.Text(); return CHAR }
+/string/ { lval.Value = yylex.Text(); return STRING }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
 /if/ { return IF }
