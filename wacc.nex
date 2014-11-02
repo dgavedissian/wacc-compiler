@@ -1,8 +1,8 @@
 /[ \t]/  { /* Skip blanks and tabs. */ }
 /[+\-]?[0-9]+/ { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
 /(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
-/"([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = yylex.Text(); lval.Kind = STR_LITER; return STR_LITER }
-/'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = yylex.Text(); lval.Kind = CHAR_LITER; return CHAR_LITER }
+/"([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { s, _ := processStr(yylex.Text()); lval.Value = s; lval.Kind = STR_LITER; return STR_LITER }
+/'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { s, _ := processStr(yylex.Text()); lval.Value = s; lval.Kind = CHAR_LITER; return CHAR_LITER }
 /begin/ { return BEGIN }
 /end/ { return END }
 /exit/ { return EXIT }
@@ -27,7 +27,39 @@
 /./ { /* wtf is this? */ }
 //
 package main
-import ("os"; "fmt")
+
+import (
+	"os"
+	"fmt"
+)
+
+func processStr(s string) (string, bool) {
+	s = s[1:len(s) - 1]
+
+	// Replace escaped characters with their ascii equivalent
+	output := ""
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' {
+			i++
+			switch s[i] {
+				case '0': output += "\000"
+				case 'b': output += "\b"
+				case 't': output += "\t"
+				case 'n': output += "\n"
+				case 'f': output += "\f"
+				case 'r': output += "\r"
+				case '\047': output += "\047"
+				case '\042': output += "\042"
+				case '\\': output += "\\"
+				default: return output, false
+			}
+		} else {
+			output += string(s[i])
+		}
+	}
+	return output, true
+}
+
 func main() {
 	yyDebug = 20
   yyParse(NewLexer(os.Stdin))

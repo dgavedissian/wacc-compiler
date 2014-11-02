@@ -17,7 +17,7 @@
 }
 
 %{
-    var top yySymType
+  var top yySymType
 %}
 %token BEGIN END EXIT
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
@@ -108,8 +108,8 @@ expression
 expr
     : INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
-    | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value[1:len($1.Value) - 1]} }
-    | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value[1:len($1.Value) - 1]} }
+    | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
+    | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
     | PAIR_LITER
     | IDENT
     ;
