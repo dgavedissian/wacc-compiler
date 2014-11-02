@@ -1,7 +1,8 @@
 /[ \t]/  { /* Skip blanks and tabs. */ }
 /[+\-]?[0-9]+/ { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
 /(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
-/'.'/ { lval.Value = yylex.Text(); lval.Kind = CHAR_LITER; return CHAR_LITER }
+/"([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = yylex.Text(); lval.Kind = STR_LITER; return STR_LITER }
+/'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = yylex.Text(); lval.Kind = CHAR_LITER; return CHAR_LITER }
 /begin/ { return BEGIN }
 /end/ { return END }
 /exit/ { return EXIT }

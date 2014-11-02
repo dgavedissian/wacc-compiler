@@ -46,16 +46,19 @@ func_list
     : func func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
     |
     ;
+
 func
     : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
     }
     ;
+
 param_list
     : param COMMA param_list { $$.Params = append([]Param{$1.Param}, $2.Params...) }
     | param { $$.Params = []Param{$1.Param} }
     |
     ;
+
 param
     : type IDENT { $$.Param = Param{0, $1.Value, $2.Value, 0} }
     ;
@@ -69,9 +72,11 @@ type
 array_type
     : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
     ;
+
 pair_type
     : PAIR ROUND_BRACKET_OPEN pair_elem_type COMMA pair_elem_type ROUND_BRACKET_CLOSE
     ;
+
 pair_elem_type
     : BASE_TYPE
     | array_type
@@ -101,10 +106,10 @@ expression
     ;
 
 expr
-    : INT_LITER       { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
-    | BOOL_LITER      { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
-    | CHAR_LITER      { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
-    | STR_LITER
+    : INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
+    | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
+    | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value[1:len($1.Value) - 1]} }
+    | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value[1:len($1.Value) - 1]} }
     | PAIR_LITER
     | IDENT
     ;
