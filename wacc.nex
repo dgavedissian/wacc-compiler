@@ -21,7 +21,8 @@
 /\)/ { return ROUND_BRACKET_CLOSE }
 /if/ { return IF }
 /then/ { return THEN }
-/else/ { return FI }
+/else/ { return ELSE }
+/fi/ {return FI }
 /./ { /* wtf is this? */ }
 //
 package main
