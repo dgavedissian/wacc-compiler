@@ -19,7 +19,7 @@
 %{
     var top yySymType
 %}
-%token BEGIN END EXIT 
+%token BEGIN END EXIT
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
 %token IDENT
 %token UNARY_OPER BINARY_OPER
@@ -61,7 +61,7 @@ param
     ;
 
 type
-    : BASE_TYPE 
+    : BASE_TYPE
     | array_type
     | pair_type
     ;

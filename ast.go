@@ -59,7 +59,7 @@ type ExitStmt struct {
 }
 
 type SkipStmt struct {
-	Skip Pos
+	Skip Pos // position of "skip" keyword
 }
 
 type Func struct {
