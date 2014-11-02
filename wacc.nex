@@ -10,6 +10,10 @@
 /int|bool|char|string/ { return BASE_TYPE }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
+/if/ { return IF }
+/then/ { return THEN }
+/else/ { return ELSE }
+/fi/ {return FI }
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }
@@ -19,10 +23,6 @@
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
 /\)/ { return ROUND_BRACKET_CLOSE }
-/if/ { return IF }
-/then/ { return THEN }
-/else/ { return ELSE }
-/fi/ {return FI }
 /./ { /* wtf is this? */ }
 //
 package main
