@@ -2,6 +2,7 @@ package main
 
 import (
 	"go/token"
+	"strconv"
 	"strings"
 )
 
@@ -89,18 +90,26 @@ type IfStmt struct {
 
 // Repr helpers
 // David: Can't make this general to []Node :( @Luke help?
-func ReprFuncs(s []Func) string {
-	statements := []string{}
-	for _, st := range s {
-		statements = append(statements, st.Repr())
+func ReprFuncs(funcList []Func) string {
+	funcs := []string{}
+	for _, f := range funcList {
+		funcs = append(funcs, f.Repr())
 	}
-	return strings.Join(statements, ", ")
+	return strings.Join(funcs, ", ")
 }
 
-func ReprStmts(s []Stmt) string {
+func ReprParams(paramList []Param) string {
+	params := []string{}
+	for _, p := range paramList {
+		params = append(params, p.Repr())
+	}
+	return strings.Join(params, ", ")
+}
+
+func ReprStmts(stmtList []Stmt) string {
 	statements := []string{}
-	for _, st := range s {
-		statements = append(statements, st.Repr())
+	for _, s := range stmtList {
+		statements = append(statements, s.Repr())
 	}
 	return strings.Join(statements, ", ")
 }
@@ -110,7 +119,7 @@ func (*BasicLit) exprNode()  {}
 func (x *BasicLit) Pos() Pos { return x.ValuePos }
 func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x *BasicLit) Repr() string {
-	return x.Value
+	return "Lit(" + strconv.Itoa(x.Kind) + ", " + x.Value + ")"
 }
 
 // Unary Expression
@@ -118,7 +127,7 @@ func (*UnaryExpr) exprNode()  {}
 func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
 func (x *UnaryExpr) End() Pos { return x.Operand.End() }
 func (x *UnaryExpr) Repr() string {
-	return "UnaryExpr(" + x.Operator + ", " + x.Operand.Repr()
+	return "Unary(" + x.Operator + ", " + x.Operand.Repr()
 }
 
 // Binary Expression
@@ -126,7 +135,7 @@ func (*BinaryExpr) exprNode()  {}
 func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
 func (x *BinaryExpr) End() Pos { return x.Right.End() }
 func (x *BinaryExpr) Repr() string {
-	return "BinaryExpr(" + x.Operator + ", " +
+	return "Binary(" + x.Operator + ", " +
 		x.Left.Repr() + ", " + x.Right.Repr()
 }
 
@@ -140,7 +149,7 @@ func (s *ExitStmt) End() Pos {
 	return s.Exit + Pos(len("exit"))
 }
 func (s *ExitStmt) Repr() string {
-	return "ExitStmt(" + s.Result.Repr() + ")"
+	return "Exit(" + s.Result.Repr() + ")"
 }
 
 // Program Statement
@@ -150,7 +159,7 @@ func (s *ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
 func (s *ProgStmt) Repr() string {
-	return "ProgStmt(" + ReprFuncs(s.Funcs) + ")(" +
+	return "Prog(" + ReprFuncs(s.Funcs) + ")(" +
 		ReprStmts(s.Body) + ")"
 }
 
@@ -179,9 +188,15 @@ func (s *Func) Pos() Pos { return s.Func }
 func (s *Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
-func (s *Func) Repr() string { return "FUNC" }
+func (s *Func) Repr() string {
+	return "Func(name:" + s.Name +
+		", params:(" + ReprParams(s.Params) +
+		"), body:(" + ReprStmts(s.Stmts) + ")"
+}
 
 // Param?
-func (s *Param) Pos() Pos     { return s.Start }
-func (s *Param) End() Pos     { return s.Finish }
-func (s *Param) Repr() string { return "PARAM" }
+func (s *Param) Pos() Pos { return s.Start }
+func (s *Param) End() Pos { return s.Finish }
+func (s *Param) Repr() string {
+	return "Param(" + s.Type + ", " + s.Name + ")"
+}
