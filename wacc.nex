@@ -25,11 +25,12 @@
 /./ { /* wtf is this? */ }
 //
 package main
-import ("os"
-		"fmt"
-       )
+import ("os"; "fmt")
 func main() {
 	yyDebug = 20
-    yyParse(NewLexer(os.Stdin))
+  yyParse(NewLexer(os.Stdin))
+
+	// Print tree
 	fmt.Println(top)
+	fmt.Println(top.Stmt.Repr())
 }
