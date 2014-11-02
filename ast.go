@@ -85,10 +85,12 @@ type IfStmt struct {
 }
 
 // Basic Literal
-func (*BasicLit) exprNode()      {}
-func (x *BasicLit) Pos() Pos     { return x.ValuePos }
-func (x *BasicLit) End() Pos     { return Pos(int(x.ValuePos) + len(x.Value)) }
-func (x *BasicLit) Repr() string { return "LITERAL" }
+func (*BasicLit) exprNode()  {}
+func (x *BasicLit) Pos() Pos { return x.ValuePos }
+func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
+func (x *BasicLit) Repr() string {
+	return x.Value
+}
 
 // Unary Expression
 func (*UnaryExpr) exprNode()      {}
@@ -111,7 +113,9 @@ func (s *ExitStmt) End() Pos {
 	}
 	return s.Exit + Pos(len("exit"))
 }
-func (s *ExitStmt) Repr() string { return "EXIT" }
+func (s *ExitStmt) Repr() string {
+	return "ExitStmt(" + s.Result.Repr() + ")"
+}
 
 // Program Statement
 func (*ProgStmt) stmtNode()  {}
@@ -119,7 +123,16 @@ func (s *ProgStmt) Pos() Pos { return s.BeginKw }
 func (s *ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
-func (s *ProgStmt) Repr() string { return "PROGRAM" }
+func (s *ProgStmt) Repr() string {
+	statements := ""
+	for i := 0; i < len(s.Body); i++ {
+		statements += s.Body[i].Repr()
+		if i < (len(s.Body) - 1) {
+			statements += ", "
+		}
+	}
+	return "ProgStmt(" + statements + ")"
+}
 
 // Skip Statement
 func (*SkipStmt) stmtNode()  {}
