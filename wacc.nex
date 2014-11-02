@@ -14,7 +14,7 @@
 /if/ { return IF }
 /then/ { return THEN }
 /else/ { return ELSE }
-/fi/ {return FI }
+/fi/ { return FI }
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }
@@ -61,7 +61,7 @@ func processStr(s string) string {
 }
 
 func main() {
-	yyDebug = 20
+	//yyDebug = 20
   yyParse(NewLexer(os.Stdin))
 	fmt.Println(top.Stmt.Repr())
 }
