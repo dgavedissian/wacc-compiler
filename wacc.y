@@ -25,7 +25,7 @@
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token STATEMENT_SEPARATOR
-%token SKIP ASSIGN READ FREE RETURN EXIT PRINT PRINTLN
+%token SKIP ASSIGN READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
 %token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
@@ -77,9 +77,9 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
-    | type IDENT ASSIGN expression { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
-    | READ expression {}
+    | type IDENT ASSIGN assign_rhs { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
+    | assign_lhs ASSIGN assign_rhs { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
+    | READ assign_lhs {}
     | FREE expression {}
     | RETURN expression {}
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
@@ -89,6 +89,23 @@ statement
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
+    ;
+
+assign_lhs
+    : IDENT {}
+    | IDENT SQUARE_BRACKET_OPEN expression SQUARE_BRACKET_CLOSE {}
+    ;
+
+assign_rhs
+    : expression {}
+    | NEWPAIR ROUND_BRACKET_OPEN expression COMMA expression ROUND_BRACKET_CLOSE {}
+    | CALL IDENT ROUND_BRACKET_OPEN arg_list ROUND_BRACKET_CLOSE {}
+    ;
+
+arg_list
+    : expression COMMA arg_list {}
+    | expression {}
+    |
     ;
 
 /* Types */
