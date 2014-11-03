@@ -39,18 +39,20 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $2.Funcs, $3.Stmts, 0} }
+    : BEGIN body END { $$.Stmt = &ProgStmt{0, $2.Funcs, $2.Stmts, 0} }
+    ;
+
+body
+    : func body { 
+        $$.Stmts = $2.Stmts
+        $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
+      }
+    | statement_list { $$.Stmts = $1.Stmts }
     ;
 
 /* Functions */
-func_list
-    : func /*func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
-    | func {}*/
-    |
-    ;
-
 func
-    : base_type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
       }
     ;
@@ -76,7 +78,7 @@ statement
     | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | type IDENT ASSIGN expression { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
-    | program { $$.Stmt = $1.Stmt }
+    | BEGIN statement_list END { $$.Stmt = $2.Stmt }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }

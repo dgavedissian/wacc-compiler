@@ -65,7 +65,7 @@ func processStr(s string) string {
 }
 
 func main() {
-	yyDebug = 20
+	//yyDebug = 20
   yyParse(NewLexer(os.Stdin))
 	fmt.Println(top.Stmt.Repr())
 }
