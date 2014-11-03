@@ -3,8 +3,10 @@
 /(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
 /"([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = processStr(yylex.Text()); lval.Kind = STR_LITER; return STR_LITER }
 /'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = processStr(yylex.Text()); lval.Kind = CHAR_LITER; return CHAR_LITER }
+
 /begin/ { return BEGIN }
 /end/ { return END }
+
 /skip/ { return SKIP }
 /=/ { return ASSIGN }
 /read/ { return READ }
@@ -13,6 +15,7 @@
 /exit/ { return EXIT }
 /print/ { return PRINT }
 /println/ { return PRINTLN }
+
 /null/ { return PAIR_LITER }
 /int/ { lval.Value = yylex.Text(); return INT }
 /bool/ { lval.Value = yylex.Text(); return BOOL }
@@ -20,10 +23,16 @@
 /string/ { lval.Value = yylex.Text(); return STRING }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
+
 /if/ { return IF }
 /then/ { return THEN }
 /else/ { return ELSE }
 /fi/ { return FI }
+
+/while/ { return WHILE }
+/do/    { return DO }
+/done/  { return DONE }
+
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
 /!|-|len|ord|chr/ { return UNARY_OPER }

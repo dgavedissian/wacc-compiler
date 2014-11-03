@@ -32,6 +32,7 @@
 %token PAIR COMMA
 %token FUNC_IS
 %token IF THEN ELSE FI
+%token WHILE DO DONE
 %%
 
 top
