@@ -13,6 +13,8 @@
 /bool/ { lval.Value = yylex.Text(); return BOOL }
 /char/ { lval.Value = yylex.Text(); return CHAR }
 /string/ { lval.Value = yylex.Text(); return STRING }
+/print/ { return PRINT }
+/println/ { return PRINTLN }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
 /if/ { return IF }

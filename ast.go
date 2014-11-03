@@ -78,6 +78,12 @@ type ExitStmt struct {
 	Result Expr // result expression
 }
 
+type PrintStmt struct {
+	Print   Pos // position of print keyword
+	Right   Expr
+	NewLine bool
+}
+
 type Func struct {
 	Func       Pos
 	ReturnType string
@@ -200,6 +206,18 @@ func (s *ExitStmt) End() Pos {
 }
 func (s *ExitStmt) Repr() string {
 	return "Exit(" + s.Result.Repr() + ")"
+}
+
+// Print Statement
+func (*PrintStmt) stmtNode()  {}
+func (s *PrintStmt) Pos() Pos { return s.Print }
+func (s *PrintStmt) End() Pos { return s.Pos() }
+func (s *PrintStmt) Repr() string {
+	if s.NewLine {
+		return "Println(" + s.Right.Repr() + ")"
+	} else {
+		return "Print(" + s.Right.Repr() + ")"
+	}
 }
 
 // If Statement

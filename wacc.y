@@ -20,12 +20,12 @@
   var top yySymType
 %}
 
-%token BEGIN END EXIT
+%token BEGIN END
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token STATEMENT_SEPARATOR
-%token SKIP ASSIGN
+%token SKIP EXIT PRINT PRINTLN ASSIGN
 %token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
@@ -79,6 +79,8 @@ statement
     | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | type IDENT ASSIGN expression { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
+    | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
+    | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
     | BEGIN statement_list END { $$.Stmt = $2.Stmt }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
