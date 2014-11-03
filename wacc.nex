@@ -28,6 +28,7 @@
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
 /\)/ { return ROUND_BRACKET_CLOSE }
+/#[^\n]*\n/ { /* Comments should be ignored */ }
 /./ { panic("Invalid Char: " + yylex.Text())/* wtf is this? */ }
 //
 package main
@@ -65,7 +66,7 @@ func processStr(s string) string {
 }
 
 func main() {
-	//yyDebug = 20
-  yyParse(NewLexer(os.Stdin))
+	yyDebug = 20
+    yyParse(NewLexer(os.Stdin))
 	fmt.Println(top.Stmt.Repr())
 }
