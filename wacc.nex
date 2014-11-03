@@ -5,16 +5,19 @@
 /'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = processStr(yylex.Text()); lval.Kind = CHAR_LITER; return CHAR_LITER }
 /begin/ { return BEGIN }
 /end/ { return END }
-/exit/ { return EXIT }
 /skip/ { return SKIP }
 /=/ { return ASSIGN }
+/read/ { return READ }
+/free/ { return FREE }
+/return/ { return RETURN }
+/exit/ { return EXIT }
+/print/ { return PRINT }
+/println/ { return PRINTLN }
 /null/ { return PAIR_LITER }
 /int/ { lval.Value = yylex.Text(); return INT }
 /bool/ { lval.Value = yylex.Text(); return BOOL }
 /char/ { lval.Value = yylex.Text(); return CHAR }
 /string/ { lval.Value = yylex.Text(); return STRING }
-/print/ { return PRINT }
-/println/ { return PRINTLN }
 /pair/ { return PAIR }
 /is/ { return FUNC_IS }
 /if/ { return IF }

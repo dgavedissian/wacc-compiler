@@ -25,7 +25,7 @@
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token STATEMENT_SEPARATOR
-%token SKIP EXIT PRINT PRINTLN ASSIGN
+%token SKIP ASSIGN READ FREE RETURN EXIT PRINT PRINTLN
 %token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
 %token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
 %token INT BOOL CHAR STRING
@@ -78,6 +78,9 @@ statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
     | IDENT ASSIGN expression { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | type IDENT ASSIGN expression { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
+    | READ expression {}
+    | FREE expression {}
+    | RETURN expression {}
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
     | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
