@@ -89,6 +89,9 @@ statement
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
+    | WHILE expression DO statement_list DONE {
+        $$.Stmt = &WhileStmt{ 0, $2.Expr, $4.Stmts ,0 }
+      }
     ;
 
 /* Types */
