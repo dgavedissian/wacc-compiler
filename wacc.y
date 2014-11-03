@@ -2,6 +2,7 @@
 
 %{
   package main
+  import "fmt"
 %}
 
 %union {
@@ -39,18 +40,22 @@ top
     ;
 
 program
-    : BEGIN func_list statement_list END { $$.Stmt = &ProgStmt{0, $2.Funcs, $3.Stmts, 0} }
+    : BEGIN func_list END { $$.Stmt = &ProgStmt{0, $2.Funcs, $2.Stmts, 0} }
+    | BEGIN statement_list END { $$.Stmt = &ProgStmt{0, nil, $2.Stmts, 0} }
     ;
 
 /* Functions */
 func_list
-    : func /*func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
-    | func {}*/
-    |
+    : func func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) } 
+    | type IDENT ASSIGN expression { fmt.Println("MATCH"); $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
+    | type IDENT ASSIGN expression STATEMENT_SEPARATOR statement_list { 
+        fmt.Println("MATCH2")
+        $$.Stmts = &DeclStmt{0, $1.Value, $2.Value, $4.Expr}
+      }
     ;
 
 func
-    : base_type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
       }
     ;

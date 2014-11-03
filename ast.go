@@ -122,7 +122,9 @@ func ReprParams(paramList []Param) string {
 func ReprStmts(stmtList []Stmt) string {
 	statements := []string{}
 	for _, s := range stmtList {
-		statements = append(statements, s.Repr())
+		if s != nil {
+			statements = append(statements, s.Repr())
+		}
 	}
 	return strings.Join(statements, ", ")
 }
