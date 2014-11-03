@@ -31,7 +31,7 @@ frontend: parser.go lexer.go ast.go
 
 clean:
 	go clean
-	$(RM) parser.go lexer.go frontend
+	$(RM) parser.go lexer.go frontend y.output
 
 nex:
 	$(GO) get github.com/blynn/nex
