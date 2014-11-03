@@ -19,6 +19,7 @@
 %{
   var top yySymType
 %}
+
 %token BEGIN END EXIT
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
 %token IDENT
@@ -43,12 +44,13 @@ program
 
 /* Functions */
 func_list
-    : func func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
+    : func /*func_list { $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...) }
+    | func {}*/
     |
     ;
 
 func
-    : 'wat' IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+    : base_type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
       }
     ;
