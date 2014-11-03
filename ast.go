@@ -107,6 +107,13 @@ type IfStmt struct {
 	Fi   Pos
 }
 
+type WhileStmt struct {
+    While Pos
+    Cond Expr
+    Body []Stmt
+    Done Pos
+}
+
 // Repr helpers
 // David: Can't make this general to []Node :( @Luke help?
 func ReprFuncs(funcList []Func) string {
@@ -230,6 +237,18 @@ func (s *IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
 		")Then(" + ReprStmts(s.Body) +
 		")Else(" + ReprStmts(s.Else) + ")"
+}
+
+// While Statement
+func (*WhileStmt) stmtNode() {}
+func (s *WhileStmt) Pos() Pos { return s.While }
+func (s *WhileStmt) End() Pos {
+    return s.Done + Pos(len("Done"))
+}
+func (s *WhileStmt) Repr() string {
+    return "While(" + s.Cond.Repr() +
+        ")Do(" + ReprStmts(s.Body) +
+        ")Done"
 }
 
 // Function Statement
