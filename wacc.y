@@ -48,6 +48,7 @@ body
         $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
+    | 
     ;
 
 /* Functions */
