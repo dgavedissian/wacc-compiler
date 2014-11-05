@@ -52,6 +52,7 @@ package main
 import (
 	"os"
 	"fmt"
+  "flag"
 )
 
 func processStr(s string) string {
@@ -82,7 +83,14 @@ func processStr(s string) string {
 }
 
 func main() {
-	yyDebug = 20
-    yyParse(NewLexer(os.Stdin))
+  enableDebug := flag.Bool("d", false, "Enable debug mode")
+  flag.Parse()
+
+  if *enableDebug {
+	  yyDebug = 20
+  }
+
+  // Parse the tree
+  yyParse(NewLexer(os.Stdin))
 	fmt.Println(top.Stmt.Repr())
 }
