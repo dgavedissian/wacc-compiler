@@ -1,4 +1,6 @@
-/[ \t\n]/   { /* Skip blanks and tabs. */ }
+<           { lex.l = 0 }
+/[\n]/      { lex.l += 1 }
+/[ \t]/     { /* Skip blanks and tabs. */ }
 
 
 /[0-9]+/    { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
@@ -68,7 +70,7 @@
 
 /#[^\n]*\n/ { /* Comments should be ignored */ }
 
-/./         { panic("Invalid Char: " + yylex.Text()) }
+/./         { lex.Error("Invalid Char: " + strconv.Quote(yylex.Text())) }
 
 //
 package main
@@ -77,7 +79,10 @@ import (
 	"os"
 	"fmt"
   "flag"
+  "strconv"
 )
+
+var lex *Lexer
 
 func processStr(s string) string {
 	s = s[1:len(s) - 1]
@@ -106,6 +111,12 @@ func processStr(s string) string {
 	return output
 }
 
+func (*Lexer) Error(s string) {
+    fmt.Println(s)
+    fmt.Println("Line: " + strconv.Itoa(lex.l))
+    os.Exit(100)
+}
+
 func main() {
   enableDebug := flag.Bool("d", false, "Enable debug mode")
   flag.Parse()
@@ -115,6 +126,7 @@ func main() {
   }
 
   // Parse the tree
-  yyParse(NewLexer(os.Stdin))
+  lex = NewLexer(os.Stdin)
+  yyParse(lex)
 	fmt.Println(top.Stmt.Repr())
 }

@@ -15,6 +15,7 @@
     Param Param
     Kind  int
     Ident Ident
+    lines int
 }
 
 %{

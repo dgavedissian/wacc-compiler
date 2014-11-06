@@ -2,6 +2,7 @@
 
 import argparse
 import subprocess
+import sys
 
 parser = argparse.ArgumentParser(description="WACC Compiler.")
 parser.add_argument('filename',
@@ -19,4 +20,4 @@ debug = '-d' if args.debug else ''
 print(filename, debug)
 
 command = "cat {} | ./frontend {}".format(filename, debug)
-subprocess.call(command, shell=True)
+sys.exit(subprocess.call(command, shell=True))

@@ -24,7 +24,7 @@ parser.go: wacc.y
 	go tool yacc -o parser.go wacc.y
 
 lexer.go: wacc.nex
-	nex -o lexer.go wacc.nex
+	nex -e=true -o lexer.go wacc.nex
 
 frontend: parser.go lexer.go ast.go
 	go build -o frontend $^
