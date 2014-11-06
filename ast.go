@@ -199,19 +199,19 @@ func (s *SkipStmt) End() Pos {
 func (s *SkipStmt) Repr() string { return "Skip" }
 
 // Declaration statement
-func (self *DeclStmt) stmtNode() {}
-func (self *DeclStmt) Pos() Pos  { return self.TypeKw }
-func (self *DeclStmt) End() Pos  { return self.Pos() } // TODO
-func (self *DeclStmt) Repr() string {
-	return "Decl(" + strconv.Itoa(self.Kind) + " " + self.Ident.Repr() + ", " + self.Right.Repr() + ")"
+func (s *DeclStmt) stmtNode() {}
+func (s *DeclStmt) Pos() Pos  { return s.TypeKw }
+func (s *DeclStmt) End() Pos  { return s.Pos() } // TODO
+func (s *DeclStmt) Repr() string {
+	return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Assign Statement
-func (self *AssignStmt) stmtNode() {}
-func (self *AssignStmt) Pos() Pos  { return self.Ident.Pos() }
-func (self *AssignStmt) End() Pos  { return self.Pos() } // TODO
-func (self *AssignStmt) Repr() string {
-	return "Assign(" + self.Ident.Repr() + ", " + self.Right.Repr() + ")"
+func (s *AssignStmt) stmtNode() {}
+func (s *AssignStmt) Pos() Pos  { return s.Ident.Pos() }
+func (s *AssignStmt) End() Pos  { return s.Pos() } // TODO
+func (s *AssignStmt) Repr() string {
+	return "Assign(" + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Exit Statement
