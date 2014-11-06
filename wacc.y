@@ -56,7 +56,7 @@ body
 /* Functions */
 func
     : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
-        $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
+        $$.Func = &Func{0, $1.Kind, $2.Value, $4.Params, $7.Stmts}
       }
     ;
 
@@ -67,7 +67,7 @@ param_list
     ;
 
 param
-    : type IDENT { $$.Param = Param{0, $1.Value, $2.Value, 0} }
+    : type IDENT { $$.Param = Param{0, $1.Kind, $2.Value, 0} }
     ;
 
 /* Statements */
@@ -78,7 +78,7 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type IDENT ASSIGN assign_rhs { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
+    | type IDENT ASSIGN assign_rhs { $$.Stmt = &DeclStmt{0, $1.Kind, $2.Value, $4.Expr} }
     | assign_lhs ASSIGN assign_rhs { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
@@ -120,10 +120,10 @@ type
     ;
 
 base_type
-    : INT { $$.Value = $1.Value }
-    | BOOL { $$.Value = $1.Value }
-    | CHAR { $$.Value = $1.Value }
-    | STRING { $$.Value = $1.Value }
+    : INT { $$.Kind = $1.Kind }
+    | BOOL { $$.Kind = $1.Kind }
+    | CHAR { $$.Kind = $1.Kind }
+    | STRING { $$.Kind = $1.Kind }
     ;
 
 array_type

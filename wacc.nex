@@ -21,11 +21,11 @@
 /call/ { return CALL }
 
 /null/ { return PAIR_LITER }
-/int/ { lval.Value = yylex.Text(); return INT }
-/bool/ { lval.Value = yylex.Text(); return BOOL }
-/char/ { lval.Value = yylex.Text(); return CHAR }
-/string/ { lval.Value = yylex.Text(); return STRING }
-/pair/ { return PAIR }
+/int/ { lval.Kind = INT; return INT }
+/bool/ { lval.Kind = BOOL; return BOOL }
+/char/ { lval.Kind = CHAR; return CHAR }
+/string/ { lval.Kind = STRING; return STRING }
+/pair/ { lval.Kind = PAIR; return PAIR }
 /is/ { return FUNC_IS }
 
 /if/ { return IF }

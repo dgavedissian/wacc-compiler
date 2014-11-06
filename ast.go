@@ -62,7 +62,7 @@ type SkipStmt struct {
 
 type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
-	Type   string
+	Kind   int
 	Ident  string
 	Right  Expr
 }
@@ -85,16 +85,16 @@ type PrintStmt struct {
 }
 
 type Func struct {
-	Func       Pos
-	ReturnType string
-	Name       string
-	Params     []Param
-	Stmts      []Stmt
+	Func   Pos
+	Kind   int
+	Name   string
+	Params []Param
+	Stmts  []Stmt
 }
 
 type Param struct {
 	Start  Pos
-	Type   string
+	Kind   int
 	Name   string
 	Finish Pos
 }
@@ -108,10 +108,10 @@ type IfStmt struct {
 }
 
 type WhileStmt struct {
-    While Pos
-    Cond Expr
-    Body []Stmt
-    Done Pos
+	While Pos
+	Cond  Expr
+	Body  []Stmt
+	Done  Pos
 }
 
 // Repr helpers
@@ -191,7 +191,7 @@ func (self *DeclStmt) stmtNode() {}
 func (self *DeclStmt) Pos() Pos  { return self.TypeKw }
 func (self *DeclStmt) End() Pos  { return self.Pos() } // TODO
 func (self *DeclStmt) Repr() string {
-	return "Decl(" + self.Type + " " + self.Ident + ", " + self.Right.Repr() + ")"
+	return "Decl(" + strconv.Itoa(self.Kind) + " " + self.Ident + ", " + self.Right.Repr() + ")"
 }
 
 // Assign Statement
@@ -240,15 +240,15 @@ func (s *IfStmt) Repr() string {
 }
 
 // While Statement
-func (*WhileStmt) stmtNode() {}
+func (*WhileStmt) stmtNode()  {}
 func (s *WhileStmt) Pos() Pos { return s.While }
 func (s *WhileStmt) End() Pos {
-    return s.Done + Pos(len("Done"))
+	return s.Done + Pos(len("Done"))
 }
 func (s *WhileStmt) Repr() string {
-    return "While(" + s.Cond.Repr() +
-        ")Do(" + ReprStmts(s.Body) +
-        ")Done"
+	return "While(" + s.Cond.Repr() +
+		")Do(" + ReprStmts(s.Body) +
+		")Done"
 }
 
 // Function Statement
@@ -266,5 +266,5 @@ func (s *Func) Repr() string {
 func (s *Param) Pos() Pos { return s.Start }
 func (s *Param) End() Pos { return s.Finish }
 func (s *Param) Repr() string {
-	return "Param(" + s.Type + ", " + s.Name + ")"
+	return "Param(" + strconv.Itoa(s.Kind) + ", " + s.Name + ")"
 }
