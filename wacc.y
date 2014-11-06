@@ -31,6 +31,8 @@
 %token FUNC_IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
+%token LEN ORD CHR
+%token LE GE EQ NE AND OR
 %%
 
 top
@@ -138,6 +140,66 @@ pair_elem_type
     ;
 
 /* Expression */
+primary_expression
+    : IDENT               { }
+    | INT_LITER           { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
+    | BOOL_LITER          { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
+    | CHAR_LITER          { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
+    | STR_LITER           { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
+    | '(' expression ')'  { $$.Expr = $2.Expr }
+    ;
+
+unary_expression
+    : primary_expression   { $$.Expr = $1.Expr }
+    | '!' unary_expression { $$.Expr = &UnaryExpr{0, "!", $2.Expr} }
+    | '+' unary_expression { $$.Expr = &UnaryExpr{0, "+", $2.Expr} }
+    | '-' unary_expression { $$.Expr = &UnaryExpr{0, "-", $2.Expr} }
+    | LEN unary_expression { $$.Expr = &UnaryExpr{0, "len", $2.Expr} }
+    | ORD unary_expression { $$.Expr = &UnaryExpr{0, "ord", $2.Expr} }
+    | CHR unary_expression { $$.Expr = &UnaryExpr{0, "chr", $2.Expr} }
+    ;
+
+multiplicative_expression
+    : unary_expression { $$.Expr = $1.Expr }
+    | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "*", $3.Expr} }
+    | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "/", $3.Expr} }
+    | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "%", $3.Expr} }
+    ;
+
+additive_expression
+    : multiplicative_expression { $$.Expr = $1.Expr }
+    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "+", $3.Expr} } 
+    | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "-", $3.Expr} }
+    ;
+
+relational_expression
+    : additive_expression { $$.Expr = $1.Expr }
+    | relational_expression '<' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "<", $3.Expr} }
+    | relational_expression '>' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, ">", $3.Expr} }
+    | relational_expression LE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "<=", $3.Expr} }
+    | relational_expression GE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, ">=", $3.Expr} }
+    ;
+
+equality_expression
+    : relational_expression { $$.Expr = $1.Expr }
+    | equality_expression EQ relational_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "==", $3.Expr} }
+    | equality_expression NE relational_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "!=", $3.Expr} }
+    ;
+
+logical_and_expression
+    : equality_expression { $$.Expr = $1.Expr }
+    | logical_and_expression AND equality_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "&&", $3.Expr} }
+    ;
+
+logical_or_expression
+    : logical_and_expression { $$.Expr = $1.Expr }
+    | logical_or_expression OR logical_and_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "||", $3.Expr} }
+    ;
+
+expression
+    : logical_or_expression { $$.Expr = $1.Expr }
+    ;
+/*
 expression
     : expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
     | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
@@ -154,4 +216,6 @@ expression
 array_elem
     : IDENT '[' expression ']'
     ;
+*/
+
 %%
