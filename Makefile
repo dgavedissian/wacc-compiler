@@ -35,7 +35,9 @@ clean:
 
 installgo:
 	[ -z `which go` ] && apt-get install -y golang go || echo "Go installed"
-	[ -z "${GOROOT}" ] && export GOROOT=/usr/share/go || echo "I AM GOROOT"
+	[ -z "${GOROOT}" ] && export GOROOT=/usr/share/go/ || echo "I AM GOROOT"
+	echo "GOROOT: " ${GOROOT}
+	
 
 nex:
 	$(GO) get github.com/blynn/nex
