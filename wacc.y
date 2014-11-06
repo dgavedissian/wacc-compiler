@@ -83,7 +83,7 @@ statement
     | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Ident, $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
-    | RETURN expression {}
+    | RETURN expression { $$.Stmt = &ReturnStmt{0, $2.Expr} }
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
     | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }

@@ -82,6 +82,11 @@ type ExitStmt struct {
 	Result Expr // result expression
 }
 
+type ReturnStmt struct {
+	Return Pos
+	Result Expr
+}
+
 type PrintStmt struct {
 	Print   Pos // position of print keyword
 	Right   Expr
@@ -224,7 +229,28 @@ func (s *ExitStmt) End() Pos {
 	return s.Exit + Pos(len("exit"))
 }
 func (s *ExitStmt) Repr() string {
-	return "Exit(" + s.Result.Repr() + ")"
+	if s.Result != nil {
+		return "Exit(" + s.Result.Repr() + ")"
+	} else {
+		return "Exit()"
+	}
+}
+
+// Return Statement
+func (*ReturnStmt) stmtNode()  {}
+func (s *ReturnStmt) Pos() Pos { return s.Return }
+func (s *ReturnStmt) End() Pos {
+	if s.Result != nil {
+		return s.Result.End()
+	}
+	return s.Return + Pos(len("return"))
+}
+func (s *ReturnStmt) Repr() string {
+	if s.Result != nil {
+		return "Return(" + s.Result.Repr() + ")"
+	} else {
+		return "Return()"
+	}
 }
 
 // Print Statement
