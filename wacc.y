@@ -14,6 +14,7 @@
     Params []Param
     Param Param
     Kind  int
+    Ident Ident
 }
 
 %{
@@ -54,8 +55,8 @@ body
 
 /* Functions */
 func
-    : type IDENT '(' param_list ')' FUNC_IS statement_list END {
-        $$.Func = &Func{0, $1.Kind, $2.Value, $4.Params, $7.Stmts}
+    : type identifier '(' param_list ')' FUNC_IS statement_list END {
+        $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
       }
     ;
 
@@ -66,7 +67,7 @@ param_list
     ;
 
 param
-    : type IDENT { $$.Param = Param{0, $1.Kind, $2.Value, 0} }
+    : type identifier { $$.Param = Param{0, $1.Kind, $2.Ident, 0} }
     ;
 
 /* Statements */
@@ -77,8 +78,8 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type IDENT '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Kind, $2.Value, $4.Expr} }
-    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
+    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Kind, $2.Ident, $4.Expr} }
+    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Ident, $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
     | RETURN expression {}
@@ -95,14 +96,18 @@ statement
     ;
 
 assign_lhs
-    : IDENT {}
-    | IDENT '[' expression ']' /* TODO: REPLACE WITH array_elem */
+    : identifier
+    | identifier '[' expression ']' /* TODO: REPLACE WITH array_elem */
     ;
 
 assign_rhs
     : expression {}
     | NEWPAIR '(' expression ',' expression ')' {}
-    | CALL IDENT '(' arg_list ')' {}
+    | CALL identifier '(' arg_list ')' {}
+    ;
+
+identifier
+    : IDENT { $$.Ident = Ident{0, $1.Value} }
     ;
 
 arg_list
@@ -141,7 +146,7 @@ pair_elem_type
 
 /* Expression */
 primary_expression
-    : IDENT               { }
+    : identifier
     | INT_LITER           { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER          { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER          { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }

@@ -68,14 +68,13 @@ type SkipStmt struct {
 type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
 	Kind   int
-	Ident  string
+	Ident  Ident
 	Right  Expr
 }
 
 type AssignStmt struct {
-	IdentKw Pos // Position of the identifier
-	Ident   string
-	Right   Expr
+	Ident Ident
+	Right Expr
 }
 
 type ExitStmt struct {
@@ -92,7 +91,7 @@ type PrintStmt struct {
 type Func struct {
 	Func   Pos
 	Kind   int
-	Name   string
+	Ident  Ident
 	Params []Param
 	Stmts  []Stmt
 }
@@ -100,7 +99,7 @@ type Func struct {
 type Param struct {
 	Start  Pos
 	Kind   int
-	Name   string
+	Ident  Ident
 	Finish Pos
 }
 
@@ -204,15 +203,15 @@ func (self *DeclStmt) stmtNode() {}
 func (self *DeclStmt) Pos() Pos  { return self.TypeKw }
 func (self *DeclStmt) End() Pos  { return self.Pos() } // TODO
 func (self *DeclStmt) Repr() string {
-	return "Decl(" + strconv.Itoa(self.Kind) + " " + self.Ident + ", " + self.Right.Repr() + ")"
+	return "Decl(" + strconv.Itoa(self.Kind) + " " + self.Ident.Repr() + ", " + self.Right.Repr() + ")"
 }
 
 // Assign Statement
 func (self *AssignStmt) stmtNode() {}
-func (self *AssignStmt) Pos() Pos  { return self.IdentKw }
+func (self *AssignStmt) Pos() Pos  { return self.Ident.Pos() }
 func (self *AssignStmt) End() Pos  { return self.Pos() } // TODO
 func (self *AssignStmt) Repr() string {
-	return "Assign(" + self.Ident + ", " + self.Right.Repr() + ")"
+	return "Assign(" + self.Ident.Repr() + ", " + self.Right.Repr() + ")"
 }
 
 // Exit Statement
@@ -270,7 +269,7 @@ func (s *Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
 func (s *Func) Repr() string {
-	return "Func(name:" + s.Name +
+	return "Func(name:" + s.Ident.Repr() +
 		", params:(" + ReprParams(s.Params) +
 		"), body:(" + ReprStmts(s.Stmts) + ")"
 }
@@ -279,5 +278,5 @@ func (s *Func) Repr() string {
 func (s *Param) Pos() Pos { return s.Start }
 func (s *Param) End() Pos { return s.Finish }
 func (s *Param) Repr() string {
-	return "Param(" + strconv.Itoa(s.Kind) + ", " + s.Name + ")"
+	return "Param(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ")"
 }
