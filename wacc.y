@@ -25,12 +25,9 @@
 %token INT_SIGN
 %token IDENT
 %token UNARY_OPER BINARY_OPER
-%token STATEMENT_SEPARATOR
-%token SKIP ASSIGN READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
-%token SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
-%token ROUND_BRACKET_OPEN ROUND_BRACKET_CLOSE
+%token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
 %token INT BOOL CHAR STRING
-%token PAIR COMMA
+%token PAIR
 %token FUNC_IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
@@ -55,13 +52,13 @@ body
 
 /* Functions */
 func
-    : type IDENT ROUND_BRACKET_OPEN param_list ROUND_BRACKET_CLOSE FUNC_IS statement_list END {
+    : type IDENT '(' param_list ')' FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Value, $2.Value, $4.Params, $7.Stmts}
       }
     ;
 
 param_list
-    : param COMMA param_list { $$.Params = append([]Param{$1.Param}, $2.Params...) }
+    : param ',' param_list { $$.Params = append([]Param{$1.Param}, $2.Params...) }
     | param { $$.Params = []Param{$1.Param} }
     |
     ;
@@ -73,13 +70,13 @@ param
 /* Statements */
 statement_list
     : statement { $$.Stmts = []Stmt{$1.Stmt} }
-    | statement STATEMENT_SEPARATOR statement_list = { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
+    | statement ';' statement_list = { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
     ;
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type IDENT ASSIGN assign_rhs { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
-    | assign_lhs ASSIGN assign_rhs { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
+    | type IDENT '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Value, $2.Value, $4.Expr} }
+    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{0, $1.Value, $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
     | RETURN expression {}
@@ -97,17 +94,17 @@ statement
 
 assign_lhs
     : IDENT {}
-    | IDENT SQUARE_BRACKET_OPEN expression SQUARE_BRACKET_CLOSE {}
+    | IDENT '[' expression ']' {}
     ;
 
 assign_rhs
     : expression {}
-    | NEWPAIR ROUND_BRACKET_OPEN expression COMMA expression ROUND_BRACKET_CLOSE {}
-    | CALL IDENT ROUND_BRACKET_OPEN arg_list ROUND_BRACKET_CLOSE {}
+    | NEWPAIR '(' expression ',' expression ')' {}
+    | CALL IDENT '(' arg_list ')' {}
     ;
 
 arg_list
-    : expression COMMA arg_list {}
+    : expression ',' arg_list {}
     | expression {}
     |
     ;
@@ -127,11 +124,11 @@ base_type
     ;
 
 array_type
-    : type SQUARE_BRACKET_OPEN SQUARE_BRACKET_CLOSE
+    : type '[' ']'
     ;
 
 pair_type
-    : PAIR ROUND_BRACKET_OPEN pair_elem_type COMMA pair_elem_type ROUND_BRACKET_CLOSE
+    : PAIR '(' pair_elem_type ',' pair_elem_type ')'
     ;
 
 pair_elem_type
@@ -142,24 +139,19 @@ pair_elem_type
 
 /* Expression */
 expression
-    : int_sign INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value + $2.Value} }
+    : expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
+    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
+    | INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
     | PAIR_LITER
     | IDENT
-    | expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
-    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
     | array_elem
-    | ROUND_BRACKET_OPEN expression ROUND_BRACKET_CLOSE { $$.Expr = $2.Expr }
-    ;
-
-int_sign
-    : INT_SIGN { $$.Value = $1.Value }
-    |
+    | '(' expression ')' { $$.Expr = $2.Expr }
     ;
 
 array_elem
-    : IDENT SQUARE_BRACKET_OPEN expression SQUARE_BRACKET_CLOSE
+    : IDENT '[' expression ']'
     ;
 %%
