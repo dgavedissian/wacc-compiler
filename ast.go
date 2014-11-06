@@ -30,6 +30,11 @@ type Prog interface {
 	progNode()
 }
 
+type Ident struct {
+	NamePos Pos
+	Name    string
+}
+
 type BasicLit struct {
 	ValuePos Pos // Literal position
 	Kind     int // Token kind (e.g. INT_LITER, CHAR_LITER)
@@ -140,6 +145,14 @@ func ReprStmts(stmtList []Stmt) string {
 		}
 	}
 	return strings.Join(statements, ", ")
+}
+
+// Identifier
+func (*Ident) exprNode()  {}
+func (x *Ident) Pos() Pos { return x.NamePos }
+func (x *Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
+func (x *Ident) Repr() string {
+	return "Ident(" + x.Name + ")"
 }
 
 // Basic Literal
