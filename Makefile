@@ -34,7 +34,7 @@ clean:
 	$(RM) parser.go lexer.go frontend y.output
 
 installgo:
-	[[ -z `which go` ]] && apt-get install -y golang go || echo "Go installed"
+	[ -z `which go` ] && apt-get install -y golang go || echo "Go installed"
 
 nex:
 	$(GO) get github.com/blynn/nex
