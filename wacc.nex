@@ -1,5 +1,7 @@
 /[ \t\n]/  { /* Skip blanks and tabs. */ }
-/[+\-]?[0-9]+/ { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
+
+
+/[0-9]+/ { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
 /(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
 /"([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = processStr(yylex.Text()); lval.Kind = STR_LITER; return STR_LITER }
 /'([a-zA-Z0-9]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = processStr(yylex.Text()); lval.Kind = CHAR_LITER; return CHAR_LITER }
@@ -37,14 +39,20 @@
 
 /;/ { return STATEMENT_SEPARATOR }
 /,/ { return COMMA }
+
+/[\+\-]/ { lval.Value = yylex.Text(); return INT_SIGN }
 /!|-|len|ord|chr/ { return UNARY_OPER }
 /\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
+
 /[_a-zA-Z][_a-zA-Z0-9]*/ { lval.Value = yylex.Text(); return IDENT }
+
 /\[/ { return SQUARE_BRACKET_OPEN }
 /\]/ { return SQUARE_BRACKET_CLOSE }
 /\(/ { return ROUND_BRACKET_OPEN }
 /\)/ { return ROUND_BRACKET_CLOSE }
+
 /#[^\n]*\n/ { /* Comments should be ignored */ }
+
 /./ { panic("Invalid Char: " + yylex.Text())/* wtf is this? */ }
 //
 package main

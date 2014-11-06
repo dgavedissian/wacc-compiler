@@ -22,6 +22,7 @@
 
 %token BEGIN END
 %token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
+%token INT_SIGN
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token STATEMENT_SEPARATOR
@@ -141,7 +142,7 @@ pair_elem_type
 
 /* Expression */
 expression
-    : INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
+    : int_sign INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value + $2.Value} }
     | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
@@ -151,6 +152,11 @@ expression
     | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
     | array_elem
     | ROUND_BRACKET_OPEN expression ROUND_BRACKET_CLOSE { $$.Expr = $2.Expr }
+    ;
+
+int_sign
+    : INT_SIGN { $$.Value = $1.Value }
+    |
     ;
 
 array_elem
