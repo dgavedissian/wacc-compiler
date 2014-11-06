@@ -1,2 +1,22 @@
-#!/bin/bash
-cat $@ | ./frontend
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+
+parser = argparse.ArgumentParser(description="WACC Compiler.")
+parser.add_argument('filename',
+                    help="The file you wish to compile")
+parser.add_argument('-d',
+                    '--debug',
+                    action='store_const',
+                    const='True',
+                    help="Gives further information useful for debugging")
+
+args = parser.parse_args()
+filename = args.filename if args.filename else ""
+debug = '-d' if args.debug else ''
+
+print(filename, debug)
+
+command = "cat {} | ./frontend {}".format(filename, debug)
+subprocess.call(command, shell=True)
