@@ -46,12 +46,12 @@ program
     ;
 
 body
-    : func body { 
+    : func body {
         $$.Stmts = $2.Stmts
         $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
-    | 
+    |
     ;
 
 /* Functions */
@@ -179,7 +179,7 @@ multiplicative_expression
 
 additive_expression
     : multiplicative_expression { $$.Expr = $1.Expr }
-    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "+", $3.Expr} } 
+    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "+", $3.Expr} }
     | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "-", $3.Expr} }
     ;
 

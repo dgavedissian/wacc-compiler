@@ -79,8 +79,8 @@ package main
 import (
 	"os"
 	"fmt"
-  "flag"
-  "strconv"
+	"flag"
+	"strconv"
 )
 
 var lex *Lexer
@@ -113,21 +113,21 @@ func processStr(s string) string {
 }
 
 func (*Lexer) Error(s string) {
-    fmt.Println(s)
-    fmt.Println("Line: " + strconv.Itoa(lex.l))
-    os.Exit(100)
+	fmt.Println(s)
+	fmt.Println("Line: " + strconv.Itoa(lex.l))
+	os.Exit(100)
 }
 
 func main() {
-  enableDebug := flag.Bool("d", false, "Enable debug mode")
-  flag.Parse()
+	enableDebug := flag.Bool("d", false, "Enable debug mode")
+	flag.Parse()
 
-  if *enableDebug {
-	  yyDebug = 20
-  }
+	if *enableDebug {
+		yyDebug = 20
+	}
 
-  // Parse the tree
-  lex = NewLexer(os.Stdin)
-  yyParse(lex)
+	// Parse the tree
+	lex = NewLexer(os.Stdin)
+	yyParse(lex)
 	fmt.Println(top.Stmt.Repr())
 }
