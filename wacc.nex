@@ -45,6 +45,8 @@
 /len/       { return LEN }
 /ord/       { return ORD }
 /chr/       { return CHR }
+/fst/       { return FST }
+/snd/       { return SND }
 
 /\*/        { return '*' }
 /\//        { return '/' }

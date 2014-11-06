@@ -33,7 +33,7 @@
 %token FUNC_IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
-%token LEN ORD CHR
+%token LEN ORD CHR FST SND
 %token LE GE EQ NE AND OR
 %%
 
@@ -99,6 +99,8 @@ statement
 assign_lhs
     : identifier
     | identifier '[' expression ']' /* TODO: REPLACE WITH array_elem */
+    | FST identifier
+    | SND identifier
     ;
 
 assign_rhs
@@ -152,6 +154,7 @@ primary_expression
     | BOOL_LITER          { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER          { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER           { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
+    | PAIR_LITER          { $$.Expr = &BasicLit{0, PAIR_LITER, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     ;
 
@@ -163,6 +166,8 @@ unary_expression
     | LEN unary_expression { $$.Expr = &UnaryExpr{0, "len", $2.Expr} }
     | ORD unary_expression { $$.Expr = &UnaryExpr{0, "ord", $2.Expr} }
     | CHR unary_expression { $$.Expr = &UnaryExpr{0, "chr", $2.Expr} }
+    | FST unary_expression { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
+    | SND unary_expression { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
     ;
 
 multiplicative_expression
