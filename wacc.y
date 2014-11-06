@@ -85,7 +85,7 @@ statement
     | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
     | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
-    | BEGIN statement_list END { $$.Stmt = $2.Stmt }
+    | BEGIN statement_list END { $$.Stmts = $2.Stmts }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
@@ -96,7 +96,7 @@ statement
 
 assign_lhs
     : IDENT {}
-    | IDENT '[' expression ']' {}
+    | IDENT '[' expression ']' /* TODO: REPLACE WITH array_elem */
     ;
 
 assign_rhs
