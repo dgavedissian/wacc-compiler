@@ -1,4 +1,3 @@
-<           { lex.l = 0 }
 /[\n]/      { lex.l += 1 }
 /[ \t]/     { /* Skip blanks and tabs. */ }
 
@@ -68,7 +67,7 @@
 /\(/        { return '(' }
 /\)/        { return ')' }
 
-/#[^\n]*\n/ { /* Comments should be ignored */ }
+/#[^\n]*\n/ { lex.l += 1 /* Comments should be ignored */ }
 
 /./         { lex.Error("Invalid Char: " + strconv.Quote(yylex.Text())) }
 
