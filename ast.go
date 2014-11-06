@@ -155,7 +155,7 @@ func (*UnaryExpr) exprNode()  {}
 func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
 func (x *UnaryExpr) End() Pos { return x.Operand.End() }
 func (x *UnaryExpr) Repr() string {
-	return "Unary(" + x.Operator + ", " + x.Operand.Repr()
+	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
 }
 
 // Binary Expression
@@ -164,7 +164,7 @@ func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
 func (x *BinaryExpr) End() Pos { return x.Right.End() }
 func (x *BinaryExpr) Repr() string {
 	return "Binary(" + x.Operator + ", " +
-		x.Left.Repr() + ", " + x.Right.Repr()
+		x.Left.Repr() + ", " + x.Right.Repr() + ")"
 }
 
 // Program Statement
