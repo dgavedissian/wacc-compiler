@@ -40,8 +40,24 @@
 /;/         { return ';' }
 /,/         { return ',' }
 
-/!|\+|-|len|ord|chr/ { return UNARY_OPER }
-/\*|\/|%|\+|-|[><]=?|[=!]=|&&|\|\|/ { return BINARY_OPER }
+/!/         { return '!' }
+/len/       { return LEN }
+/ord/       { return ORD }
+/chr/       { return CHR }
+
+/\*/        { return '*' }
+/\//        { return '/' }
+/%/         { return '%' }
+/\+/        { return '+' }
+/\-/        { return '-' }
+/</         { return '<' }
+/>/         { return '>' }
+/<=/        { return LE }
+/>=/        { return GE }
+/==/        { return EQ }
+/!=/        { return NE }
+/&&/        { return AND }
+/\|\|/      { return OR }
 
 /[_a-zA-Z][_a-zA-Z0-9]*/ { lval.Value = yylex.Text(); return IDENT }
 

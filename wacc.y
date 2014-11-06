@@ -31,6 +31,8 @@
 %token FUNC_IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
+%token LEN ORD CHR
+%token LE GE EQ NE AND OR
 %%
 
 top
@@ -138,6 +140,69 @@ pair_elem_type
     ;
 
 /* Expression */
+primary_expression
+    : IDENT {}
+    | INT_LITER {}
+    | BOOL_LITER {}
+    | CHAR_LITER {}
+    | STR_LITER {}
+    | '(' expression ')' {}
+    ;
+
+unary_expression
+    : primary_expression
+    | unary_operator unary_expression
+
+unary_operator
+    : '!'
+    | '-'
+    | '+'
+    | LEN
+    | ORD
+    | CHR
+    ;
+
+multiplicative_expression
+    : unary_expression
+    | multiplicative_expression '*' unary_expression
+    | multiplicative_expression '/' unary_expression
+    | multiplicative_expression '%' unary_expression
+    ;
+
+additive_expression
+    : multiplicative_expression
+    | additive_expression '+' multiplicative_expression
+    | additive_expression '-' multiplicative_expression
+    ;
+
+relational_expression
+    : additive_expression
+    | relational_expression '<' additive_expression
+    | relational_expression '>' additive_expression
+    | relational_expression LE additive_expression
+    | relational_expression GE additive_expression
+    ;
+
+equality_expression
+    : relational_expression
+    | equality_expression EQ relational_expression
+    | equality_expression NE relational_expression
+    ;
+
+logical_and_expression
+    : equality_expression
+    | logical_and_expression AND equality_expression
+    ;
+
+logical_or_expression
+    : logical_and_expression
+    | logical_or_expression OR logical_and_expression
+    ;
+
+expression
+    : logical_or_expression
+    ;
+/*
 expression
     : expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
     | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
@@ -154,4 +219,6 @@ expression
 array_elem
     : IDENT '[' expression ']'
     ;
+*/
+
 %%
