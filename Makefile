@@ -26,6 +26,7 @@ parser.go: go wacc.y
 	$(GO) tool yacc -o parser.go wacc.y
 
 lexer.go: go wacc.nex
+	source ~/.bash_profile
 	nex -e=true -o lexer.go wacc.nex
 
 frontend: parser.go lexer.go ast.go
