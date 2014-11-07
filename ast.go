@@ -156,6 +156,9 @@ func (*Ident) exprNode()  {}
 func (x *Ident) Pos() Pos { return x.NamePos }
 func (x *Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
 func (x *Ident) Repr() string {
+	if x.Name == "" {
+		return "Ident(Bad name)"
+	}
 	return "Ident(" + x.Name + ")"
 }
 
@@ -172,6 +175,9 @@ func (*UnaryExpr) exprNode()  {}
 func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
 func (x *UnaryExpr) End() Pos { return x.Operand.End() }
 func (x *UnaryExpr) Repr() string {
+	if x.Operand == nil {
+		return "Unary(" + x.Operator + ", )"
+	}
 	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
 }
 
@@ -180,6 +186,9 @@ func (*BinaryExpr) exprNode()  {}
 func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
 func (x *BinaryExpr) End() Pos { return x.Right.End() }
 func (x *BinaryExpr) Repr() string {
+	if x.Left == nil || x.Right == nil {
+		return "Binary(" + x.Operator + ", , )"
+	}
 	return "Binary(" + x.Operator + ", " +
 		x.Left.Repr() + ", " + x.Right.Repr() + ")"
 }
@@ -208,6 +217,9 @@ func (s *DeclStmt) stmtNode() {}
 func (s *DeclStmt) Pos() Pos  { return s.TypeKw }
 func (s *DeclStmt) End() Pos  { return s.Pos() } // TODO
 func (s *DeclStmt) Repr() string {
+	if s.Right == nil {
+		return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", )"
+	}
 	return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
@@ -216,6 +228,9 @@ func (s *AssignStmt) stmtNode() {}
 func (s *AssignStmt) Pos() Pos  { return s.Ident.Pos() }
 func (s *AssignStmt) End() Pos  { return s.Pos() } // TODO
 func (s *AssignStmt) Repr() string {
+	if s.Right == nil {
+		return "Assign(" + s.Ident.Repr() + ", )"
+	}
 	return "Assign(" + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
@@ -258,10 +273,16 @@ func (*PrintStmt) stmtNode()  {}
 func (s *PrintStmt) Pos() Pos { return s.Print }
 func (s *PrintStmt) End() Pos { return s.Pos() }
 func (s *PrintStmt) Repr() string {
-	if s.NewLine {
-		return "Println(" + s.Right.Repr() + ")"
+	var v string
+	if s.Right == nil {
+		v = ""
 	} else {
-		return "Print(" + s.Right.Repr() + ")"
+		v = s.Right.Repr()
+	}
+	if s.NewLine {
+		return "Println(" + v + ")"
+	} else {
+		return "Print(" + v + ")"
 	}
 }
 
@@ -295,7 +316,8 @@ func (s *Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
 func (s *Func) Repr() string {
-	return "Func(name:" + s.Ident.Repr() +
+	return "Func(type:" + strconv.Itoa(s.Kind) +
+		", name:" + s.Ident.Repr() +
 		", params:(" + ReprParams(s.Params) +
 		"), body:(" + ReprStmts(s.Stmts) + ")"
 }
