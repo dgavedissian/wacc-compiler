@@ -62,7 +62,7 @@ func
     ;
 
 param_list
-    : param ',' param_list { $$.Params = append([]Param{$1.Param}, $2.Params...) }
+    : param ',' param_list { $$.Params = append([]Param{$1.Param}, $3.Params...) }
     | param { $$.Params = []Param{$1.Param} }
     |
     ;
