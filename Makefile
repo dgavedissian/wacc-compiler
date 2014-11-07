@@ -34,10 +34,15 @@ nex:
 go:
 	./installgo.sh
 
-# make test invalids=~/labs/wacc_examples/invalid/ valids=~/labs/wacc_examples/valid/
-test:
-	@echo "Running tests.."
-	@find ./wacc_examples/valid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 100){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}' & 
-	@find ./wacc_examples/invalid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID:", run - failed, "/", run, "tests passed";}'
+test: testvalid testinvalid
+	@echo "Tests complete"
 
-.PHONY: clean all nex test go
+testvalid: frontend
+	@echo "Testing valid cases..."
+	@find ./wacc_examples/valid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 != 0){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'
+
+testinvalid: frontend
+	@echo "Testing invalid cases..."
+	@find ./wacc_examples/invalid/syntaxErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID:", run - failed, "/", run, "tests passed";}'
+
+.PHONY: clean all nex test go testvalid testinvalid
