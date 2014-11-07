@@ -67,10 +67,10 @@ type BinaryExpr struct {
 	Right       Expr
 }
 
-type ArrayIndexExpr struct {
-	IdentPos Pos
-	Ident    Ident
-	Index    Expr
+type IndexExpr struct {
+	VolumePos Pos
+	Volume    Expr
+	Index     Expr
 }
 
 type CallExpr struct {
@@ -263,13 +263,13 @@ func (x *BinaryExpr) Repr() string {
 }
 
 // Array index expression
-func (*ArrayIndexExpr) exprNode()  {}
-func (x *ArrayIndexExpr) Pos() Pos { return x.IdentPos }
-func (x *ArrayIndexExpr) End() Pos {
+func (*IndexExpr) exprNode()  {}
+func (x *IndexExpr) Pos() Pos { return x.VolumePos }
+func (x *IndexExpr) End() Pos {
 	return x.Index.End() + 1 /* Close bracket*/
 }
-func (x *ArrayIndexExpr) Repr() string {
-	return "ArrayIndex(" + x.Ident.Repr() + ", " + x.Index.Repr() + ")"
+func (x *IndexExpr) Repr() string {
+	return "Index(" + x.Volume.Repr() + ", " + x.Index.Repr() + ")"
 }
 
 // Function call

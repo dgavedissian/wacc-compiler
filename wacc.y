@@ -80,7 +80,7 @@ param
 /* Statements */
 statement_list
     : statement { $$.Stmts = []Stmt{$1.Stmt} }
-    | statement ';' statement_list = { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
+    | statement ';' statement_list { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
     ;
 
 statement
@@ -104,9 +104,8 @@ statement
 
 assign_lhs
     : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
-    | identifier '[' expression ']' { $$.Expr = &ArrayIndexExpr{0, $1.Ident, $3.Expr} }
-    | FST identifier { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
-    | SND identifier { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
+    | identifier '[' expression ']' { $$.Expr = &IndexExpr{0, &$1.Ident, $3.Expr} }
+    | pair_elem
     ;
 
 assign_rhs
@@ -116,6 +115,7 @@ assign_rhs
       }
     | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
+    | pair_elem
     ;
 
 identifier
@@ -138,8 +138,8 @@ arg_list
 /* Types */
 type
     : base_type
-    | array_type
     | pair_type
+    | type '[' ']'
     ;
 
 base_type
@@ -163,24 +163,37 @@ pair_elem_type
     | PAIR        {$$.Expr = $1.Expr}
     ;
 
+pair_elem
+    : FST expression { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
+    | SND expression { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
+
 array_liter
-    : expression ',' array_liter {
-      $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
-    }
-    | expression { $$.Exprs =  []Expr{$1.Expr} }
+    : array_contents
     |
     ;
 
+array_contents
+    : expression ',' array_contents {
+      $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
+    }
+    | expression { $$.Exprs =  []Expr{$1.Expr} }
+    ;
+
 /* Expression */
+array_expression
+    : identifier '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
+    | array_expression '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
+    ;
+
 primary_expression
-    : identifier          { $$.Expr = &Ident{0, $1.Value} }
+    : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
     | INT_LITER           { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
     | BOOL_LITER          { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
     | CHAR_LITER          { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
     | STR_LITER           { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
     | PAIR_LITER          { $$.Expr = &BasicLit{0, PAIR_LITER, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
-    | identifier '[' expression ']' { $$.Expr = &ArrayIndexExpr{0, $1.Ident, $3.Expr} }
+    | array_expression
     ;
 
 unary_expression
@@ -191,8 +204,6 @@ unary_expression
     | LEN unary_expression { $$.Expr = &UnaryExpr{0, "len", $2.Expr} }
     | ORD unary_expression { $$.Expr = &UnaryExpr{0, "ord", $2.Expr} }
     | CHR unary_expression { $$.Expr = &UnaryExpr{0, "chr", $2.Expr} }
-    | FST unary_expression { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
-    | SND unary_expression { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
     ;
 
 multiplicative_expression
