@@ -57,16 +57,20 @@ body
 
 /* Functions */
 func
-    : type identifier '(' param_list ')' FUNC_IS statement_list END {
+    : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
         VerifyFunction($7.Stmts)
         $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
       }
     ;
 
+optional_param_list
+    : param_list { $$.Params = $1.Params }
+    |
+    ;
+
 param_list
     : param ',' param_list { $$.Params = append([]Param{$1.Param}, $3.Params...) }
     | param { $$.Params = []Param{$1.Param} }
-    |
     ;
 
 param
@@ -110,7 +114,7 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &PairExpr{0, $3.Kind, $3.Expr, $5.Kind, $5.Expr}
       }
-    | CALL identifier '(' arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
+    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
     ;
 
@@ -118,12 +122,16 @@ identifier
     : IDENT { $$.Ident = Ident{0, $1.Value}; $$.Expr = &Ident{0, $1.Value} }
     ;
 
+optional_arg_list
+    : arg_list { $$.Exprs = $1.Exprs }
+    |
+    ;
+
 arg_list
     : expression ',' arg_list {
         $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
       }
     | expression { $$.Exprs = []Expr{$1.Expr} }
-    |
     ;
 
 
