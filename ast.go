@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"go/token"
 	"strconv"
 	"strings"
@@ -422,6 +421,8 @@ func VerifyStatement(stmt Stmt) bool {
 	case *WhileStmt:
 		whileStmt := stmt.(*WhileStmt)
 		return VerifyStatement(whileStmt.Body[len(whileStmt.Body)-1])
+	case *ExitStmt:
+		return true
 	case *ReturnStmt:
 		return true
 	default:
@@ -429,29 +430,11 @@ func VerifyStatement(stmt Stmt) bool {
 	}
 }
 
+// We're only concerned with the very last statement
 func VerifyFunction(stmtList []Stmt) {
-	isValid := true
-	for _, s := range stmtList {
-		isValid = isValid && VerifyStatement(s)
-
-		// Short circuit if we've found a violation
-		if !isValid {
-			break
-		}
+	if !VerifyStatement(stmtList[len(stmtList)-1]) {
+		lex.Error("syntax error - Function has no return statement on every control path or it doesn't end in an exit statement")
 	}
-
-	// A return was found in every branch so this function body is valid
-	if isValid {
-		return
-	}
-
-	// Does the function end in exit?
-	if _, ok := stmtList[len(stmtList)-1].(*ExitStmt); ok {
-		return
-	}
-
-	// The function isnt valid so error out here
-	lex.Error("syntax error - Function has no return statement on every control path or it doesn't end in an exit statement")
 }
 
 // Function Parameter
