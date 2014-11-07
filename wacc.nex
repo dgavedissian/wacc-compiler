@@ -4,8 +4,8 @@
 
 /[0-9]+/    { lval.Value = yylex.Text(); lval.Kind = INT_LITER; return INT_LITER }
 /(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL_LITER; return BOOL_LITER }
-/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = processStr(yylex.Text()); lval.Kind = STR_LITER; return STR_LITER }
-/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = processStr(yylex.Text()); lval.Kind = CHAR_LITER; return CHAR_LITER }
+/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); lval.Kind = STR_LITER; return STR_LITER }
+/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); lval.Kind = CHAR_LITER; return CHAR_LITER }
 /null/      { return PAIR_LITER }
 
 /begin/     { return BEGIN }
@@ -85,7 +85,7 @@ import (
 
 var lex *Lexer
 
-func processStr(s string) string {
+func ProcessStr(s string) string {
 	s = s[1:len(s) - 1]
 
 	// Replace escaped characters with their unicode equivalent

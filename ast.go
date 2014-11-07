@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
 	"strconv"
 	"strings"
@@ -324,15 +325,15 @@ func (s *AssignStmt) Repr() string {
 }
 
 // Exit Statement
-func (*ExitStmt) stmtNode()  {}
-func (s *ExitStmt) Pos() Pos { return s.Exit }
-func (s *ExitStmt) End() Pos {
+func (ExitStmt) stmtNode()  {}
+func (s ExitStmt) Pos() Pos { return s.Exit }
+func (s ExitStmt) End() Pos {
 	if s.Result != nil {
 		return s.Result.End()
 	}
 	return s.Exit + Pos(len("exit"))
 }
-func (s *ExitStmt) Repr() string {
+func (s ExitStmt) Repr() string {
 	if s.Result != nil {
 		return "Exit(" + s.Result.Repr() + ")"
 	} else {
@@ -409,6 +410,43 @@ func (s *Func) Repr() string {
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprParams(s.Params) +
 		"), body:(" + ReprStmts(s.Stmts) + ")"
+}
+
+// Verification of a function body
+func VerifyStatement(stmt Stmt) bool {
+	switch stmt.(type) {
+	case *ExitStmt:
+		fmt.Println("Statement is exit")
+	default:
+		fmt.Println("Unknown statement")
+	}
+	return true
+}
+
+func VerifyFunction(stmtList []Stmt) {
+	/*hasReturn := true
+	for _, s := range stmtList {
+		hasReturn = hasReturn && VerifyStatement(s)
+		if !hasReturn {
+			fmt.Println("Has no return")
+			break
+		}
+	}
+
+	// A return was found in every branch so this function body is valid
+	if hasReturn {
+		fmt.Println("Has a return")
+		return
+	}*/
+
+	// Does the function end in exit?
+	if _, ok := stmtList[len(stmtList)-1].(*ExitStmt); ok {
+		return
+	}
+
+	// The function isnt valid so error out here
+	fmt.Println("")
+	lex.Error("syntax error - function has no return statement on every control path or an exit at the end")
 }
 
 // Function Parameter
