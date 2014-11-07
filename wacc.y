@@ -44,6 +44,7 @@ top
 
 program
     : BEGIN body END { $$.Stmt = &ProgStmt{0, $2.Funcs, $2.Stmts, 0} }
+    | BEGIN END
     ;
 
 body
@@ -52,7 +53,6 @@ body
         $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
-    |
     ;
 
 /* Functions */
