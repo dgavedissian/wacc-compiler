@@ -39,7 +39,7 @@ nex:
 	$(GO) get github.com/blynn/nex
 
 go:
-	[ -n "${which apt-get}" ] && apt-get install -y golang-go || echo "Go installed"
+	./installgo.sh
 
 # make test invalids=~/labs/wacc_examples/invalid/ valids=~/labs/wacc_examples/valid/
 test:
