@@ -1,4 +1,4 @@
 if [ -n "`which apt-get`" ];
 then
-    apt-get install golang-go
+    apt-get install -y golang-go
 fi
