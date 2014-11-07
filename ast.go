@@ -377,12 +377,12 @@ func (s *PrintStmt) Repr() string {
 }
 
 // If Statement
-func (*IfStmt) stmtNode()  {}
-func (s *IfStmt) Pos() Pos { return s.If }
-func (s *IfStmt) End() Pos {
+func (IfStmt) stmtNode()  {}
+func (s IfStmt) Pos() Pos { return s.If }
+func (s IfStmt) End() Pos {
 	return s.Fi + Pos(len("Fi"))
 }
-func (s *IfStmt) Repr() string {
+func (s IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
 		")Then(" + ReprStmts(s.Body) +
 		")Else(" + ReprStmts(s.Else) + ")"
@@ -415,29 +415,35 @@ func (s *Func) Repr() string {
 // Verification of a function body
 func VerifyStatement(stmt Stmt) bool {
 	switch stmt.(type) {
-	case *ExitStmt:
-		fmt.Println("Statement is exit")
+	case *IfStmt:
+		ifStmt := stmt.(*IfStmt)
+		return VerifyStatement(ifStmt.Body[len(ifStmt.Body)-1]) &&
+			VerifyStatement(ifStmt.Else[len(ifStmt.Else)-1])
+	case *WhileStmt:
+		whileStmt := stmt.(*WhileStmt)
+		return VerifyStatement(whileStmt.Body[len(whileStmt.Body)-1])
+	case *ReturnStmt:
+		return true
 	default:
-		fmt.Println("Unknown statement")
+		return false
 	}
-	return true
 }
 
 func VerifyFunction(stmtList []Stmt) {
-	/*hasReturn := true
+	isValid := true
 	for _, s := range stmtList {
-		hasReturn = hasReturn && VerifyStatement(s)
-		if !hasReturn {
-			fmt.Println("Has no return")
+		isValid = isValid && VerifyStatement(s)
+
+		// Short circuit if we've found a violation
+		if !isValid {
 			break
 		}
 	}
 
 	// A return was found in every branch so this function body is valid
-	if hasReturn {
-		fmt.Println("Has a return")
+	if isValid {
 		return
-	}*/
+	}
 
 	// Does the function end in exit?
 	if _, ok := stmtList[len(stmtList)-1].(*ExitStmt); ok {
@@ -445,8 +451,7 @@ func VerifyFunction(stmtList []Stmt) {
 	}
 
 	// The function isnt valid so error out here
-	fmt.Println("")
-	lex.Error("syntax error - function has no return statement on every control path or an exit at the end")
+	lex.Error("syntax error - Function has no return statement on every control path or it doesn't end in an exit statement")
 }
 
 // Function Parameter
