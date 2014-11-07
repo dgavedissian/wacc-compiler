@@ -41,6 +41,11 @@ type BasicLit struct {
 	Value    string
 }
 
+type ArrayLit struct {
+	ValuesPos Pos
+	Values    []Expr
+}
+
 type PairExpr struct {
 	ValuePos  Pos
 	LeftKind  int
@@ -203,6 +208,22 @@ func (x *BasicLit) Pos() Pos { return x.ValuePos }
 func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x *BasicLit) Repr() string {
 	return "Lit(" + strconv.Itoa(x.Kind) + ", " + x.Value + ")"
+}
+
+// Array literal
+func (*ArrayLit) exprNode()  {}
+func (x *ArrayLit) Pos() Pos { return x.ValuesPos }
+func (x *ArrayLit) End() Pos {
+	if x.Values == nil {
+		return Pos(int(x.ValuesPos) + 1) /* CLose bracket */
+	}
+	return Pos(int(x.Values[len(x.Values)-1].End()) + 1)
+}
+func (x *ArrayLit) Repr() string {
+	if x.Values == nil {
+		return "ArrayLit([])"
+	}
+	return "ArrayLit([" + ReprExprs(x.Values) + "])"
 }
 
 // Pairs

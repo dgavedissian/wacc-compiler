@@ -5,18 +5,18 @@
 %}
 
 %union {
-    Expr Expr
-    Value string
-    Funcs []Func
-    Func  *Func
-    Stmts []Stmt
-    Stmt  Stmt
+    Expr   Expr
+    Value  string
+    Funcs  []Func
+    Func   *Func
+    Stmts  []Stmt
+    Stmt   Stmt
     Params []Param
-    Param Param
-    Kind  int
-    Ident Ident
-    lines int
-    Args  []Expr
+    Param  Param
+    Kind   int
+    Ident  Ident
+    lines  int
+    Exprs  []Expr
 }
 
 %{
@@ -109,7 +109,8 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &PairExpr{0, $3.Kind, $3.Expr, $5.Kind, $5.Expr}
       }
-    | CALL identifier '(' arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Args} }
+    | CALL identifier '(' arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
+    | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
     ;
 
 identifier
@@ -118,9 +119,9 @@ identifier
 
 arg_list
     : expression ',' arg_list {
-      $$.Args = append([]Expr{$1.Expr}, $3.Args...)
+      $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
     }
-    | expression { $$.Args = []Expr{$1.Expr} }
+    | expression { $$.Exprs = []Expr{$1.Expr} }
     |
     ;
 
@@ -151,6 +152,14 @@ pair_elem_type
     : base_type   {$$.Expr = $1.Expr}
     | array_type  {$$.Expr = $1.Expr}
     | PAIR        {$$.Expr = $1.Expr}
+    ;
+
+array_liter
+    : expression ',' array_liter {
+      $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
+    }
+    | expression { $$.Exprs =  []Expr{$1.Expr} }
+    |
     ;
 
 /* Expression */
