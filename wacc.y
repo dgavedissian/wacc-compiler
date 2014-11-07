@@ -57,15 +57,19 @@ body
 
 /* Functions */
 func
-    : type identifier '(' param_list ')' FUNC_IS statement_list END {
+    : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
         $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
       }
+    ;
+
+optional_param_list
+    : param_list { $$.Params = $1.Params }
+    |
     ;
 
 param_list
     : param ',' param_list { $$.Params = append([]Param{$1.Param}, $3.Params...) }
     | param { $$.Params = []Param{$1.Param} }
-    |
     ;
 
 param
