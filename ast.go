@@ -41,6 +41,14 @@ type BasicLit struct {
 	Value    string
 }
 
+type PairExpr struct {
+	ValuePos  Pos
+	LeftKind  int
+	LeftExpr  Expr
+	RightKind int
+	RightExpr Expr
+}
+
 type UnaryExpr struct {
 	OperatorPos Pos
 	Operator    string
@@ -76,6 +84,11 @@ type AssignStmt struct {
 	Ident Ident
 	Right Expr
 }
+
+/* TODO:
+ * Pair element assign e.g. fst p = 1
+ * Array element assign e.g. xs[0] = 1
+ */
 
 type ExitStmt struct {
 	Exit   Pos  // position of "exit" keyword
@@ -168,6 +181,19 @@ func (x *BasicLit) Pos() Pos { return x.ValuePos }
 func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x *BasicLit) Repr() string {
 	return "Lit(" + strconv.Itoa(x.Kind) + ", " + x.Value + ")"
+}
+
+// Pairs
+func (*PairExpr) exprNode()  {}
+func (x *PairExpr) Pos() Pos { return x.ValuePos }
+func (x *PairExpr) End() Pos {
+	return Pos(int(x.ValuePos) + len(x.RightExpr.Repr()) + 1) // Right bracket
+}
+func (x *PairExpr) Repr() string {
+	if x.LeftExpr == nil || x.RightExpr == nil {
+		return "Pair()"
+	}
+	return "Pair(" + strconv.Itoa(x.LeftKind) + ", " + x.LeftExpr.Repr() + strconv.Itoa(x.RightKind) + ", " + x.RightExpr.Repr() + ")"
 }
 
 // Unary Expression
