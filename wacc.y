@@ -129,9 +129,9 @@ type
     ;
 
 base_type
-    : INT { $$.Kind = $1.Kind }
-    | BOOL { $$.Kind = $1.Kind }
-    | CHAR { $$.Kind = $1.Kind }
+    : INT    { $$.Kind = $1.Kind }
+    | BOOL   { $$.Kind = $1.Kind }
+    | CHAR   { $$.Kind = $1.Kind }
     | STRING { $$.Kind = $1.Kind }
     ;
 
