@@ -13,12 +13,12 @@ GO      := GOPATH=$$HOME/go go
 
 # the make rules
 
-all: go frontend
+all: frontend
 
 parser.go: go wacc.y
 	$(GO) tool yacc -o parser.go wacc.y
 
-lexer.go: go wacc.nex
+lexer.go: go nex wacc.nex
 	$$HOME/go/bin/nex -e=true -o lexer.go wacc.nex
 
 frontend: parser.go lexer.go ast.go
@@ -37,9 +37,7 @@ go:
 # make test invalids=~/labs/wacc_examples/invalid/ valids=~/labs/wacc_examples/valid/
 test:
 	@echo "Running tests.."
-	@[ -n "$(valids)" ] && \
-		find $(valids) -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 100){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'; \
- 	[ -n "$(invalids)" ] && \
-		find $(invalids) -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID:", run - failed, "/", run, "tests passed";}'
+	@find ./wacc_examples/valid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 100){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}' & 
+	@find ./wacc_examples/invalid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID:", run - failed, "/", run, "tests passed";}'
 
 .PHONY: clean all nex test go
