@@ -1,3 +1,4 @@
+#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 if [ -n "`which apt-get`" ];
 then
