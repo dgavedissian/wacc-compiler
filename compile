@@ -12,12 +12,21 @@ parser.add_argument('-d',
                     action='store_const',
                     const='True',
                     help="Gives further information useful for debugging")
+parser.add_argument('-x',
+                    '--exit-code',
+                    action='store_const',
+                    const='True',
+                    help="Only prints exit code of compilation")
+
 
 args = parser.parse_args()
 filename = args.filename if args.filename else ""
 debug = '-d' if args.debug else ''
 
-print(filename, debug)
-
-command = "cat {} | ./frontend {}".format(filename, debug)
-sys.exit(subprocess.call(command, shell=True))
+if args.exit_code:
+    command = "cat {} | ./frontend &> /dev/null".format(filename)
+    print(subprocess.call(command, shell=True))
+else:
+    command = "cat {} | ./frontend {}".format(filename, debug)
+    print(filename, debug)
+    sys.exit(subprocess.call(command, shell=True))
