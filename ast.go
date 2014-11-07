@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
 	"strconv"
 	"strings"
@@ -324,15 +325,15 @@ func (s *AssignStmt) Repr() string {
 }
 
 // Exit Statement
-func (*ExitStmt) stmtNode()  {}
-func (s *ExitStmt) Pos() Pos { return s.Exit }
-func (s *ExitStmt) End() Pos {
+func (ExitStmt) stmtNode()  {}
+func (s ExitStmt) Pos() Pos { return s.Exit }
+func (s ExitStmt) End() Pos {
 	if s.Result != nil {
 		return s.Result.End()
 	}
 	return s.Exit + Pos(len("exit"))
 }
-func (s *ExitStmt) Repr() string {
+func (s ExitStmt) Repr() string {
 	if s.Result != nil {
 		return "Exit(" + s.Result.Repr() + ")"
 	} else {
@@ -376,12 +377,12 @@ func (s *PrintStmt) Repr() string {
 }
 
 // If Statement
-func (*IfStmt) stmtNode()  {}
-func (s *IfStmt) Pos() Pos { return s.If }
-func (s *IfStmt) End() Pos {
+func (IfStmt) stmtNode()  {}
+func (s IfStmt) Pos() Pos { return s.If }
+func (s IfStmt) End() Pos {
 	return s.Fi + Pos(len("Fi"))
 }
-func (s *IfStmt) Repr() string {
+func (s IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
 		")Then(" + ReprStmts(s.Body) +
 		")Else(" + ReprStmts(s.Else) + ")"
@@ -409,6 +410,48 @@ func (s *Func) Repr() string {
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprParams(s.Params) +
 		"), body:(" + ReprStmts(s.Stmts) + ")"
+}
+
+// Verification of a function body
+func VerifyStatement(stmt Stmt) bool {
+	switch stmt.(type) {
+	case *IfStmt:
+		ifStmt := stmt.(*IfStmt)
+		return VerifyStatement(ifStmt.Body[len(ifStmt.Body)-1]) &&
+			VerifyStatement(ifStmt.Else[len(ifStmt.Else)-1])
+	case *WhileStmt:
+		whileStmt := stmt.(*WhileStmt)
+		return VerifyStatement(whileStmt.Body[len(whileStmt.Body)-1])
+	case *ReturnStmt:
+		return true
+	default:
+		return false
+	}
+}
+
+func VerifyFunction(stmtList []Stmt) {
+	isValid := true
+	for _, s := range stmtList {
+		isValid = isValid && VerifyStatement(s)
+
+		// Short circuit if we've found a violation
+		if !isValid {
+			break
+		}
+	}
+
+	// A return was found in every branch so this function body is valid
+	if isValid {
+		return
+	}
+
+	// Does the function end in exit?
+	if _, ok := stmtList[len(stmtList)-1].(*ExitStmt); ok {
+		return
+	}
+
+	// The function isnt valid so error out here
+	lex.Error("syntax error - Function has no return statement on every control path or it doesn't end in an exit statement")
 }
 
 // Function Parameter

@@ -58,6 +58,7 @@ body
 /* Functions */
 func
     : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
+        VerifyFunction($7.Stmts)
         $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
       }
     ;
@@ -128,8 +129,8 @@ optional_arg_list
 
 arg_list
     : expression ',' arg_list {
-      $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
-    }
+        $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
+      }
     | expression { $$.Exprs = []Expr{$1.Expr} }
     ;
 
