@@ -1,6 +1,6 @@
 # Sample Makefile for the WACC Compiler lab: edit this to build your own comiler
 # Locations
-
+SHELL       := /bin/bash
 SOURCE_DIR	:= src
 OUTPUT_DIR	:= bin 
 
@@ -39,7 +39,7 @@ nex:
 	$(GO) get github.com/blynn/nex
 
 go:
-	./installgo.sh
+	source installgo.sh
 
 # make test invalids=~/labs/wacc_examples/invalid/ valids=~/labs/wacc_examples/valid/
 test:
