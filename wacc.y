@@ -16,6 +16,7 @@
     Kind  int
     Ident Ident
     lines int
+    Args  []Expr
 }
 
 %{
@@ -98,7 +99,7 @@ statement
 
 assign_lhs
     : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
-    | identifier '[' expression ']' /* TODO: REPLACE WITH array_elem */
+    | identifier '[' expression ']' { $$.Expr = &ArrayIndexExpr{0, $1.Ident, $3.Expr} }
     | FST identifier { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
     | SND identifier { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
     ;
@@ -108,7 +109,7 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &PairExpr{0, $3.Kind, $3.Expr, $5.Kind, $5.Expr}
       }
-    | CALL identifier '(' arg_list ')' {}
+    | CALL identifier '(' arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Args} }
     ;
 
 identifier
@@ -116,10 +117,13 @@ identifier
     ;
 
 arg_list
-    : expression ',' arg_list {}
-    | expression {}
+    : expression ',' arg_list {
+      $$.Args = append([]Expr{$1.Expr}, $3.Args...)
+    }
+    | expression { $$.Args = []Expr{$1.Expr} }
     |
     ;
+
 
 /* Types */
 type
@@ -158,6 +162,7 @@ primary_expression
     | STR_LITER           { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
     | PAIR_LITER          { $$.Expr = &BasicLit{0, PAIR_LITER, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
+    | identifier '[' expression ']' { $$.Expr = &ArrayIndexExpr{0, $1.Ident, $3.Expr} }
     ;
 
 unary_expression

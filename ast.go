@@ -62,6 +62,18 @@ type BinaryExpr struct {
 	Right       Expr
 }
 
+type ArrayIndexExpr struct {
+	IdentPos Pos
+	Ident    Ident
+	Index    Expr
+}
+
+type CallExpr struct {
+	Call  Pos
+	Ident Ident
+	Args  []Expr
+}
+
 type ProgStmt struct {
 	BeginKw Pos // position of "begin" keyword
 	Funcs   []Func
@@ -164,6 +176,16 @@ func ReprStmts(stmtList []Stmt) string {
 	return strings.Join(statements, ", ")
 }
 
+func ReprExprs(exprList []Expr) string {
+	exprs := []string{}
+	for _, x := range exprList {
+		if x != nil {
+			exprs = append(exprs, x.Repr())
+		}
+	}
+	return strings.Join(exprs, ", ")
+}
+
 // Identifier
 func (*Ident) exprNode()  {}
 func (x *Ident) Pos() Pos { return x.NamePos }
@@ -217,6 +239,26 @@ func (x *BinaryExpr) Repr() string {
 	}
 	return "Binary(" + x.Operator + ", " +
 		x.Left.Repr() + ", " + x.Right.Repr() + ")"
+}
+
+// Array index expression
+func (*ArrayIndexExpr) exprNode()  {}
+func (x *ArrayIndexExpr) Pos() Pos { return x.IdentPos }
+func (x *ArrayIndexExpr) End() Pos {
+	return x.Index.End() + 1 /* Close bracket*/
+}
+func (x *ArrayIndexExpr) Repr() string {
+	return "ArrayIndex(" + x.Ident.Repr() + ", " + x.Index.Repr() + ")"
+}
+
+// Function call
+func (*CallExpr) exprNode()  {}
+func (x *CallExpr) Pos() Pos { return x.Call }
+func (x *CallExpr) End() Pos {
+	return x.Call /* TODO */
+}
+func (x *CallExpr) Repr() string {
+	return "Call(" + x.Ident.Repr() + ", " + ReprExprs(x.Args) + ")"
 }
 
 // Program Statement
