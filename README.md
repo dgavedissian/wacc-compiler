@@ -19,7 +19,6 @@ Tests
 Set up
 ******
 ```
-cd wacc_examples
 git submodule init
 git submodule update
 ```
