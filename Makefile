@@ -34,15 +34,20 @@ nex:
 go:
 	./installgo.sh
 
-test: testvalid testinvalid
+test: testvalid testinvalidsyntax testinvalidsemantic
 	@echo "Tests complete"
 
 testvalid: frontend
 	@echo "Testing valid cases..."
 	@find ./wacc_examples/valid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 != 0){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'
 
-testinvalid: frontend
-	@echo "Testing invalid cases..."
-	@find ./wacc_examples/invalid/syntaxErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID:", run - failed, "/", run, "tests passed";}'
+testinvalidsyntax: frontend
+	@echo "Testing invalid syntax cases..."
+	@find ./wacc_examples/invalid/syntaxErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
 
-.PHONY: clean all nex test go testvalid testinvalid
+testinvalidsemantic: frontend
+	@echo "Testing invalid semantic cases..."
+	@find ./wacc_examples/invalid/semanticErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
+
+
+.PHONY: clean all nex test go testvalid testinvalidsyntax testinvalidsemantic
