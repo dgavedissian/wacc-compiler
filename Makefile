@@ -39,15 +39,15 @@ test: testvalid testinvalidsyntax testinvalidsemantic
 
 testvalid: frontend
 	@echo "Testing valid cases..."
-	@find ./wacc_examples/valid/ -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 != 0){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'
+	@find ./wacc_examples/valid/ -name *.wacc | xargs -n 1 -P 4 ./compile -x | awk '{run+=1; if ($$0 != 0){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'
 
 testinvalidsyntax: frontend
 	@echo "Testing invalid syntax cases..."
-	@find ./wacc_examples/invalid/syntaxErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
+	@find ./wacc_examples/invalid/syntaxErr -name *.wacc | xargs -n 1 -P 4 ./compile -x | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
 
 testinvalidsemantic: frontend
 	@echo "Testing invalid semantic cases..."
-	@find ./wacc_examples/invalid/semanticErr -name *.wacc -exec ./compile -x {} ";" | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
+	@find ./wacc_examples/invalid/semanticErr -name *.wacc | xargs -n 1 -P 4 ./compile -x | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
 
 
 .PHONY: clean all nex test go testvalid testinvalidsyntax testinvalidsemantic
