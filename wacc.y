@@ -207,7 +207,10 @@ unary_expression
     ;
 
 multiplicative_expression
-    : unary_expression { $$.Expr = $1.Expr }
+    : unary_expression {
+        VerifyNoOverflows($1.Expr)
+        $$.Expr = $1.Expr
+    }
     | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "*", $3.Expr} }
     | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "/", $3.Expr} }
     | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "%", $3.Expr} }

@@ -430,6 +430,58 @@ func VerifyStatementReturns(stmt Stmt) bool {
 	}
 }
 
+func IntLiteralToIntConst(basicLit BasicLit) int64 {
+	n, _ := strconv.ParseInt(basicLit.Value, 10, 64)
+	return n
+}
+
+func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
+	operand := unaryExpr.Operand
+
+	switch operand.(type) {
+
+	case *BasicLit:
+		basicLit := operand.(*BasicLit)
+		if basicLit.Kind == INT_LITER {
+			n := IntLiteralToIntConst(*basicLit)
+			return n < -(1 << 31)
+		}
+		return false
+
+	default:
+		return StaticExprOverflows(operand)
+	}
+}
+
+func StaticExprOverflows(expr Expr) bool {
+	switch expr.(type) {
+
+	case *UnaryExpr:
+		unaryExpr := expr.(*UnaryExpr)
+		if unaryExpr.Operator == "-" {
+			return StaticUnaryMinusOverflows(*unaryExpr)
+		}
+		return StaticExprOverflows(unaryExpr.Operand)
+
+	case *BasicLit:
+		basicLit := expr.(*BasicLit)
+		if basicLit.Kind == INT_LITER {
+			n := IntLiteralToIntConst(*basicLit)
+			return n > ((1 << 31) - 1)
+		}
+		return false
+
+	default:
+		return false
+	}
+}
+
+func VerifyNoOverflows(expr Expr) {
+	if StaticExprOverflows(expr) {
+		lex.Error("Syntax Error - Int literal overflow")
+	}
+}
+
 // We're only concerned with the very last statement
 func VerifyFunctionReturns(stmtList []Stmt) {
 	if !VerifyStatementReturns(stmtList[len(stmtList)-1]) {
