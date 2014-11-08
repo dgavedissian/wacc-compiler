@@ -58,7 +58,7 @@ body
 /* Functions */
 func
     : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
-        VerifyFunction($7.Stmts)
+        VerifyFunctionReturns($7.Stmts)
         $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
       }
     ;

@@ -412,15 +412,15 @@ func (s *Func) Repr() string {
 }
 
 // Verification of a function body
-func VerifyStatement(stmt Stmt) bool {
+func VerifyStatementReturns(stmt Stmt) bool {
 	switch stmt.(type) {
 	case *IfStmt:
 		ifStmt := stmt.(*IfStmt)
-		return VerifyStatement(ifStmt.Body[len(ifStmt.Body)-1]) &&
-			VerifyStatement(ifStmt.Else[len(ifStmt.Else)-1])
+		return VerifyStatementReturns(ifStmt.Body[len(ifStmt.Body)-1]) &&
+			VerifyStatementReturns(ifStmt.Else[len(ifStmt.Else)-1])
 	case *WhileStmt:
 		whileStmt := stmt.(*WhileStmt)
-		return VerifyStatement(whileStmt.Body[len(whileStmt.Body)-1])
+		return VerifyStatementReturns(whileStmt.Body[len(whileStmt.Body)-1])
 	case *ExitStmt:
 		return true
 	case *ReturnStmt:
@@ -431,9 +431,9 @@ func VerifyStatement(stmt Stmt) bool {
 }
 
 // We're only concerned with the very last statement
-func VerifyFunction(stmtList []Stmt) {
-	if !VerifyStatement(stmtList[len(stmtList)-1]) {
-		lex.Error("syntax error - Function has no return statement on every control path or it doesn't end in an exit statement")
+func VerifyFunctionReturns(stmtList []Stmt) {
+	if !VerifyStatementReturns(stmtList[len(stmtList)-1]) {
+		lex.Error("Syntax Error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }
 
