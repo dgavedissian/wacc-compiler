@@ -71,7 +71,7 @@
 
 /#[^\n]*\n/ { lex.l += 1 /* Comments should be ignored */ }
 
-/./         { lex.Error("Invalid Char: " + strconv.Quote(yylex.Text())) }
+/./         { lex.Error("Invalid Char") }
 
 //
 package main
@@ -82,6 +82,8 @@ import (
 	"flag"
 	"strconv"
 )
+
+const SYNTAX_ERROR = 100
 
 var lex *Lexer
 
@@ -113,9 +115,11 @@ func ProcessStr(s string) string {
 }
 
 func (*Lexer) Error(s string) {
-	fmt.Println(s)
-	fmt.Println("Line: " + strconv.Itoa(lex.l))
-	os.Exit(100)
+	unexpectedToken := "<EOF>"
+	if len(lex.stack) > 0 {
+		unexpectedToken = strconv.Quote(lex.Text())
+	}
+	fmt.Printf("Line %d: %s -- unexpected %s\n", lex.l, s, unexpectedToken)
 }
 
 func main() {
@@ -129,6 +133,11 @@ func main() {
 	// Parse the tree
 	// We tend to think of the first line as line 1, not line 0
 	lex = NewLexerWithInit(os.Stdin, func(l *Lexer){l.l = 1})
-	yyParse(lex)
-	fmt.Println(top.Stmt.Repr())
+	e := yyParse(lex)
+	if e > 0 {
+		os.Exit(SYNTAX_ERROR)
+	}
+	if top.Stmt != nil {
+		fmt.Println(top.Stmt.Repr())
+	}
 }

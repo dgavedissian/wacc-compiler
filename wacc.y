@@ -81,6 +81,7 @@ param
 statement_list
     : statement { $$.Stmts = []Stmt{$1.Stmt} }
     | statement ';' statement_list { $$.Stmts = append([]Stmt{$1.Stmt}, $3.Stmts...) }
+    | error ';' statement_list
     ;
 
 statement
