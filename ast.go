@@ -480,14 +480,14 @@ func StaticExprOverflows(expr Expr) bool {
 
 func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
-		lex.Error("Syntax Error - Int literal overflow")
+		lex.Error("syntax error - Int literal overflow")
 	}
 }
 
 // We're only concerned with the very last statement
 func VerifyFunctionReturns(stmtList []Stmt) {
 	if !VerifyStatementReturns(stmtList[len(stmtList)-1]) {
-		lex.Error("Syntax Error - Function has no return statement on every control path or doesn't end in an exit statement")
+		lex.Error("syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }
 

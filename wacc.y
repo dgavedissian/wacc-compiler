@@ -44,7 +44,6 @@ top
 
 program
     : BEGIN body END { $$.Stmt = &ProgStmt{0, $2.Funcs, $2.Stmts, 0} }
-    | BEGIN END
     ;
 
 body

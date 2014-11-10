@@ -86,6 +86,7 @@ import (
 const SYNTAX_ERROR = 100
 
 var lex *Lexer
+var exitFlag int = 0
 
 func ProcessStr(s string) string {
 	s = s[1:len(s) - 1]
@@ -120,6 +121,7 @@ func (*Lexer) Error(s string) {
 		unexpectedToken = strconv.Quote(lex.Text())
 	}
 	fmt.Printf("Line %d: %s -- unexpected %s\n", lex.l, s, unexpectedToken)
+	exitFlag = SYNTAX_ERROR
 }
 
 func main() {
@@ -133,11 +135,10 @@ func main() {
 	// Parse the tree
 	// We tend to think of the first line as line 1, not line 0
 	lex = NewLexerWithInit(os.Stdin, func(l *Lexer){l.l = 1})
-	e := yyParse(lex)
-	if e > 0 {
+	yyParse(lex)
+	if exitFlag != 0 {
 		os.Exit(SYNTAX_ERROR)
 	}
-	if top.Stmt != nil {
-		fmt.Println(top.Stmt.Repr())
-	}
+	
+	fmt.Println(top.Stmt.Repr())
 }
