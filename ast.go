@@ -197,7 +197,7 @@ func (x *Ident) Pos() Pos { return x.NamePos }
 func (x *Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
 func (x *Ident) Repr() string {
 	if x.Name == "" {
-		return "Ident(Bad name)"
+		return "Ident(<missing name>)"
 	}
 	return "Ident(" + x.Name + ")"
 }
@@ -234,9 +234,10 @@ func (x *PairExpr) End() Pos {
 }
 func (x *PairExpr) Repr() string {
 	if x.LeftExpr == nil || x.RightExpr == nil {
-		return "Pair()"
+		return "Pair(<missing elements>)"
 	}
-	return "Pair(" + strconv.Itoa(x.LeftKind) + ", " + x.LeftExpr.Repr() + strconv.Itoa(x.RightKind) + ", " + x.RightExpr.Repr() + ")"
+	return "Pair(" + strconv.Itoa(x.LeftKind) + ", " + x.LeftExpr.Repr() +
+		", " + strconv.Itoa(x.RightKind) + ", " + x.RightExpr.Repr() + ")"
 }
 
 // Unary Expression
@@ -245,7 +246,7 @@ func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
 func (x *UnaryExpr) End() Pos { return x.Operand.End() }
 func (x *UnaryExpr) Repr() string {
 	if x.Operand == nil {
-		return "Unary(" + x.Operator + ", )"
+		return "Unary(" + x.Operator + ", <missing operand>)"
 	}
 	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
 }
@@ -307,7 +308,7 @@ func (s *DeclStmt) Pos() Pos  { return s.TypeKw }
 func (s *DeclStmt) End() Pos  { return s.Pos() } // TODO
 func (s *DeclStmt) Repr() string {
 	if s.Right == nil {
-		return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", )"
+		return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", <missing rhs>)"
 	}
 	return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
@@ -318,7 +319,7 @@ func (s *AssignStmt) Pos() Pos  { return s.Ident.Pos() }
 func (s *AssignStmt) End() Pos  { return s.Pos() } // TODO
 func (s *AssignStmt) Repr() string {
 	if s.Right == nil {
-		return "Assign(" + s.Ident.Repr() + ", )"
+		return "Assign(" + s.Ident.Repr() + ", <missing rhs>)"
 	}
 	return "Assign(" + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
@@ -336,7 +337,7 @@ func (s ExitStmt) Repr() string {
 	if s.Result != nil {
 		return "Exit(" + s.Result.Repr() + ")"
 	} else {
-		return "Exit()"
+		return "Exit(<missing expr>)"
 	}
 }
 
@@ -353,7 +354,7 @@ func (s *ReturnStmt) Repr() string {
 	if s.Result != nil {
 		return "Return(" + s.Result.Repr() + ")"
 	} else {
-		return "Return()"
+		return "Return(<missing expr>)"
 	}
 }
 
