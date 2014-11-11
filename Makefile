@@ -21,7 +21,7 @@ parser.go: go wacc.y
 lexer.go: go nex wacc.nex
 	$$HOME/go/bin/nex -e=true -o lexer.go wacc.nex
 
-frontend: parser.go lexer.go ast.go
+frontend: parser.go lexer.go ast.go syntax.go
 	$(GO) build -o frontend $^
 
 clean:
