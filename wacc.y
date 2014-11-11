@@ -24,7 +24,7 @@
 %}
 
 %token BEGIN END
-%token INT_LITER BOOL_LITER CHAR_LITER STR_LITER PAIR_LITER
+%token INT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
 %token INT_SIGN
 %token IDENT
 %token UNARY_OPER BINARY_OPER
@@ -105,7 +105,7 @@ statement
 assign_lhs
     : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
     | identifier '[' expression ']' { $$.Expr = &IndexExpr{0, &$1.Ident, $3.Expr} }
-    | pair_elem
+    | pair_elem      { $$.Expr = $1.Expr }
     ;
 
 assign_rhs
@@ -158,9 +158,9 @@ pair_type
     ;
 
 pair_elem_type
-    : base_type   {$$.Expr = $1.Expr}
-    | array_type  {$$.Expr = $1.Expr}
-    | PAIR        {$$.Expr = $1.Expr}
+    : base_type   { $$.Expr = $1.Expr }
+    | array_type  { $$.Expr = $1.Expr }
+    | PAIR        { $$.Expr = $1.Expr }
     ;
 
 pair_elem
@@ -187,11 +187,11 @@ array_expression
 
 primary_expression
     : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
-    | INT_LITER           { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
-    | BOOL_LITER          { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
-    | CHAR_LITER          { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
-    | STR_LITER           { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
-    | PAIR_LITER          { $$.Expr = &BasicLit{0, PAIR_LITER, $1.Value} }
+    | INT_LIT             { $$.Expr = &BasicLit{0, INT_LIT, $1.Value} }
+    | BOOL_LIT            { $$.Expr = &BasicLit{0, BOOL_LIT, $1.Value} }
+    | CHAR_LIT            { $$.Expr = &BasicLit{0, CHAR_LIT, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{0, STRING_LIT, $1.Value} }
+    | PAIR_LIT            { $$.Expr = &BasicLit{0, PAIR_LIT, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
     ;
@@ -249,23 +249,5 @@ logical_or_expression
 expression
     : logical_or_expression { $$.Expr = $1.Expr }
     ;
-/*
-expression
-    : expression BINARY_OPER expression { $$.Expr = &BinaryExpr{$1.Expr, 0, $2.Value, $3.Expr} }
-    | UNARY_OPER expression { $$.Expr = &UnaryExpr{0, $1.Value, $2.Expr} }
-    | INT_LITER    { $$.Expr = &BasicLit{0, INT_LITER, $1.Value} }
-    | BOOL_LITER   { $$.Expr = &BasicLit{0, BOOL_LITER, $1.Value} }
-    | CHAR_LITER   { $$.Expr = &BasicLit{0, CHAR_LITER, $1.Value} }
-    | STR_LITER    { $$.Expr = &BasicLit{0, STR_LITER, $1.Value} }
-    | PAIR_LITER
-    | IDENT
-    | array_elem
-    | '(' expression ')' { $$.Expr = $2.Expr }
-    ;
-
-array_elem
-    : IDENT '[' expression ']'
-    ;
-*/
 
 %%
