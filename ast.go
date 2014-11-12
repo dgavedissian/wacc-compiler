@@ -308,9 +308,9 @@ func (s DeclStmt) Pos() Pos { return s.TypeKw }
 func (s DeclStmt) End() Pos { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
-		return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", <missing rhs>)"
+		return "Decl(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ", <missing rhs>)"
 	}
-	return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
+	return "Decl(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Assign Statement
