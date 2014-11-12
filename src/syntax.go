@@ -11,13 +11,17 @@ func VerifyStatementReturns(stmt Stmt) bool {
 		ifStmt := stmt.(*IfStmt)
 		return VerifyStatementReturns(ifStmt.Body[len(ifStmt.Body)-1]) &&
 			VerifyStatementReturns(ifStmt.Else[len(ifStmt.Else)-1])
+
 	case *WhileStmt:
 		whileStmt := stmt.(*WhileStmt)
 		return VerifyStatementReturns(whileStmt.Body[len(whileStmt.Body)-1])
+
 	case *ExitStmt:
 		return true
+
 	case *ReturnStmt:
 		return true
+
 	default:
 		return false
 	}
@@ -32,7 +36,6 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 	operand := unaryExpr.Operand
 
 	switch operand.(type) {
-
 	case *BasicLit:
 		basicLit := operand.(*BasicLit)
 		if basicLit.Kind == INT_LIT {
@@ -50,7 +53,6 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 
 func StaticExprOverflows(expr Expr) bool {
 	switch expr.(type) {
-
 	case *UnaryExpr:
 		unaryExpr := expr.(*UnaryExpr)
 		if unaryExpr.Operator == "-" {
@@ -73,13 +75,13 @@ func StaticExprOverflows(expr Expr) bool {
 
 func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
-		lex.Error("syntax error - Int literal overflow")
+		SyntaxError("syntax error - Int literal overflow")
 	}
 }
 
 // We're only concerned with the very last statement
 func VerifyFunctionReturns(stmtList []Stmt) {
 	if !VerifyStatementReturns(stmtList[len(stmtList)-1]) {
-		lex.Error("syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
+		SyntaxError("syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }
