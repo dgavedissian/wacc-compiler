@@ -1,7 +1,5 @@
 package main
 
-import ()
-
 func VerifySemantics(program *ProgStmt) {
 	// Verify functions
 	for _, f := range program.Funcs {
