@@ -154,41 +154,42 @@ type WhileStmt struct {
 }
 
 // Repr helpers
-// David: Can't make this general to []Node :( @Luke help?
-func ReprFuncs(funcList []Func) string {
-	funcs := []string{}
-	for _, f := range funcList {
-		funcs = append(funcs, f.Repr())
-	}
-	return strings.Join(funcs, ", ")
-}
-
-func ReprParams(paramList []Param) string {
-	params := []string{}
-	for _, p := range paramList {
-		params = append(params, p.Repr())
-	}
-	return strings.Join(params, ", ")
-}
-
-func ReprStmts(stmtList []Stmt) string {
-	statements := []string{}
-	for _, s := range stmtList {
-		if s != nil {
-			statements = append(statements, s.Repr())
+func ReprNodes(nodeList interface{}) string {
+	realNodeList := make([]Node, 0)
+	switch nodeList := nodeList.(type) {
+	case []Node:
+		return reprNodesInt(nodeList)
+	case []Stmt:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
 		}
+		return reprNodesInt(realNodeList)
+	case []Expr:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	case []Func:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	case []Param:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	default:
+		panic("nodeList is not of valid type")
 	}
-	return strings.Join(statements, ", ")
 }
 
-func ReprExprs(exprList []Expr) string {
-	exprs := []string{}
-	for _, x := range exprList {
-		if x != nil {
-			exprs = append(exprs, x.Repr())
-		}
+func reprNodesInt(nodeList []Node) string {
+	nodes := []string{}
+	for _, f := range nodeList {
+		nodes = append(nodes, f.(Node).Repr())
 	}
-	return strings.Join(exprs, ", ")
+	return strings.Join(nodes, ", ")
 }
 
 // Identifier
@@ -223,7 +224,7 @@ func (x ArrayLit) Repr() string {
 	if x.Values == nil {
 		return "ArrayLit([])"
 	}
-	return "ArrayLit([" + ReprExprs(x.Values) + "])"
+	return "ArrayLit([" + ReprNodes(x.Values) + "])"
 }
 
 // Pairs
@@ -280,7 +281,7 @@ func (x CallExpr) End() Pos {
 	return x.Call /* TODO */
 }
 func (x CallExpr) Repr() string {
-	return "Call(" + x.Ident.Repr() + ", " + ReprExprs(x.Args) + ")"
+	return "Call(" + x.Ident.Repr() + ", " + ReprNodes(x.Args) + ")"
 }
 
 // Program Statement
@@ -290,8 +291,8 @@ func (s ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
 func (s ProgStmt) Repr() string {
-	return "Prog(" + ReprFuncs(s.Funcs) + ")(" +
-		ReprStmts(s.Body) + ")"
+	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
+		ReprNodes(s.Body) + ")"
 }
 
 // Skip Statement
@@ -384,8 +385,8 @@ func (s IfStmt) End() Pos {
 }
 func (s IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
-		")Then(" + ReprStmts(s.Body) +
-		")Else(" + ReprStmts(s.Else) + ")"
+		")Then(" + ReprNodes(s.Body) +
+		")Else(" + ReprNodes(s.Else) + ")"
 }
 
 // While Statement
@@ -396,7 +397,7 @@ func (s WhileStmt) End() Pos {
 }
 func (s WhileStmt) Repr() string {
 	return "While(" + s.Cond.Repr() +
-		")Do(" + ReprStmts(s.Body) +
+		")Do(" + ReprNodes(s.Body) +
 		")Done"
 }
 
@@ -408,8 +409,8 @@ func (s Func) End() Pos {
 func (s Func) Repr() string {
 	return "Func(type:" + strconv.Itoa(s.Kind) +
 		", name:" + s.Ident.Repr() +
-		", params:(" + ReprParams(s.Params) +
-		"), body:(" + ReprStmts(s.Stmts) + ")"
+		", params:(" + ReprNodes(s.Params) +
+		"), body:(" + ReprNodes(s.Stmts) + ")"
 }
 
 // Function Parameter
