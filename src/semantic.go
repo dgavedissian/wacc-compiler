@@ -11,7 +11,11 @@ func VerifySemantics(program *ProgStmt) {
 	}
 
 	// Verify statements
-	for _, s := range program.Body {
+	VerifyStatementListSemantics(program.Body)
+}
+
+func VerifyStatementListSemantics(statementList []Stmt) {
+	for _, s := range statementList {
 		VerifyStatementSemantics(s)
 	}
 }
@@ -35,17 +39,23 @@ func VerifyStatementSemantics(statement Stmt) {
 
 		// Check for boolean condition
 		if GetKind(ifStmt.Cond) != BOOL {
-			SemanticError("semantic error - Condition is not a bool")
+			SemanticError("semantic error - Condition '%s' is not a bool", ifStmt.Cond.Repr())
 		}
 
 		// Verify branches
-		for _, s := range ifStmt.Body {
-			VerifyStatementSemantics(s)
-		}
-		for _, s := range ifStmt.Else {
-			VerifyStatementSemantics(s)
+		VerifyStatementListSemantics(ifStmt.Body)
+		VerifyStatementListSemantics(ifStmt.Else)
+
+	case *WhileStmt:
+		whileStmt := statement.(*WhileStmt)
+
+		// Check the condition
+		if GetKind(whileStmt.Cond) != BOOL {
+			SemanticError("semantic error - Condition '%s' is not a bool", whileStmt.Cond.Repr())
 		}
 
+		// Verfy body
+		VerifyStatementListSemantics(whileStmt.Body)
 	}
 }
 
