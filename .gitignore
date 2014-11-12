@@ -34,3 +34,4 @@
 parser.go
 lexer.go
 frontend
+build

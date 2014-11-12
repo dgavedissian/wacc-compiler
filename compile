@@ -24,9 +24,9 @@ filename = args.filename if args.filename else ""
 debug = '-d' if args.debug else ''
 
 if args.exit_code:
-    command = "cat {} | ./frontend".format(filename)
+    command = "cat {} | ./build/frontend".format(filename)
     print(subprocess.call(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
 else:
-    command = "cat {} | ./frontend {}".format(filename, debug)
+    command = "cat {} | ./build/frontend {}".format(filename, debug)
     print(filename, debug)
     sys.exit(subprocess.call(command, shell=True))
