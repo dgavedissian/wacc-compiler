@@ -75,13 +75,16 @@ func StaticExprOverflows(expr Expr) bool {
 
 func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
-		SyntaxError("syntax error - Int literal overflow")
+		// TODO: Use token.Position.Line rather than lex.l
+		SyntaxError(lex.l, "syntax error - Int literal overflow")
 	}
 }
 
 // We're only concerned with the very last statement
 func VerifyFunctionReturns(stmtList []Stmt) {
-	if !VerifyStatementReturns(stmtList[len(stmtList)-1]) {
-		SyntaxError("syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
+	endStmt := stmtList[len(stmtList)-1]
+	if !VerifyStatementReturns(endStmt) {
+		// TODO: Use token.Position.Line rather than lex.l
+		SyntaxError(lex.l, "syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }

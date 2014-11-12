@@ -28,7 +28,7 @@ func VerifyStatementSemantics(statement Stmt) {
 	case *DeclStmt:
 		declStatement := statement.(*DeclStmt)
 		if declStatement.Kind != GetKind(declStatement.Right) {
-			SemanticError("semantic error - Right hand side of variable declaration doesn't match the type of the variable")
+			SemanticError(0, "semantic error - Right hand side of variable declaration doesn't match the type of the variable")
 		}
 
 	case *AssignStmt:
@@ -39,7 +39,7 @@ func VerifyStatementSemantics(statement Stmt) {
 
 		// Check for boolean condition
 		if GetKind(ifStmt.Cond) != BOOL {
-			SemanticError("semantic error - Condition '%s' is not a bool", ifStmt.Cond.Repr())
+			SemanticError(0, "semantic error - Condition '%s' is not a bool", ifStmt.Cond.Repr())
 		}
 
 		// Verify branches
@@ -51,7 +51,7 @@ func VerifyStatementSemantics(statement Stmt) {
 
 		// Check the condition
 		if GetKind(whileStmt.Cond) != BOOL {
-			SemanticError("semantic error - Condition '%s' is not a bool", whileStmt.Cond.Repr())
+			SemanticError(0, "semantic error - Condition '%s' is not a bool", whileStmt.Cond.Repr())
 		}
 
 		// Verfy body
