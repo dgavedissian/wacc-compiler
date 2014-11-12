@@ -1,84 +1,121 @@
 package main
 
+import "fmt"
+
+// Context (Variable Store)
 type Context struct {
-	store map[string]int
+	types map[string]Type
 }
 
+func (cxt Context) Add(expr LValueExpr, t Type) {
+	switch expr := expr.(type) {
+	case IdentExpr:
+		cxt.types[expr.Name] = t
+
+	default:
+		SemanticError(0, "IMPLEMENT_ME: Context.Add not defined for type %T", expr)
+	}
+}
+
+func (cxt Context) LookupType(expr LValueExpr) Type {
+	switch expr := expr.(type) {
+	case IdentExpr:
+		t, ok := cxt.types[expr.Name]
+		if !ok {
+			SemanticError(0, "semantic error - Variable '%s' is not in the variable store", expr.Name)
+			return ErrorType{}
+		} else {
+			return t
+		}
+
+	default:
+		panic(fmt.Sprintf("%T\n", expr))
+	}
+}
+
+// Semantic Checking
 func VerifySemantics(program *ProgStmt) {
-	// Verify functions
+	cxt := &Context{make(map[string]Type)}
 	for _, f := range program.Funcs {
-		VerifyFunctionSemantics(f)
+		VerifyFunctionSemantics(cxt, f)
 	}
-
-	// Verify statements
-	VerifyStatementListSemantics(program.Body)
+	VerifyStatementListSemantics(cxt, program.Body)
 }
 
-func VerifyStatementListSemantics(statementList []Stmt) {
+func VerifyFunctionSemantics(cxt *Context, function Func) {
+}
+
+func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {
 	for _, s := range statementList {
-		VerifyStatementSemantics(s)
+		VerifyStatementSemantics(cxt, s)
 	}
 }
 
-func VerifyFunctionSemantics(function Func) {
-}
-
-func VerifyStatementSemantics(statement Stmt) {
+func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 	switch statement := statement.(type) {
 	case *DeclStmt:
-		if !statement.Type.Equals(DeriveType(statement.Right)) {
+		if !statement.Type.Equals(DeriveType(cxt, statement.Right)) {
 			SemanticError(0, "semantic error - Right hand side of variable declaration doesn't match the type of the variable")
+		} else {
+			cxt.Add(statement.Ident, statement.Type)
 		}
 
 	case *AssignStmt:
-		// TODO: Check
+		t1, t2 := cxt.LookupType(statement.Ident), DeriveType(cxt, statement.Right)
+		if !t1.Equals(t2) {
+			SemanticError(0, "semantic error - Cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
+		}
 
 	case *IfStmt:
 		// Check for boolean condition
-		if !DeriveType(statement.Cond).Equals(BasicType{BOOL}) {
-			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
+		t := DeriveType(cxt, statement.Cond)
+		if !t.Equals(BasicType{BOOL}) {
+			SemanticError(0, "semantic error - Condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
 		// Verify branches
-		VerifyStatementListSemantics(statement.Body)
-		VerifyStatementListSemantics(statement.Else)
+		VerifyStatementListSemantics(cxt, statement.Body)
+		VerifyStatementListSemantics(cxt, statement.Else)
 
 	case *WhileStmt:
 		// Check the condition
-		if !DeriveType(statement.Cond).Equals(BasicType{BOOL}) {
-			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
+		t := DeriveType(cxt, statement.Cond)
+		if !t.Equals(BasicType{BOOL}) {
+			SemanticError(0, "semantic error - Condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
 		// Verfy body
-		VerifyStatementListSemantics(statement.Body)
+		VerifyStatementListSemantics(cxt, statement.Body)
 	}
 }
 
-func DeriveType(expr Expr) Type {
+func DeriveType(cxt *Context, expr Expr) Type {
 	switch expr := expr.(type) {
 	case *BasicLit:
 		return expr.Type
 
 	case *UnaryExpr:
-		t := DeriveType(expr.Operand)
+		t := DeriveType(cxt, expr.Operand)
 
 		// TODO: Check whether unary operator supports the operand type
 		// Refer to the table in the spec
 		return t
 
 	case *BinaryExpr:
-		t1, t2 := DeriveType(expr.Left), DeriveType(expr.Right)
+		t1, t2 := DeriveType(cxt, expr.Left), DeriveType(cxt, expr.Right)
 
 		// TODO: Check whether binary operator supports the operand types
 		// Refer to the table in the spec
 
 		if !t1.Equals(t2) {
-			SemanticError(0, "semantic error - Types of binary expression operands do not match")
+			SemanticError(0, "semantic error - Types of binary expression operands do not match (%s != %s)", t1.Repr(), t2.Repr())
+			return ErrorType{}
+		} else {
+			return t1
 		}
 
-		return t1
-
 	default:
-		panic("WTF I DON'T KNOW WHAT THIS IS HELP")
+		SemanticError(0, "IMPLEMENT_ME: Unhandled type in DeriveType - Type: %T", expr)
+		return ErrorType{}
 	}
 }

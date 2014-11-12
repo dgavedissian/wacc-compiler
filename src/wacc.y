@@ -14,7 +14,7 @@
   Params []Param
   Param  Param
   Type   Type
-  Ident  Ident
+  Ident  IdentExpr
   lines  int
   Exprs  []Expr
 }
@@ -117,7 +117,7 @@ assign_rhs
     ;
 
 identifier
-    : IDENT { $$.Ident = Ident{0, $1.Value}; $$.Expr = &Ident{0, $1.Value} }
+    : IDENT { $$.Ident = IdentExpr{0, $1.Value}; $$.Expr = &IdentExpr{0, $1.Value} }
     ;
 
 optional_arg_list
@@ -184,7 +184,7 @@ array_expression
     ;
 
 primary_expression
-    : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
+    : identifier          { $$.Expr = &IdentExpr{0, $1.Value} ; $$.Ident = IdentExpr{0, $1.Value} }
     | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
     | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
     | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }

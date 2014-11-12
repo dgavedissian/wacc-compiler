@@ -40,6 +40,9 @@ type Type interface {
 	Repr() string
 }
 
+//
+// Types
+//
 type BasicType struct {
 	TypeId int
 }
@@ -65,11 +68,105 @@ func (bt BasicType) Repr() string {
 	}
 }
 
-type Ident struct {
+type ErrorType struct {
+}
+
+func (ErrorType) Equals(Type) bool {
+	return false
+}
+func (ErrorType) Repr() string {
+	return "ERROR_TYPE"
+}
+
+//
+// Statements
+//
+type ProgStmt struct {
+	BeginKw Pos // position of "begin" keyword
+	Funcs   []Func
+	Body    []Stmt
+	EndKw   Pos // position of "end keyword
+}
+
+type SkipStmt struct {
+	Skip Pos // position of "skip" keyword
+}
+
+type DeclStmt struct {
+	TypeKw Pos // Position of the type keyword
+	Type   Type
+	Ident  IdentExpr
+	Right  Expr
+}
+
+type AssignStmt struct {
+	Ident IdentExpr
+	Right Expr
+}
+
+type ExitStmt struct {
+	Exit   Pos  // position of "exit" keyword
+	Result Expr // result expression
+}
+
+type ReturnStmt struct {
+	Return Pos
+	Result Expr
+}
+
+type PrintStmt struct {
+	Print   Pos // position of print keyword
+	Right   Expr
+	NewLine bool
+}
+
+type Func struct {
+	Func   Pos
+	Type   Type
+	Ident  IdentExpr
+	Params []Param
+	Stmts  []Stmt
+}
+
+type Param struct {
+	Start  Pos
+	Type   Type
+	Ident  IdentExpr
+	Finish Pos
+}
+
+type IfStmt struct {
+	If   Pos
+	Cond Expr
+	Body []Stmt
+	Else []Stmt
+	Fi   Pos
+}
+
+type WhileStmt struct {
+	While Pos
+	Cond  Expr
+	Body  []Stmt
+	Done  Pos
+}
+
+//
+// LValue Expressions
+//
+type IdentExpr struct {
 	NamePos Pos
 	Name    string
 }
 
+type PairSelectorExpr struct {
+	SelectorPos  Pos
+	SelectorType int
+	Operand      Expr
+}
+
+//
+// Expressions
+//
 type BasicLit struct {
 	ValuePos Pos  // Literal position
 	Type     Type // Token kind (e.g. INT_LIT, CHAR_LIT)
@@ -108,85 +205,10 @@ type IndexExpr struct {
 	Index     Expr
 }
 
-type PairSelectorExpr struct {
-	SelectorPos  Pos
-	SelectorType int
-	Operand      Expr
-}
-
 type CallExpr struct {
 	Call  Pos
-	Ident Ident
+	Ident IdentExpr
 	Args  []Expr
-}
-
-type ProgStmt struct {
-	BeginKw Pos // position of "begin" keyword
-	Funcs   []Func
-	Body    []Stmt
-	EndKw   Pos // position of "end keyword
-}
-
-type SkipStmt struct {
-	Skip Pos // position of "skip" keyword
-}
-
-type DeclStmt struct {
-	TypeKw Pos // Position of the type keyword
-	Type   Type
-	Ident  Ident
-	Right  Expr
-}
-
-type AssignStmt struct {
-	Ident Ident
-	Right Expr
-}
-
-type ExitStmt struct {
-	Exit   Pos  // position of "exit" keyword
-	Result Expr // result expression
-}
-
-type ReturnStmt struct {
-	Return Pos
-	Result Expr
-}
-
-type PrintStmt struct {
-	Print   Pos // position of print keyword
-	Right   Expr
-	NewLine bool
-}
-
-type Func struct {
-	Func   Pos
-	Type   Type
-	Ident  Ident
-	Params []Param
-	Stmts  []Stmt
-}
-
-type Param struct {
-	Start  Pos
-	Type   Type
-	Ident  Ident
-	Finish Pos
-}
-
-type IfStmt struct {
-	If   Pos
-	Cond Expr
-	Body []Stmt
-	Else []Stmt
-	Fi   Pos
-}
-
-type WhileStmt struct {
-	While Pos
-	Cond  Expr
-	Body  []Stmt
-	Done  Pos
 }
 
 // Repr helpers
@@ -234,15 +256,15 @@ func reprNodesInt(nodeList []Node) string {
 }
 
 // Identifier
-func (Ident) lvalueExprNode() {}
-func (Ident) exprNode()       {}
-func (x Ident) Pos() Pos      { return x.NamePos }
-func (x Ident) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
-func (x Ident) Repr() string {
+func (IdentExpr) lvalueExprNode() {}
+func (IdentExpr) exprNode()       {}
+func (x IdentExpr) Pos() Pos      { return x.NamePos }
+func (x IdentExpr) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
+func (x IdentExpr) Repr() string {
 	if x.Name == "" {
-		return "Ident(<missing name>)"
+		return "IdentExpr(<missing name>)"
 	}
-	return "Ident(" + x.Name + ")"
+	return "IdentExpr(" + x.Name + ")"
 }
 
 // Basic Literal
