@@ -5,18 +5,18 @@
 %}
 
 %union {
-    Expr   Expr
-    Value  string
-    Funcs  []Func
-    Func   *Func
-    Stmts  []Stmt
-    Stmt   Stmt
-    Params []Param
-    Param  Param
-    Kind   int
-    Ident  Ident
-    lines  int
-    Exprs  []Expr
+  Expr   Expr
+  Value  string
+  Funcs  []Func
+  Func   *Func
+  Stmts  []Stmt
+  Stmt   Stmt
+  Params []Param
+  Param  Param
+  Kind   int
+  Ident  Ident
+  lines  int
+  Exprs  []Expr
 }
 
 %{
