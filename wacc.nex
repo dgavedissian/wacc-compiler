@@ -84,6 +84,7 @@ import (
 )
 
 const SYNTAX_ERROR = 100
+const SEMANTIC_ERROR = 200
 
 var lex *Lexer
 var exitFlag int = 0
@@ -115,13 +116,23 @@ func ProcessStr(s string) string {
   return output
 }
 
+// Callback for goyacc
 func (*Lexer) Error(s string) {
+  SyntaxError(s)
+}
+
+func SyntaxError(s string) {
   unexpectedToken := "<EOF>"
   if len(lex.stack) > 0 {
     unexpectedToken = strconv.Quote(lex.Text())
   }
   fmt.Printf("Line %d: %s -- unexpected %s\n", lex.l, s, unexpectedToken)
   exitFlag = SYNTAX_ERROR
+}
+
+func SemanticError(s string) {
+  fmt.Printf("Line %d: %s\n", 0, s)
+  exitFlag = SEMANTIC_ERROR
 }
 
 func main() {
@@ -137,11 +148,16 @@ func main() {
   lex = NewLexerWithInit(os.Stdin, func(l *Lexer){ l.l = 1 })
   yyParse(lex)
   if exitFlag != 0 {
-    os.Exit(SYNTAX_ERROR)
+    os.Exit(exitFlag)
   }
 
   // Semantic-check the tree
+  VerifySemantics(top.Stmt.(*ProgStmt))
+  if exitFlag != 0 {
+    os.Exit(exitFlag)
+  }
 
   // Print the representation of the tree
+  fmt.Println("Compilation successful!")
   fmt.Println(top.Stmt.Repr())
 }
