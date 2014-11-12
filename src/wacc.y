@@ -189,11 +189,11 @@ array_expression
 
 primary_expression
     : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
-    | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT_LIT}, $1.Value} }
-    | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL_LIT}, $1.Value} }
-    | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR_LIT}, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{0, BasicType{STRING_LIT}, $1.Value} }
-    | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR_LIT}, $1.Value} }
+    | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
+    | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
+    | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{0, BasicType{STRING}, $1.Value} }
+    | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
     ;
