@@ -58,6 +58,26 @@ func GetKind(expr Expr) Type {
 	switch expr := expr.(type) {
 	case *BasicLit:
 		return expr.Kind
+
+	case *UnaryExpr:
+		t := GetKind(expr.Operand)
+
+		// TODO: Check whether unary operator supports the operand type
+		// Refer to the table in the spec
+		return t
+
+	case *BinaryExpr:
+		t1, t2 := GetKind(expr.Left), GetKind(expr.Right)
+
+		// TODO: Check whether binary operator supports the operand types
+		// Refer to the table in the spec
+
+		if !t1.Equals(t2) {
+			SemanticError(0, "semantic error - Types of binary expression operands do not match")
+		}
+
+		return t1
+
 	default:
 		panic("WTF I DON'T KNOW WHAT THIS IS HELP")
 	}
