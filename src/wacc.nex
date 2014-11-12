@@ -118,20 +118,22 @@ func ProcessStr(s string) string {
 
 // Callback for goyacc
 func (*Lexer) Error(s string) {
-  SyntaxError(s)
-}
-
-func SyntaxError(s string) {
   unexpectedToken := "<EOF>"
   if len(lex.stack) > 0 {
     unexpectedToken = strconv.Quote(lex.Text())
   }
-  fmt.Printf("Line %d: %s -- unexpected %s\n", lex.l, s, unexpectedToken)
+  SyntaxError("%s -- unexpected %s", s, unexpectedToken)
+}
+
+func SyntaxError(s string, a... interface{}) {
+  errorStr := fmt.Sprintf(s, a...)
+  fmt.Printf("Line %d: %s\n", lex.l, errorStr)
   exitFlag = SYNTAX_ERROR
 }
 
-func SemanticError(s string) {
-  fmt.Printf("Line %d: %s\n", 0, s)
+func SemanticError(s string, a... interface{}) {
+  errorStr := fmt.Sprintf(s, a...)
+  fmt.Printf("Line %d: %s\n", 0, errorStr)
   exitFlag = SEMANTIC_ERROR
 }
 
