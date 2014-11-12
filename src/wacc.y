@@ -2,8 +2,6 @@
 
 %{
   package main
-
-  //import ("log")
 %}
 
 %union {
@@ -15,7 +13,7 @@
   Stmt   Stmt
   Params []Param
   Param  Param
-  Kind   Type
+  Type   Type
   Ident  Ident
   lines  int
   Exprs  []Expr
@@ -27,12 +25,10 @@
 
 %token BEGIN END
 %token INT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
-%token INT_SIGN
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
-%token INT BOOL CHAR STRING
-%token PAIR
+%token INT BOOL CHAR STRING PAIR
 %token FUNC_IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
@@ -60,7 +56,7 @@ body
 func
     : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
+        $$.Func = &Func{0, $1.Type, $2.Ident, $4.Params, $7.Stmts}
       }
     ;
 
@@ -75,7 +71,7 @@ param_list
     ;
 
 param
-    : type identifier { $$.Param = Param{0, $1.Kind, $2.Ident, 0} }
+    : type identifier { $$.Param = Param{0, $1.Type, $2.Ident, 0} }
     ;
 
 /* Statements */
@@ -87,7 +83,7 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Kind, $2.Ident, $4.Expr} }
+    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Type, $2.Ident, $4.Expr} }
     | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Ident, $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
@@ -113,7 +109,7 @@ assign_lhs
 assign_rhs
     : expression {$$.Expr = $1.Expr}
     | NEWPAIR '(' expression ',' expression ')' {
-        $$.Expr = &PairExpr{0, $3.Kind, $3.Expr, $5.Kind, $5.Expr}
+        $$.Expr = &PairExpr{0, $3.Type, $3.Expr, $5.Type, $5.Expr}
       }
     | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
@@ -145,10 +141,10 @@ type
     ;
 
 base_type
-    : INT    { $$.Kind = $1.Kind }
-    | BOOL   { $$.Kind = $1.Kind }
-    | CHAR   { $$.Kind = $1.Kind }
-    | STRING { $$.Kind = $1.Kind }
+    : INT    { $$.Type = $1.Type }
+    | BOOL   { $$.Type = $1.Type }
+    | CHAR   { $$.Type = $1.Type }
+    | STRING { $$.Type = $1.Type }
     ;
 
 array_type

@@ -26,7 +26,7 @@ func VerifyFunctionSemantics(function Func) {
 func VerifyStatementSemantics(statement Stmt) {
 	switch statement := statement.(type) {
 	case *DeclStmt:
-		if !statement.Kind.Equals(GetKind(statement.Right)) {
+		if !statement.Type.Equals(DeriveType(statement.Right)) {
 			SemanticError(0, "semantic error - Right hand side of variable declaration doesn't match the type of the variable")
 		}
 
@@ -35,7 +35,7 @@ func VerifyStatementSemantics(statement Stmt) {
 
 	case *IfStmt:
 		// Check for boolean condition
-		if !GetKind(statement.Cond).Equals(BasicType{BOOL}) {
+		if !DeriveType(statement.Cond).Equals(BasicType{BOOL}) {
 			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
 		}
 
@@ -45,7 +45,7 @@ func VerifyStatementSemantics(statement Stmt) {
 
 	case *WhileStmt:
 		// Check the condition
-		if !GetKind(statement.Cond).Equals(BasicType{BOOL}) {
+		if !DeriveType(statement.Cond).Equals(BasicType{BOOL}) {
 			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
 		}
 
@@ -54,20 +54,20 @@ func VerifyStatementSemantics(statement Stmt) {
 	}
 }
 
-func GetKind(expr Expr) Type {
+func DeriveType(expr Expr) Type {
 	switch expr := expr.(type) {
 	case *BasicLit:
-		return expr.Kind
+		return expr.Type
 
 	case *UnaryExpr:
-		t := GetKind(expr.Operand)
+		t := DeriveType(expr.Operand)
 
 		// TODO: Check whether unary operator supports the operand type
 		// Refer to the table in the spec
 		return t
 
 	case *BinaryExpr:
-		t1, t2 := GetKind(expr.Left), GetKind(expr.Right)
+		t1, t2 := DeriveType(expr.Left), DeriveType(expr.Right)
 
 		// TODO: Check whether binary operator supports the operand types
 		// Refer to the table in the spec

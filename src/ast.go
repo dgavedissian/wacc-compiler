@@ -41,17 +41,17 @@ type Type interface {
 }
 
 type BasicType struct {
-	Kind int
+	TypeId int
 }
 
 func (bt BasicType) Equals(t2 Type) bool {
 	if bt2, ok := t2.(BasicType); ok {
-		return bt2.Kind == bt.Kind
+		return bt2.TypeId == bt.TypeId
 	}
 	return false
 }
 func (bt BasicType) Repr() string {
-	switch bt.Kind {
+	switch bt.TypeId {
 	case INT:
 		return "INT"
 	case BOOL:
@@ -61,7 +61,7 @@ func (bt BasicType) Repr() string {
 	case STRING:
 		return "STRING"
 	default:
-		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.Kind))
+		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
 	}
 }
 
@@ -72,7 +72,7 @@ type Ident struct {
 
 type BasicLit struct {
 	ValuePos Pos  // Literal position
-	Kind     Type // Token kind (e.g. INT_LIT, CHAR_LIT)
+	Type     Type // Token kind (e.g. INT_LIT, CHAR_LIT)
 	Value    string
 }
 
@@ -83,9 +83,9 @@ type ArrayLit struct {
 
 type PairExpr struct {
 	ValuePos  Pos
-	LeftKind  Type
+	LeftType  Type
 	LeftExpr  Expr
-	RightKind Type
+	RightType Type
 	RightExpr Expr
 }
 
@@ -110,7 +110,7 @@ type IndexExpr struct {
 
 type PairSelectorExpr struct {
 	SelectorPos  Pos
-	SelectorKind int
+	SelectorType int
 	Operand      Expr
 }
 
@@ -133,7 +133,7 @@ type SkipStmt struct {
 
 type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
-	Kind   Type
+	Type   Type
 	Ident  Ident
 	Right  Expr
 }
@@ -161,7 +161,7 @@ type PrintStmt struct {
 
 type Func struct {
 	Func   Pos
-	Kind   Type
+	Type   Type
 	Ident  Ident
 	Params []Param
 	Stmts  []Stmt
@@ -169,7 +169,7 @@ type Func struct {
 
 type Param struct {
 	Start  Pos
-	Kind   Type
+	Type   Type
 	Ident  Ident
 	Finish Pos
 }
@@ -195,26 +195,31 @@ func ReprNodes(nodeList interface{}) string {
 	switch nodeList := nodeList.(type) {
 	case []Node:
 		return reprNodesInt(nodeList)
+
 	case []Stmt:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
 		return reprNodesInt(realNodeList)
+
 	case []Expr:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
 		return reprNodesInt(realNodeList)
+
 	case []Func:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
 		return reprNodesInt(realNodeList)
+
 	case []Param:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
 		return reprNodesInt(realNodeList)
+
 	default:
 		panic("nodeList is not of valid type")
 	}
@@ -245,7 +250,7 @@ func (BasicLit) exprNode()  {}
 func (x BasicLit) Pos() Pos { return x.ValuePos }
 func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x BasicLit) Repr() string {
-	return "Lit(" + x.Kind.Repr() + ", " + x.Value + ")"
+	return "Lit(" + x.Type.Repr() + ", " + x.Value + ")"
 }
 
 // Pair selector expressions
@@ -254,7 +259,7 @@ func (PairSelectorExpr) exprNode()       {}
 func (x PairSelectorExpr) Pos() Pos      { return x.SelectorPos }
 func (x PairSelectorExpr) End() Pos      { return Pos(int(x.SelectorPos) + 3) } // TODO: unbreak that
 func (x PairSelectorExpr) Repr() string {
-	return fmt.Sprintf("PairSelectorExpr(%d, %f)", x.SelectorKind, x.Operand)
+	return fmt.Sprintf("PairSelectorExpr(%d, %f)", x.SelectorType, x.Operand)
 }
 
 // Array literal
@@ -283,8 +288,8 @@ func (x PairExpr) Repr() string {
 	if x.LeftExpr == nil || x.RightExpr == nil {
 		return "Pair(<missing elements>)"
 	}
-	return "Pair(" + x.LeftKind.Repr() + ", " + x.LeftExpr.Repr() +
-		", " + x.RightKind.Repr() + ", " + x.RightExpr.Repr() + ")"
+	return "Pair(" + x.LeftType.Repr() + ", " + x.LeftExpr.Repr() +
+		", " + x.RightType.Repr() + ", " + x.RightExpr.Repr() + ")"
 }
 
 // Unary Expression
@@ -355,9 +360,9 @@ func (s DeclStmt) Pos() Pos { return s.TypeKw }
 func (s DeclStmt) End() Pos { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
-		return "Decl(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ", <missing rhs>)"
+		return "Decl(" + s.Type.Repr() + ", " + s.Ident.Repr() + ", <missing rhs>)"
 	}
-	return "Decl(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
+	return "Decl(" + s.Type.Repr() + ", " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Assign Statement
@@ -453,7 +458,7 @@ func (s Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
 func (s Func) Repr() string {
-	return "Func(type:" + s.Kind.Repr() +
+	return "Func(type:" + s.Type.Repr() +
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprNodes(s.Params) +
 		"), body:(" + ReprNodes(s.Stmts) + ")"
@@ -463,7 +468,7 @@ func (s Func) Repr() string {
 func (s Param) Pos() Pos { return s.Start }
 func (s Param) End() Pos { return s.Finish }
 func (s Param) Repr() string {
-	return "Param(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ")"
+	return "Param(" + s.Type.Repr() + ", " + s.Ident.Repr() + ")"
 }
 
 // Pair selectors (fst/snd)
