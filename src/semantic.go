@@ -1,5 +1,9 @@
 package main
 
+type Context struct {
+	store map[string]int
+}
+
 func VerifySemantics(program *ProgStmt) {
 	// Verify functions
 	for _, f := range program.Funcs {
@@ -22,6 +26,26 @@ func VerifyStatementSemantics(statement Stmt) {
 		if declStatement.Kind != GetKind(declStatement.Right) {
 			SemanticError("semantic error - Right hand side of variable declaration doesn't match the type of the variable")
 		}
+
+	case *AssignStmt:
+		// TODO: Check
+
+	case *IfStmt:
+		ifStmt := statement.(*IfStmt)
+
+		// Check for boolean condition
+		if GetKind(ifStmt.Cond) != BOOL {
+			SemanticError("semantic error - Condition is not a bool")
+		}
+
+		// Verify branches
+		for _, s := range ifStmt.Body {
+			VerifyStatementSemantics(s)
+		}
+		for _, s := range ifStmt.Else {
+			VerifyStatementSemantics(s)
+		}
+
 	}
 }
 
