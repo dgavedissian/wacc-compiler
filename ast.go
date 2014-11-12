@@ -192,10 +192,10 @@ func ReprExprs(exprList []Expr) string {
 }
 
 // Identifier
-func (*Ident) exprNode()  {}
-func (x *Ident) Pos() Pos { return x.NamePos }
-func (x *Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
-func (x *Ident) Repr() string {
+func (Ident) exprNode()  {}
+func (x Ident) Pos() Pos { return x.NamePos }
+func (x Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
+func (x Ident) Repr() string {
 	if x.Name == "" {
 		return "Ident(<missing name>)"
 	}
@@ -203,23 +203,23 @@ func (x *Ident) Repr() string {
 }
 
 // Basic Literal
-func (*BasicLit) exprNode()  {}
-func (x *BasicLit) Pos() Pos { return x.ValuePos }
-func (x *BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
-func (x *BasicLit) Repr() string {
+func (BasicLit) exprNode()  {}
+func (x BasicLit) Pos() Pos { return x.ValuePos }
+func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
+func (x BasicLit) Repr() string {
 	return "Lit(" + strconv.Itoa(x.Kind) + ", " + x.Value + ")"
 }
 
 // Array literal
-func (*ArrayLit) exprNode()  {}
-func (x *ArrayLit) Pos() Pos { return x.ValuesPos }
-func (x *ArrayLit) End() Pos {
+func (ArrayLit) exprNode()  {}
+func (x ArrayLit) Pos() Pos { return x.ValuesPos }
+func (x ArrayLit) End() Pos {
 	if x.Values == nil {
 		return Pos(int(x.ValuesPos) + 1) /* CLose bracket */
 	}
 	return Pos(int(x.Values[len(x.Values)-1].End()) + 1)
 }
-func (x *ArrayLit) Repr() string {
+func (x ArrayLit) Repr() string {
 	if x.Values == nil {
 		return "ArrayLit([])"
 	}
@@ -227,12 +227,12 @@ func (x *ArrayLit) Repr() string {
 }
 
 // Pairs
-func (*PairExpr) exprNode()  {}
-func (x *PairExpr) Pos() Pos { return x.ValuePos }
-func (x *PairExpr) End() Pos {
+func (PairExpr) exprNode()  {}
+func (x PairExpr) Pos() Pos { return x.ValuePos }
+func (x PairExpr) End() Pos {
 	return Pos(int(x.ValuePos) + len(x.RightExpr.Repr()) + 1) // Right bracket
 }
-func (x *PairExpr) Repr() string {
+func (x PairExpr) Repr() string {
 	if x.LeftExpr == nil || x.RightExpr == nil {
 		return "Pair(<missing elements>)"
 	}
@@ -241,10 +241,10 @@ func (x *PairExpr) Repr() string {
 }
 
 // Unary Expression
-func (*UnaryExpr) exprNode()  {}
-func (x *UnaryExpr) Pos() Pos { return x.OperatorPos }
-func (x *UnaryExpr) End() Pos { return x.Operand.End() }
-func (x *UnaryExpr) Repr() string {
+func (UnaryExpr) exprNode()  {}
+func (x UnaryExpr) Pos() Pos { return x.OperatorPos }
+func (x UnaryExpr) End() Pos { return x.Operand.End() }
+func (x UnaryExpr) Repr() string {
 	if x.Operand == nil {
 		return "Unary(" + x.Operator + ", <missing operand>)"
 	}
@@ -252,10 +252,10 @@ func (x *UnaryExpr) Repr() string {
 }
 
 // Binary Expression
-func (*BinaryExpr) exprNode()  {}
-func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
-func (x *BinaryExpr) End() Pos { return x.Right.End() }
-func (x *BinaryExpr) Repr() string {
+func (BinaryExpr) exprNode()  {}
+func (x BinaryExpr) Pos() Pos { return x.Left.Pos() }
+func (x BinaryExpr) End() Pos { return x.Right.End() }
+func (x BinaryExpr) Repr() string {
 	if x.Left == nil || x.Right == nil {
 		return "Binary(" + x.Operator + ", , )"
 	}
@@ -264,49 +264,49 @@ func (x *BinaryExpr) Repr() string {
 }
 
 // Array index expression
-func (*IndexExpr) exprNode()  {}
-func (x *IndexExpr) Pos() Pos { return x.VolumePos }
-func (x *IndexExpr) End() Pos {
+func (IndexExpr) exprNode()  {}
+func (x IndexExpr) Pos() Pos { return x.VolumePos }
+func (x IndexExpr) End() Pos {
 	return x.Index.End() + 1 /* Close bracket*/
 }
-func (x *IndexExpr) Repr() string {
+func (x IndexExpr) Repr() string {
 	return "Index(" + x.Volume.Repr() + ", " + x.Index.Repr() + ")"
 }
 
 // Function call
-func (*CallExpr) exprNode()  {}
-func (x *CallExpr) Pos() Pos { return x.Call }
-func (x *CallExpr) End() Pos {
+func (CallExpr) exprNode()  {}
+func (x CallExpr) Pos() Pos { return x.Call }
+func (x CallExpr) End() Pos {
 	return x.Call /* TODO */
 }
-func (x *CallExpr) Repr() string {
+func (x CallExpr) Repr() string {
 	return "Call(" + x.Ident.Repr() + ", " + ReprExprs(x.Args) + ")"
 }
 
 // Program Statement
-func (*ProgStmt) stmtNode()  {}
-func (s *ProgStmt) Pos() Pos { return s.BeginKw }
-func (s *ProgStmt) End() Pos {
+func (ProgStmt) stmtNode()  {}
+func (s ProgStmt) Pos() Pos { return s.BeginKw }
+func (s ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
-func (s *ProgStmt) Repr() string {
+func (s ProgStmt) Repr() string {
 	return "Prog(" + ReprFuncs(s.Funcs) + ")(" +
 		ReprStmts(s.Body) + ")"
 }
 
 // Skip Statement
-func (*SkipStmt) stmtNode()  {}
-func (s *SkipStmt) Pos() Pos { return s.Skip }
-func (s *SkipStmt) End() Pos {
+func (SkipStmt) stmtNode()  {}
+func (s SkipStmt) Pos() Pos { return s.Skip }
+func (s SkipStmt) End() Pos {
 	return s.Skip + Pos(len("skip"))
 }
-func (s *SkipStmt) Repr() string { return "Skip" }
+func (s SkipStmt) Repr() string { return "Skip" }
 
 // Declaration statement
-func (s *DeclStmt) stmtNode() {}
-func (s *DeclStmt) Pos() Pos  { return s.TypeKw }
-func (s *DeclStmt) End() Pos  { return s.Pos() } // TODO
-func (s *DeclStmt) Repr() string {
+func (DeclStmt) stmtNode()  {}
+func (s DeclStmt) Pos() Pos { return s.TypeKw }
+func (s DeclStmt) End() Pos { return s.Pos() } // TODO
+func (s DeclStmt) Repr() string {
 	if s.Right == nil {
 		return "Decl(" + strconv.Itoa(s.Kind) + " " + s.Ident.Repr() + ", <missing rhs>)"
 	}
@@ -314,10 +314,10 @@ func (s *DeclStmt) Repr() string {
 }
 
 // Assign Statement
-func (s *AssignStmt) stmtNode() {}
-func (s *AssignStmt) Pos() Pos  { return s.Ident.Pos() }
-func (s *AssignStmt) End() Pos  { return s.Pos() } // TODO
-func (s *AssignStmt) Repr() string {
+func (AssignStmt) stmtNode()  {}
+func (s AssignStmt) Pos() Pos { return s.Ident.Pos() }
+func (s AssignStmt) End() Pos { return s.Pos() } // TODO
+func (s AssignStmt) Repr() string {
 	if s.Right == nil {
 		return "Assign(" + s.Ident.Repr() + ", <missing rhs>)"
 	}
@@ -342,15 +342,15 @@ func (s ExitStmt) Repr() string {
 }
 
 // Return Statement
-func (*ReturnStmt) stmtNode()  {}
-func (s *ReturnStmt) Pos() Pos { return s.Return }
-func (s *ReturnStmt) End() Pos {
+func (ReturnStmt) stmtNode()  {}
+func (s ReturnStmt) Pos() Pos { return s.Return }
+func (s ReturnStmt) End() Pos {
 	if s.Result != nil {
 		return s.Result.End()
 	}
 	return s.Return + Pos(len("return"))
 }
-func (s *ReturnStmt) Repr() string {
+func (s ReturnStmt) Repr() string {
 	if s.Result != nil {
 		return "Return(" + s.Result.Repr() + ")"
 	} else {
@@ -359,10 +359,10 @@ func (s *ReturnStmt) Repr() string {
 }
 
 // Print Statement
-func (*PrintStmt) stmtNode()  {}
-func (s *PrintStmt) Pos() Pos { return s.Print }
-func (s *PrintStmt) End() Pos { return s.Pos() }
-func (s *PrintStmt) Repr() string {
+func (PrintStmt) stmtNode()  {}
+func (s PrintStmt) Pos() Pos { return s.Print }
+func (s PrintStmt) End() Pos { return s.Pos() }
+func (s PrintStmt) Repr() string {
 	var v string
 	if s.Right == nil {
 		v = ""
@@ -389,23 +389,23 @@ func (s IfStmt) Repr() string {
 }
 
 // While Statement
-func (*WhileStmt) stmtNode()  {}
-func (s *WhileStmt) Pos() Pos { return s.While }
-func (s *WhileStmt) End() Pos {
-	return s.Done + Pos(len("Done"))
+func (WhileStmt) stmtNode()  {}
+func (s WhileStmt) Pos() Pos { return s.While }
+func (s WhileStmt) End() Pos {
+	return s.Done + Pos(len("Done")) // TODO
 }
-func (s *WhileStmt) Repr() string {
+func (s WhileStmt) Repr() string {
 	return "While(" + s.Cond.Repr() +
 		")Do(" + ReprStmts(s.Body) +
 		")Done"
 }
 
 // Function Statement
-func (s *Func) Pos() Pos { return s.Func }
-func (s *Func) End() Pos {
+func (s Func) Pos() Pos { return s.Func }
+func (s Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
-func (s *Func) Repr() string {
+func (s Func) Repr() string {
 	return "Func(type:" + strconv.Itoa(s.Kind) +
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprParams(s.Params) +
@@ -413,8 +413,8 @@ func (s *Func) Repr() string {
 }
 
 // Function Parameter
-func (s *Param) Pos() Pos { return s.Start }
-func (s *Param) End() Pos { return s.Finish }
-func (s *Param) Repr() string {
+func (s Param) Pos() Pos { return s.Start }
+func (s Param) End() Pos { return s.Finish }
+func (s Param) Repr() string {
 	return "Param(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ")"
 }
