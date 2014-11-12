@@ -48,11 +48,11 @@ testvalid: frontend
 
 testinvalidsyntax: frontend
 	@echo "Testing invalid syntax cases..."
-	@find $(TESTS_DIR)/wacc_examples/invalid/syntaxErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
+	@find $(TESTS_DIR)/wacc_examples/invalid/syntaxErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 != 100){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
 
 testinvalidsemantic: frontend
 	@echo "Testing invalid semantic cases..."
-	@find $(TESTS_DIR)/wacc_examples/invalid/semanticErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 == 0){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
+	@find $(TESTS_DIR)/wacc_examples/invalid/semanticErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 != 200){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
 
 
 .PHONY: clean all nex test go testvalid testinvalidsyntax testinvalidsemantic
