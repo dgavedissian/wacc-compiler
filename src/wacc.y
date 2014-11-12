@@ -2,6 +2,8 @@
 
 %{
   package main
+
+  //import ("log")
 %}
 
 %union {
@@ -13,7 +15,7 @@
   Stmt   Stmt
   Params []Param
   Param  Param
-  Kind   int
+  Kind   Type
   Ident  Ident
   lines  int
   Exprs  []Expr
@@ -154,7 +156,7 @@ array_type
     ;
 
 pair_type
-    : PAIR '(' pair_elem_type ',' pair_elem_type ')' {}
+    : PAIR '(' pair_elem_type ',' pair_elem_type ')' { }
     ;
 
 pair_elem_type
@@ -164,8 +166,8 @@ pair_elem_type
     ;
 
 pair_elem
-    : FST expression { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
-    | SND expression { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
+    : FST expression { $$.Expr = &PairSelectorExpr{0, FST, $2.Expr} }
+    | SND expression { $$.Expr = &PairSelectorExpr{0, SND, $2.Expr} }
 
 array_liter
     : array_contents
@@ -187,11 +189,11 @@ array_expression
 
 primary_expression
     : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
-    | INT_LIT             { $$.Expr = &BasicLit{0, INT_LIT, $1.Value} }
-    | BOOL_LIT            { $$.Expr = &BasicLit{0, BOOL_LIT, $1.Value} }
-    | CHAR_LIT            { $$.Expr = &BasicLit{0, CHAR_LIT, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{0, STRING_LIT, $1.Value} }
-    | PAIR_LIT            { $$.Expr = &BasicLit{0, PAIR_LIT, $1.Value} }
+    | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
+    | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
+    | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{0, BasicType{STRING}, $1.Value} }
+    | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
     ;

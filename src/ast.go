@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
-	"strconv"
 	"strings"
 )
 
@@ -30,14 +30,49 @@ type Prog interface {
 	progNode()
 }
 
+type LValueExpr interface {
+	Expr
+	lvalueExprNode()
+}
+
+type Type interface {
+	Equals(Type) bool
+	Repr() string
+}
+
+type BasicType struct {
+	Kind int
+}
+
+func (bt BasicType) Equals(t2 Type) bool {
+	if bt2, ok := t2.(BasicType); ok {
+		return bt2.Kind == bt.Kind
+	}
+	return false
+}
+func (bt BasicType) Repr() string {
+	switch bt.Kind {
+	case INT:
+		return "INT"
+	case BOOL:
+		return "BOOL"
+	case CHAR:
+		return "CHAR"
+	case STRING:
+		return "STRING"
+	default:
+		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.Kind))
+	}
+}
+
 type Ident struct {
 	NamePos Pos
 	Name    string
 }
 
 type BasicLit struct {
-	ValuePos Pos // Literal position
-	Kind     int // Token kind (e.g. INT_LIT, CHAR_LIT)
+	ValuePos Pos  // Literal position
+	Kind     Type // Token kind (e.g. INT_LIT, CHAR_LIT)
 	Value    string
 }
 
@@ -48,9 +83,9 @@ type ArrayLit struct {
 
 type PairExpr struct {
 	ValuePos  Pos
-	LeftKind  int
+	LeftKind  Type
 	LeftExpr  Expr
-	RightKind int
+	RightKind Type
 	RightExpr Expr
 }
 
@@ -73,6 +108,12 @@ type IndexExpr struct {
 	Index     Expr
 }
 
+type PairSelectorExpr struct {
+	SelectorPos  Pos
+	SelectorKind int
+	Operand      Expr
+}
+
 type CallExpr struct {
 	Call  Pos
 	Ident Ident
@@ -92,7 +133,7 @@ type SkipStmt struct {
 
 type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
-	Kind   int
+	Kind   Type
 	Ident  Ident
 	Right  Expr
 }
@@ -101,11 +142,6 @@ type AssignStmt struct {
 	Ident Ident
 	Right Expr
 }
-
-/* TODO:
- * Pair element assign e.g. fst p = 1
- * Array element assign e.g. xs[0] = 1
- */
 
 type ExitStmt struct {
 	Exit   Pos  // position of "exit" keyword
@@ -125,7 +161,7 @@ type PrintStmt struct {
 
 type Func struct {
 	Func   Pos
-	Kind   int
+	Kind   Type
 	Ident  Ident
 	Params []Param
 	Stmts  []Stmt
@@ -133,7 +169,7 @@ type Func struct {
 
 type Param struct {
 	Start  Pos
-	Kind   int
+	Kind   Type
 	Ident  Ident
 	Finish Pos
 }
@@ -154,47 +190,49 @@ type WhileStmt struct {
 }
 
 // Repr helpers
-// David: Can't make this general to []Node :( @Luke help?
-func ReprFuncs(funcList []Func) string {
-	funcs := []string{}
-	for _, f := range funcList {
-		funcs = append(funcs, f.Repr())
-	}
-	return strings.Join(funcs, ", ")
-}
-
-func ReprParams(paramList []Param) string {
-	params := []string{}
-	for _, p := range paramList {
-		params = append(params, p.Repr())
-	}
-	return strings.Join(params, ", ")
-}
-
-func ReprStmts(stmtList []Stmt) string {
-	statements := []string{}
-	for _, s := range stmtList {
-		if s != nil {
-			statements = append(statements, s.Repr())
+func ReprNodes(nodeList interface{}) string {
+	realNodeList := make([]Node, 0)
+	switch nodeList := nodeList.(type) {
+	case []Node:
+		return reprNodesInt(nodeList)
+	case []Stmt:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
 		}
+		return reprNodesInt(realNodeList)
+	case []Expr:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	case []Func:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	case []Param:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+	default:
+		panic("nodeList is not of valid type")
 	}
-	return strings.Join(statements, ", ")
 }
 
-func ReprExprs(exprList []Expr) string {
-	exprs := []string{}
-	for _, x := range exprList {
-		if x != nil {
-			exprs = append(exprs, x.Repr())
-		}
+func reprNodesInt(nodeList []Node) string {
+	nodes := []string{}
+	for _, f := range nodeList {
+		nodes = append(nodes, f.(Node).Repr())
 	}
-	return strings.Join(exprs, ", ")
+	return strings.Join(nodes, ", ")
 }
 
 // Identifier
-func (Ident) exprNode()  {}
-func (x Ident) Pos() Pos { return x.NamePos }
-func (x Ident) End() Pos { return Pos(int(x.NamePos) + len(x.Name)) }
+func (Ident) lvalueExprNode() {}
+func (Ident) exprNode()       {}
+func (x Ident) Pos() Pos      { return x.NamePos }
+func (x Ident) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
 func (x Ident) Repr() string {
 	if x.Name == "" {
 		return "Ident(<missing name>)"
@@ -207,7 +245,16 @@ func (BasicLit) exprNode()  {}
 func (x BasicLit) Pos() Pos { return x.ValuePos }
 func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x BasicLit) Repr() string {
-	return "Lit(" + strconv.Itoa(x.Kind) + ", " + x.Value + ")"
+	return "Lit(" + x.Kind.Repr() + ", " + x.Value + ")"
+}
+
+// Pair selector expressions
+func (PairSelectorExpr) lvalueExprNode() {}
+func (PairSelectorExpr) exprNode()       {}
+func (x PairSelectorExpr) Pos() Pos      { return x.SelectorPos }
+func (x PairSelectorExpr) End() Pos      { return Pos(int(x.SelectorPos) + 3) } // TODO: unbreak that
+func (x PairSelectorExpr) Repr() string {
+	return fmt.Sprintf("PairSelectorExpr(%d, %f)", x.SelectorKind, x.Operand)
 }
 
 // Array literal
@@ -223,7 +270,7 @@ func (x ArrayLit) Repr() string {
 	if x.Values == nil {
 		return "ArrayLit([])"
 	}
-	return "ArrayLit([" + ReprExprs(x.Values) + "])"
+	return "ArrayLit([" + ReprNodes(x.Values) + "])"
 }
 
 // Pairs
@@ -236,8 +283,8 @@ func (x PairExpr) Repr() string {
 	if x.LeftExpr == nil || x.RightExpr == nil {
 		return "Pair(<missing elements>)"
 	}
-	return "Pair(" + strconv.Itoa(x.LeftKind) + ", " + x.LeftExpr.Repr() +
-		", " + strconv.Itoa(x.RightKind) + ", " + x.RightExpr.Repr() + ")"
+	return "Pair(" + x.LeftKind.Repr() + ", " + x.LeftExpr.Repr() +
+		", " + x.RightKind.Repr() + ", " + x.RightExpr.Repr() + ")"
 }
 
 // Unary Expression
@@ -280,7 +327,7 @@ func (x CallExpr) End() Pos {
 	return x.Call /* TODO */
 }
 func (x CallExpr) Repr() string {
-	return "Call(" + x.Ident.Repr() + ", " + ReprExprs(x.Args) + ")"
+	return "Call(" + x.Ident.Repr() + ", " + ReprNodes(x.Args) + ")"
 }
 
 // Program Statement
@@ -290,8 +337,8 @@ func (s ProgStmt) End() Pos {
 	return s.EndKw + Pos(len("end"))
 }
 func (s ProgStmt) Repr() string {
-	return "Prog(" + ReprFuncs(s.Funcs) + ")(" +
-		ReprStmts(s.Body) + ")"
+	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
+		ReprNodes(s.Body) + ")"
 }
 
 // Skip Statement
@@ -308,9 +355,9 @@ func (s DeclStmt) Pos() Pos { return s.TypeKw }
 func (s DeclStmt) End() Pos { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
-		return "Decl(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ", <missing rhs>)"
+		return "Decl(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ", <missing rhs>)"
 	}
-	return "Decl(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
+	return "Decl(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Assign Statement
@@ -384,8 +431,8 @@ func (s IfStmt) End() Pos {
 }
 func (s IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
-		")Then(" + ReprStmts(s.Body) +
-		")Else(" + ReprStmts(s.Else) + ")"
+		")Then(" + ReprNodes(s.Body) +
+		")Else(" + ReprNodes(s.Else) + ")"
 }
 
 // While Statement
@@ -396,7 +443,7 @@ func (s WhileStmt) End() Pos {
 }
 func (s WhileStmt) Repr() string {
 	return "While(" + s.Cond.Repr() +
-		")Do(" + ReprStmts(s.Body) +
+		")Do(" + ReprNodes(s.Body) +
 		")Done"
 }
 
@@ -406,15 +453,17 @@ func (s Func) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
 func (s Func) Repr() string {
-	return "Func(type:" + strconv.Itoa(s.Kind) +
+	return "Func(type:" + s.Kind.Repr() +
 		", name:" + s.Ident.Repr() +
-		", params:(" + ReprParams(s.Params) +
-		"), body:(" + ReprStmts(s.Stmts) + ")"
+		", params:(" + ReprNodes(s.Params) +
+		"), body:(" + ReprNodes(s.Stmts) + ")"
 }
 
 // Function Parameter
 func (s Param) Pos() Pos { return s.Start }
 func (s Param) End() Pos { return s.Finish }
 func (s Param) Repr() string {
-	return "Param(" + strconv.Itoa(s.Kind) + ", " + s.Ident.Repr() + ")"
+	return "Param(" + s.Kind.Repr() + ", " + s.Ident.Repr() + ")"
 }
+
+// Pair selectors (fst/snd)

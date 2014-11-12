@@ -6,15 +6,13 @@ import (
 
 // Verification of a function body
 func VerifyStatementReturns(stmt Stmt) bool {
-	switch stmt.(type) {
+	switch stmt := stmt.(type) {
 	case *IfStmt:
-		ifStmt := stmt.(*IfStmt)
-		return VerifyStatementReturns(ifStmt.Body[len(ifStmt.Body)-1]) &&
-			VerifyStatementReturns(ifStmt.Else[len(ifStmt.Else)-1])
+		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1]) &&
+			VerifyStatementReturns(stmt.Else[len(stmt.Else)-1])
 
 	case *WhileStmt:
-		whileStmt := stmt.(*WhileStmt)
-		return VerifyStatementReturns(whileStmt.Body[len(whileStmt.Body)-1])
+		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1])
 
 	case *ExitStmt:
 		return true
@@ -35,11 +33,10 @@ func IntLiteralToIntConst(basicLit BasicLit) int64 {
 func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 	operand := unaryExpr.Operand
 
-	switch operand.(type) {
+	switch operand := operand.(type) {
 	case *BasicLit:
-		basicLit := operand.(*BasicLit)
-		if basicLit.Kind == INT_LIT {
-			n := IntLiteralToIntConst(*basicLit)
+		if operand.Kind.Equals(BasicType{INT}) {
+			n := IntLiteralToIntConst(*operand)
 			// Smallest 32bit literal is -(1<<31)
 			// The lexer always generates positive literals
 			return n > (1 << 31)
@@ -52,18 +49,16 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 }
 
 func StaticExprOverflows(expr Expr) bool {
-	switch expr.(type) {
+	switch expr := expr.(type) {
 	case *UnaryExpr:
-		unaryExpr := expr.(*UnaryExpr)
-		if unaryExpr.Operator == "-" {
-			return StaticUnaryMinusOverflows(*unaryExpr)
+		if expr.Operator == "-" {
+			return StaticUnaryMinusOverflows(*expr)
 		}
-		return StaticExprOverflows(unaryExpr.Operand)
+		return StaticExprOverflows(expr.Operand)
 
 	case *BasicLit:
-		basicLit := expr.(*BasicLit)
-		if basicLit.Kind == INT_LIT {
-			n := IntLiteralToIntConst(*basicLit)
+		if expr.Kind.Equals(BasicType{INT}) {
+			n := IntLiteralToIntConst(*expr)
 			return n > ((1 << 31) - 1)
 		}
 		return false

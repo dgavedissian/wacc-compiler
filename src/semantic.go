@@ -24,10 +24,9 @@ func VerifyFunctionSemantics(function Func) {
 }
 
 func VerifyStatementSemantics(statement Stmt) {
-	switch statement.(type) {
+	switch statement := statement.(type) {
 	case *DeclStmt:
-		declStatement := statement.(*DeclStmt)
-		if declStatement.Kind != GetKind(declStatement.Right) {
+		if !statement.Kind.Equals(GetKind(statement.Right)) {
 			SemanticError(0, "semantic error - Right hand side of variable declaration doesn't match the type of the variable")
 		}
 
@@ -35,50 +34,31 @@ func VerifyStatementSemantics(statement Stmt) {
 		// TODO: Check
 
 	case *IfStmt:
-		ifStmt := statement.(*IfStmt)
-
 		// Check for boolean condition
-		if GetKind(ifStmt.Cond) != BOOL {
-			SemanticError(0, "semantic error - Condition '%s' is not a bool", ifStmt.Cond.Repr())
+		if !GetKind(statement.Cond).Equals(BasicType{BOOL}) {
+			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
 		}
 
 		// Verify branches
-		VerifyStatementListSemantics(ifStmt.Body)
-		VerifyStatementListSemantics(ifStmt.Else)
+		VerifyStatementListSemantics(statement.Body)
+		VerifyStatementListSemantics(statement.Else)
 
 	case *WhileStmt:
-		whileStmt := statement.(*WhileStmt)
-
 		// Check the condition
-		if GetKind(whileStmt.Cond) != BOOL {
-			SemanticError(0, "semantic error - Condition '%s' is not a bool", whileStmt.Cond.Repr())
+		if !GetKind(statement.Cond).Equals(BasicType{BOOL}) {
+			SemanticError(0, "semantic error - Condition '%s' is not a bool", statement.Cond.Repr())
 		}
 
 		// Verfy body
-		VerifyStatementListSemantics(whileStmt.Body)
+		VerifyStatementListSemantics(statement.Body)
 	}
 }
 
-func GetKind(expr Expr) int {
-	switch expr.(type) {
+func GetKind(expr Expr) Type {
+	switch expr := expr.(type) {
 	case *BasicLit:
-		basicLit := expr.(*BasicLit)
-
-		// Get type of *_LIT
-		switch basicLit.Kind {
-		case INT_LIT:
-			return INT
-		case BOOL_LIT:
-			return BOOL
-		case CHAR_LIT:
-			return CHAR
-		case STRING_LIT:
-			return STRING
-		default:
-			return -1
-		}
-
+		return expr.Kind
 	default:
-		return -1
+		panic("WTF I DON'T KNOW WHAT THIS IS HELP")
 	}
 }
