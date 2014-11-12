@@ -38,7 +38,7 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 	switch operand.(type) {
 	case *BasicLit:
 		basicLit := operand.(*BasicLit)
-		if basicLit.Kind == INT_LIT {
+		if basicLit.Kind.Equals(BasicType{INT}) {
 			n := IntLiteralToIntConst(*basicLit)
 			// Smallest 32bit literal is -(1<<31)
 			// The lexer always generates positive literals
@@ -62,7 +62,7 @@ func StaticExprOverflows(expr Expr) bool {
 
 	case *BasicLit:
 		basicLit := expr.(*BasicLit)
-		if basicLit.Kind == INT_LIT {
+		if basicLit.Kind.Equals(BasicType{INT}) {
 			n := IntLiteralToIntConst(*basicLit)
 			return n > ((1 << 31) - 1)
 		}

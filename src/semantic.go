@@ -23,8 +23,8 @@ func VerifyStatementSemantics(statement Stmt) {
 	switch statement.(type) {
 	case *DeclStmt:
 		declStatement := statement.(*DeclStmt)
-		if declStatement.Kind != GetKind(declStatement.Right) {
-			SemanticError("semantic error - Right hand side of variable declaration doesn't match the type of the variable")
+		if !declStatement.Kind.Equals(GetKind(declStatement.Right)) {
+			SemanticError("semantic error - Right hand side of variable declaration (%r) doesn't match the type of the variable (%r)")
 		}
 
 	case *AssignStmt:
@@ -34,7 +34,7 @@ func VerifyStatementSemantics(statement Stmt) {
 		ifStmt := statement.(*IfStmt)
 
 		// Check for boolean condition
-		if GetKind(ifStmt.Cond) != BOOL {
+		if !GetKind(ifStmt.Cond).Equals(BasicType{BOOL}) {
 			SemanticError("semantic error - Condition is not a bool")
 		}
 
@@ -49,26 +49,11 @@ func VerifyStatementSemantics(statement Stmt) {
 	}
 }
 
-func GetKind(expr Expr) int {
-	switch expr.(type) {
+func GetKind(expr Expr) Type {
+	switch expr := expr.(type) {
 	case *BasicLit:
-		basicLit := expr.(*BasicLit)
-
-		// Get type of *_LIT
-		switch basicLit.Kind {
-		case INT_LIT:
-			return INT
-		case BOOL_LIT:
-			return BOOL
-		case CHAR_LIT:
-			return CHAR
-		case STRING_LIT:
-			return STRING
-		default:
-			return -1
-		}
-
+		return expr.Kind
 	default:
-		return -1
+		panic("WTF I DON'T KNOW WHAT THIS IS HELP")
 	}
 }
