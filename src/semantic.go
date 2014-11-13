@@ -137,6 +137,9 @@ func DeriveType(cxt *Context, expr Expr) Type {
 			return t1
 		}
 
+	case *NewPairCmd:
+		return PairType{DeriveType(cxt, expr.Left), DeriveType(cxt, expr.Right)}
+
 	default:
 		SemanticError(0, "IMPLEMENT_ME: Unhandled type in DeriveType - Type: %T", expr)
 		return ErrorType{}

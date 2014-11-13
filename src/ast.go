@@ -193,9 +193,9 @@ type BinaryExpr struct {
 // Commands: Expressions which are only used in assignments
 //
 type NewPairCmd struct {
-	ValuePos  Pos
-	LeftExpr  Expr
-	RightExpr Expr
+	ValuePos Pos
+	Left     Expr
+	Right    Expr
 }
 
 type CallCmd struct {
@@ -573,13 +573,13 @@ func (x BinaryExpr) Repr() string {
 func (NewPairCmd) exprNode()  {}
 func (x NewPairCmd) Pos() Pos { return x.ValuePos }
 func (x NewPairCmd) End() Pos {
-	return Pos(int(x.ValuePos) + len(x.RightExpr.Repr()) + 1) // Right bracket
+	return Pos(int(x.ValuePos) + len(x.Right.Repr()) + 1) // Right bracket
 }
 func (x NewPairCmd) Repr() string {
-	if x.LeftExpr == nil || x.RightExpr == nil {
+	if x.Left == nil || x.Right == nil {
 		return "NewPair(<missing elements>)"
 	}
-	return "NewPair(" + x.LeftExpr.Repr() + ", " + x.RightExpr.Repr() + ")"
+	return "NewPair(" + x.Left.Repr() + ", " + x.Right.Repr() + ")"
 }
 
 // Function call
