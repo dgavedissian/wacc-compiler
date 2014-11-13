@@ -48,7 +48,9 @@ type BasicType struct {
 }
 
 func (bt BasicType) Equals(t2 Type) bool {
-	if bt2, ok := t2.(BasicType); ok {
+	if _, ok := t2.(PairType); ok && bt.TypeId == PAIR {
+		return true
+	} else if bt2, ok := t2.(BasicType); ok {
 		return bt2.TypeId == bt.TypeId
 	}
 	return false
@@ -63,8 +65,8 @@ func (bt BasicType) Repr() string {
 		return "CHAR"
 	case STRING:
 		return "STRING"
-	case PAIR:
-		return "PAIR"
+	case PAIR: // null
+		return "PAIR(_, _)"
 	default:
 		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
 	}
