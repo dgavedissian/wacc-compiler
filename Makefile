@@ -18,7 +18,7 @@ GO      := GOPATH=$$HOME/go go
 
 all: frontend
 
-frontend: $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/ast.go $(SOURCE_DIR)/syntax.go $(SOURCE_DIR)/semantic.go
+frontend: $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/ast.go $(SOURCE_DIR)/syntax.go $(SOURCE_DIR)/semantic.go $(SOURCE_DIR)/errors.go $(SOURCE_DIR)/main.go
 	$(GO) build -o frontend $^
 
 $(SOURCE_DIR)/parser.go: go $(SOURCE_DIR)/wacc.y

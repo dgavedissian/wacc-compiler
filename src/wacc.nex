@@ -77,9 +77,6 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"flag"
 	"strconv"
 )
 
