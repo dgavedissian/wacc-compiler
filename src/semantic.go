@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 // Context (Variable Store)
 type Context struct {
 	types map[string]Type
@@ -29,7 +27,8 @@ func (cxt Context) LookupType(expr LValueExpr) Type {
 		}
 
 	default:
-		panic(fmt.Sprintf("%T\n", expr))
+		SemanticError(0, "IMPLEMENT_ME: Context.LookupType not defined for type %T", expr)
+		return ErrorType{}
 	}
 }
 
@@ -57,7 +56,7 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		t1, t2 := statement.Type, DeriveType(cxt, statement.Right)
 		if !t1.Equals(t2) {
 			SemanticError(0, "semantic error - Value being used to initialise '%s' does not match it's type (%s != %s)",
-				statement.Ident.Repr(), t1.Repr(), t2.Repr())
+				statement.Ident.Name, t1.Repr(), t2.Repr())
 		} else {
 			cxt.Add(statement.Ident, statement.Type)
 		}
@@ -114,6 +113,9 @@ func DeriveType(cxt *Context, expr Expr) Type {
 
 		// Just return the first elements type
 		return ArrayType{t}
+
+	case *IdentExpr:
+		return cxt.LookupType(*expr)
 
 	case *UnaryExpr:
 		t := DeriveType(cxt, expr.Operand)
