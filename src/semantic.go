@@ -7,7 +7,7 @@ type Context struct {
 
 func (cxt Context) Add(expr LValueExpr, t Type) {
 	switch expr := expr.(type) {
-	case IdentExpr:
+	case *IdentExpr:
 		cxt.types[expr.Name] = t
 
 	default:
@@ -17,7 +17,7 @@ func (cxt Context) Add(expr LValueExpr, t Type) {
 
 func (cxt Context) LookupType(expr LValueExpr) Type {
 	switch expr := expr.(type) {
-	case IdentExpr:
+	case *IdentExpr:
 		t, ok := cxt.types[expr.Name]
 		if !ok {
 			SemanticError(0, "semantic error - Variable '%s' is not in the variable store", expr.Name)
@@ -115,7 +115,7 @@ func DeriveType(cxt *Context, expr Expr) Type {
 		return ArrayType{t}
 
 	case *IdentExpr:
-		return cxt.LookupType(*expr)
+		return cxt.LookupType(expr)
 
 	case *UnaryExpr:
 		t := DeriveType(cxt, expr.Operand)
