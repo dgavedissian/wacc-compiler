@@ -1,17 +1,18 @@
 # Locations
-SHELL       := /bin/bash
+SHELL        := /bin/bash
 
-BASE_DIR    := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-SOURCE_DIR	:= src
-SCRIPTS_DIR := scripts
-TESTS_DIR   := examples
+BASE_DIR     := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+SOURCE_DIR	 := src
+SCRIPTS_DIR  := scripts
+EXAMPLES_DIR := examples
+TESTS_DIR    := tests
 
 # Tools
 FIND	:= find
-RM	  := rm -rf
+RM	    := rm -rf
 MKDIR	:= mkdir -p
-NEX   := $$HOME/go/bin/nex
-GO    := GOPATH=$$HOME/go go
+NEX     := $$HOME/go/bin/nex
+GO      := GOPATH=$$HOME/go go
 
 
 # the make rules
@@ -39,20 +40,17 @@ clean:
 	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go frontend
 
 
-test: testvalid testinvalidsyntax testinvalidsemantic
-	@echo "Tests complete"
+test:
+	python $(TESTS_DIR)/run.py
 
 testvalid: frontend
-	@echo "Testing valid cases..."
-	@find $(TESTS_DIR)/valid/ -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 != 0){ failed+=1; }} END {print "VALID:", run - failed, "/", run, "tests passed";}'
+	python $(TESTS_DIR)/run.py "Valid"
 
 testinvalidsyntax: frontend
-	@echo "Testing invalid syntax cases..."
-	@find $(TESTS_DIR)/invalid/syntaxErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 != 100){ failed+=1; }} END {print "INVALID SYNTAX:", run - failed, "/", run, "tests passed";}'
+	python $(TESTS_DIR)/run.py "Invalid Syntax"
 
 testinvalidsemantic: frontend
-	@echo "Testing invalid semantic cases..."
-	@find $(TESTS_DIR)/invalid/semanticErr -name *.wacc | xargs -n 1 -P 4 $(BASE_DIR)/compile -x | awk '{run+=1; if ($$0 != 200){ failed+=1; }} END {print "INVALID SEMANTIC:", run - failed, "/", run, "tests passed";}'
+	python $(TESTS_DIR)/run.py "Invalid Semantic"
 
 
 .PHONY: clean all nex test go testvalid testinvalidsyntax testinvalidsemantic
