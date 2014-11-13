@@ -171,10 +171,10 @@ array_liter
     ;
 
 array_contents
-    : assign_rhs ',' array_contents {
+    : expression ',' array_contents {
       $$.Exprs = append([]Expr{$1.Expr}, $3.Exprs...)
     }
-    | assign_rhs { $$.Exprs = []Expr{$1.Expr} }
+    | expression { $$.Exprs =  []Expr{$1.Expr} }
     ;
 
 /* Expression */
