@@ -137,7 +137,7 @@ arg_list
 type
     : base_type
     | pair_type
-    | type '[' ']'
+    | type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
 base_type
@@ -148,11 +148,11 @@ base_type
     ;
 
 array_type
-    : type '[' ']'
+    : type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
 pair_type
-    : PAIR '(' pair_elem_type ',' pair_elem_type ')' { }
+    : PAIR '(' pair_elem_type ',' pair_elem_type ')' { $$.Type = PairType{$3.Type, $5.Type} }
     ;
 
 pair_elem_type

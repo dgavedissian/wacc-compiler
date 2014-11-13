@@ -43,21 +43,6 @@ type Type interface {
 //
 // Types
 //
-func TypeIdToString(TypeId int) string {
-	switch TypeId {
-	case INT:
-		return "INT"
-	case BOOL:
-		return "BOOL"
-	case CHAR:
-		return "CHAR"
-	case STRING:
-		return "STRING"
-	default:
-		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", TypeId))
-	}
-}
-
 type BasicType struct {
 	TypeId int
 }
@@ -69,36 +54,49 @@ func (bt BasicType) Equals(t2 Type) bool {
 	return false
 }
 func (bt BasicType) Repr() string {
-	return TypeIdToString(bt.TypeId)
+	switch bt.TypeId {
+	case INT:
+		return "INT"
+	case BOOL:
+		return "BOOL"
+	case CHAR:
+		return "CHAR"
+	case STRING:
+		return "STRING"
+	case PAIR:
+		return "PAIR"
+	default:
+		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
+	}
 }
 
 type ArrayType struct {
-	TypeId int
+	BaseType Type
 }
 
 func (at ArrayType) Equals(t2 Type) bool {
 	if at2, ok := t2.(ArrayType); ok {
-		return at2.TypeId == at.TypeId
+		return at2.BaseType.Equals(at.BaseType)
 	}
 	return false
 }
 func (at ArrayType) Repr() string {
-	return TypeIdToString(at.TypeId)
+	return at.BaseType.Repr() + "[]"
 }
 
 type PairType struct {
-	FstTypeId int
-	SndTypeId int
+	Fst Type
+	Snd Type
 }
 
 func (pt PairType) Equals(t2 Type) bool {
 	if pt2, ok := t2.(PairType); ok {
-		return pt.FstTypeId == pt2.FstTypeId && pt.SndTypeId == pt2.SndTypeId
+		return pt2.Fst.Equals(pt.Fst) && pt2.Snd.Equals(pt.Snd)
 	}
 	return false
 }
 func (pt PairType) Repr() string {
-	return "PAIR(" + TypeIdToString(pt.FstTypeId) + ", " + TypeIdToString(pt.SndTypeId) + ")"
+	return "PAIR(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
 }
 
 type ErrorType struct {
