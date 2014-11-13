@@ -5,7 +5,7 @@ type Context struct {
 	types map[string]Type
 }
 
-func (cxt Context) Add(expr LValueExpr, t Type) {
+func (cxt *Context) Add(expr LValueExpr, t Type) {
 	switch expr := expr.(type) {
 	case *IdentExpr:
 		cxt.types[expr.Name] = t
@@ -15,7 +15,7 @@ func (cxt Context) Add(expr LValueExpr, t Type) {
 	}
 }
 
-func (cxt Context) LookupType(expr LValueExpr) Type {
+func (cxt *Context) DeriveType(expr Expr) Type {
 	switch expr := expr.(type) {
 	case *IdentExpr:
 		t, ok := cxt.types[expr.Name]
@@ -27,11 +27,72 @@ func (cxt Context) LookupType(expr LValueExpr) Type {
 		}
 
 	case *ArrayElemExpr:
-		t := cxt.LookupType(expr.Volume).(ArrayType)
+		t := cxt.DeriveType(expr.Volume).(ArrayType)
 		return t.BaseType
 
+	case *PairElemExpr:
+		t := cxt.DeriveType(expr.Operand)
+		if pair, ok := t.(PairType); ok {
+			switch expr.SelectorType {
+			case FST:
+				return pair.Fst
+			case SND:
+				return pair.Snd
+			default:
+				panic("expr.SelectorType must be either FST or SND")
+			}
+		} else {
+			SemanticError(0, "semantic error - Operand of pair selector must be a pair type (actual: %s)", t.Repr())
+			return ErrorType{}
+		}
+
+	case *BasicLit:
+		return expr.Type
+
+	case *ArrayLit:
+		// Check if the array has any elements
+		if len(expr.Values) == 0 {
+			SemanticError(0, "semantic error - Array literal cannot be empty")
+			return ErrorType{}
+		}
+
+		// Check that all the types match
+		t := cxt.DeriveType(expr.Values[0])
+		for i := 1; i < len(expr.Values); i++ {
+			if !t.Equals(cxt.DeriveType(expr.Values[i])) {
+				SemanticError(0, "semantic error - All expressions in the array literal must have the same type")
+				return ErrorType{}
+			}
+		}
+
+		// Just return the first elements type
+		return ArrayType{t}
+
+	case *UnaryExpr:
+		t := cxt.DeriveType(expr.Operand)
+
+		// TODO: Check whether unary operator supports the operand type
+		// Refer to the table in the spec
+		return t
+
+	case *BinaryExpr:
+		t1, t2 := cxt.DeriveType(expr.Left), cxt.DeriveType(expr.Right)
+
+		// TODO: Check whether binary operator supports the operand types
+		// Refer to the table in the spec
+
+		if !t1.Equals(t2) {
+			SemanticError(0, "semantic error - Types of binary expression operands do not match (%s != %s)", t1.Repr(), t2.Repr())
+			return ErrorType{}
+		} else {
+			return t1
+		}
+
+	case *NewPairCmd:
+		return PairType{cxt.DeriveType(expr.Left), cxt.DeriveType(expr.Right)}
+
 	default:
-		SemanticError(0, "IMPLEMENT_ME: Context.LookupType not defined for type %T", expr)
+		SemanticError(0, "IMPLEMENT_ME: Unhandled type in DeriveType - Type: %T", expr)
 		return ErrorType{}
 	}
 }
@@ -57,7 +118,7 @@ func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {
 func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 	switch statement := statement.(type) {
 	case *DeclStmt:
-		t1, t2 := statement.Type, DeriveType(cxt, statement.Right)
+		t1, t2 := statement.Type, cxt.DeriveType(statement.Right)
 		if !t1.Equals(t2) {
 			SemanticError(0, "semantic error - Value being used to initialise '%s' does not match it's type (%s != %s)",
 				statement.Ident.Name, t1.Repr(), t2.Repr())
@@ -66,14 +127,14 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		}
 
 	case *AssignStmt:
-		t1, t2 := cxt.LookupType(statement.Left), DeriveType(cxt, statement.Right)
+		t1, t2 := cxt.DeriveType(statement.Left), cxt.DeriveType(statement.Right)
 		if !t1.Equals(t2) {
 			SemanticError(0, "semantic error - Cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
 		}
 
 	case *IfStmt:
 		// Check for boolean condition
-		t := DeriveType(cxt, statement.Cond)
+		t := cxt.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
 			SemanticError(0, "semantic error - Condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
@@ -84,68 +145,12 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 
 	case *WhileStmt:
 		// Check the condition
-		t := DeriveType(cxt, statement.Cond)
+		t := cxt.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
 			SemanticError(0, "semantic error - Condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
 		// Verfy body
 		VerifyStatementListSemantics(cxt, statement.Body)
-	}
-}
-
-func DeriveType(cxt *Context, expr Expr) Type {
-	switch expr := expr.(type) {
-	case *BasicLit:
-		return expr.Type
-
-	case *ArrayLit:
-		// Check if the array has any elements
-		if len(expr.Values) == 0 {
-			SemanticError(0, "semantic error - Array literal cannot be empty")
-			return ErrorType{}
-		}
-
-		// Check that all the types match
-		t := DeriveType(cxt, expr.Values[0])
-		for i := 1; i < len(expr.Values); i++ {
-			if !t.Equals(DeriveType(cxt, expr.Values[i])) {
-				SemanticError(0, "semantic error - All expressions in the array literal must have the same type")
-				return ErrorType{}
-			}
-		}
-
-		// Just return the first elements type
-		return ArrayType{t}
-
-	case *IdentExpr:
-		return cxt.LookupType(expr)
-
-	case *UnaryExpr:
-		t := DeriveType(cxt, expr.Operand)
-
-		// TODO: Check whether unary operator supports the operand type
-		// Refer to the table in the spec
-		return t
-
-	case *BinaryExpr:
-		t1, t2 := DeriveType(cxt, expr.Left), DeriveType(cxt, expr.Right)
-
-		// TODO: Check whether binary operator supports the operand types
-		// Refer to the table in the spec
-
-		if !t1.Equals(t2) {
-			SemanticError(0, "semantic error - Types of binary expression operands do not match (%s != %s)", t1.Repr(), t2.Repr())
-			return ErrorType{}
-		} else {
-			return t1
-		}
-
-	case *NewPairCmd:
-		return PairType{DeriveType(cxt, expr.Left), DeriveType(cxt, expr.Right)}
-
-	default:
-		SemanticError(0, "IMPLEMENT_ME: Unhandled type in DeriveType - Type: %T", expr)
-		return ErrorType{}
 	}
 }
