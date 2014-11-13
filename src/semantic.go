@@ -54,8 +54,10 @@ func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {
 func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 	switch statement := statement.(type) {
 	case *DeclStmt:
-		if !statement.Type.Equals(DeriveType(cxt, statement.Right)) {
-			SemanticError(0, "semantic error - Right hand side of variable declaration doesn't match the type of the variable")
+		t1, t2 := statement.Type, DeriveType(cxt, statement.Right)
+		if !t1.Equals(t2) {
+			SemanticError(0, "semantic error - Value being used to initialise '%s' does not match it's type (%s != %s)",
+				statement.Ident.Repr(), t1.Repr(), t2.Repr())
 		} else {
 			cxt.Add(statement.Ident, statement.Type)
 		}
@@ -93,6 +95,25 @@ func DeriveType(cxt *Context, expr Expr) Type {
 	switch expr := expr.(type) {
 	case *BasicLit:
 		return expr.Type
+
+	case *ArrayLit:
+		// Check if the array has any elements
+		if len(expr.Values) == 0 {
+			SemanticError(0, "semantic error - Array literal cannot be empty")
+			return ErrorType{}
+		}
+
+		// Check that all the types match
+		t := DeriveType(cxt, expr.Values[0])
+		for i := 1; i < len(expr.Values); i++ {
+			if !t.Equals(DeriveType(cxt, expr.Values[i])) {
+				SemanticError(0, "semantic error - All expressions in the array literal must have the same type")
+				return ErrorType{}
+			}
+		}
+
+		// Just return the first elements type
+		return ArrayType{t}
 
 	case *UnaryExpr:
 		t := DeriveType(cxt, expr.Operand)
