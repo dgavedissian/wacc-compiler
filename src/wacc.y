@@ -81,16 +81,16 @@ statement_list
     ;
 
 statement
-    : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
-    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
-    | READ assign_lhs {}
-    | FREE expression {}
-    | RETURN expression { $$.Stmt = &ReturnStmt{0, $2.Expr} }
-    | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
-    | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
-    | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
-    | BEGIN statement_list END { $$.Stmts = $2.Stmts }
+    : SKIP                            { $$.Stmt = &SkipStmt{0} }
+    | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{0, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
+    | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
+    | READ assign_lhs                 { $$.Stmt = &ReadStmt{0, $2.Expr.(LValueExpr)} }
+    | FREE expression                 { $$.Stmt = &FreeStmt{0, $2.Expr} }
+    | RETURN expression               { $$.Stmt = &ReturnStmt{0, $2.Expr} }
+    | EXIT expression                 { $$.Stmt = &ExitStmt{0, $2.Expr} }
+    | PRINT expression                { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
+    | PRINTLN expression              { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
+    | BEGIN statement_list END        { $$.Stmts = $2.Stmts }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
