@@ -7,8 +7,8 @@
 %union {
   Expr   Expr
   Value  string
-  Funcs  []Func
-  Func   *Func
+  Funcs  []Function
+  Func   *Function
   Stmts  []Stmt
   Stmt   Stmt
   Params []Param
@@ -47,7 +47,7 @@ program
 body
     : func body {
         $$.Stmts = $2.Stmts
-        $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
+        $$.Funcs = append([]Function{*$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
     ;
@@ -56,7 +56,7 @@ body
 func
     : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Func{0, $1.Type, $2.Ident, $4.Params, $7.Stmts}
+        $$.Func = &Function{0, $1.Type, $2.Ident, $4.Params, $7.Stmts}
       }
     ;
 
@@ -102,16 +102,16 @@ statement
 
 assign_lhs
     : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
-    | identifier '[' expression ']' { $$.Expr = &IndexExpr{0, &$1.Ident, $3.Expr} }
+    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, &$1.Ident, $3.Expr} }
     | pair_elem      { $$.Expr = $1.Expr }
     ;
 
 assign_rhs
     : expression {$$.Expr = $1.Expr}
     | NEWPAIR '(' expression ',' expression ')' {
-        $$.Expr = &PairExpr{0, $3.Type, $3.Expr, $5.Type, $5.Expr}
+        $$.Expr = &NewPairCmd{0, $3.Expr, $5.Expr}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
+    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{0, $2.Ident, $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
     | pair_elem
     ;
@@ -162,8 +162,8 @@ pair_elem_type
     ;
 
 pair_elem
-    : FST expression { $$.Expr = &PairSelectorExpr{0, FST, $2.Expr} }
-    | SND expression { $$.Expr = &PairSelectorExpr{0, SND, $2.Expr} }
+    : FST expression { $$.Expr = &PairElemExpr{0, FST, $2.Expr} }
+    | SND expression { $$.Expr = &PairElemExpr{0, SND, $2.Expr} }
 
 array_liter
     : array_contents
@@ -179,8 +179,8 @@ array_contents
 
 /* Expression */
 array_expression
-    : identifier '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
-    | array_expression '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
+    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
+    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
     ;
 
 primary_expression

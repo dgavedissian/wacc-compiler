@@ -41,7 +41,7 @@ func VerifySemantics(program *ProgStmt) {
 	VerifyStatementListSemantics(cxt, program.Body)
 }
 
-func VerifyFunctionSemantics(cxt *Context, function Func) {
+func VerifyFunctionSemantics(cxt *Context, function Function) {
 }
 
 func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {

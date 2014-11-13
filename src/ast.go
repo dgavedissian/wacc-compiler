@@ -47,43 +47,8 @@ type BasicType struct {
 	TypeId int
 }
 
-func (bt BasicType) Equals(t2 Type) bool {
-	if _, ok := t2.(PairType); ok && bt.TypeId == PAIR {
-		return true
-	} else if bt2, ok := t2.(BasicType); ok {
-		return bt2.TypeId == bt.TypeId
-	}
-	return false
-}
-func (bt BasicType) Repr() string {
-	switch bt.TypeId {
-	case INT:
-		return "INT"
-	case BOOL:
-		return "BOOL"
-	case CHAR:
-		return "CHAR"
-	case STRING:
-		return "STRING"
-	case PAIR: // null
-		return "PAIR(_, _)"
-	default:
-		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
-	}
-}
-
 type ArrayType struct {
 	BaseType Type
-}
-
-func (at ArrayType) Equals(t2 Type) bool {
-	if at2, ok := t2.(ArrayType); ok {
-		return at2.BaseType.Equals(at.BaseType)
-	}
-	return false
-}
-func (at ArrayType) Repr() string {
-	return at.BaseType.Repr() + "[]"
 }
 
 type PairType struct {
@@ -91,24 +56,7 @@ type PairType struct {
 	Snd Type
 }
 
-func (pt PairType) Equals(t2 Type) bool {
-	if pt2, ok := t2.(PairType); ok {
-		return pt2.Fst.Equals(pt.Fst) && pt2.Snd.Equals(pt.Snd)
-	}
-	return false
-}
-func (pt PairType) Repr() string {
-	return "PAIR(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
-}
-
 type ErrorType struct {
-}
-
-func (ErrorType) Equals(Type) bool {
-	return false
-}
-func (ErrorType) Repr() string {
-	return "ERROR_TYPE"
 }
 
 //
@@ -116,7 +64,7 @@ func (ErrorType) Repr() string {
 //
 type ProgStmt struct {
 	BeginKw Pos // position of "begin" keyword
-	Funcs   []Func
+	Funcs   []Function
 	Body    []Stmt
 	EndKw   Pos // position of "end keyword
 }
@@ -153,21 +101,6 @@ type PrintStmt struct {
 	NewLine bool
 }
 
-type Func struct {
-	Func   Pos
-	Type   Type
-	Ident  IdentExpr
-	Params []Param
-	Stmts  []Stmt
-}
-
-type Param struct {
-	Start  Pos
-	Type   Type
-	Ident  IdentExpr
-	Finish Pos
-}
-
 type IfStmt struct {
 	If   Pos
 	Cond Expr
@@ -183,6 +116,21 @@ type WhileStmt struct {
 	Done  Pos
 }
 
+type Function struct {
+	Func   Pos
+	Type   Type
+	Ident  IdentExpr
+	Params []Param
+	Stmts  []Stmt
+}
+
+type Param struct {
+	Start  Pos
+	Type   Type
+	Ident  IdentExpr
+	Finish Pos
+}
+
 //
 // LValue Expressions
 //
@@ -191,7 +139,14 @@ type IdentExpr struct {
 	Name    string
 }
 
-type PairSelectorExpr struct {
+type ArrayElemExpr struct {
+	VolumePos Pos
+	Volume    Expr
+	Index     Expr
+}
+
+// Technically not an expression - but can be used as an lvalue
+type PairElemExpr struct {
 	SelectorPos  Pos
 	SelectorType int
 	Operand      Expr
@@ -211,14 +166,6 @@ type ArrayLit struct {
 	Values    []Expr
 }
 
-type PairExpr struct {
-	ValuePos  Pos
-	LeftType  Type
-	LeftExpr  Expr
-	RightType Type
-	RightExpr Expr
-}
-
 type UnaryExpr struct {
 	OperatorPos Pos
 	Operator    string
@@ -232,19 +179,24 @@ type BinaryExpr struct {
 	Right       Expr
 }
 
-type IndexExpr struct {
-	VolumePos Pos
-	Volume    Expr
-	Index     Expr
+//
+// Commands: Expressions which are only used in assignments
+//
+type NewPairCmd struct {
+	ValuePos  Pos
+	LeftExpr  Expr
+	RightExpr Expr
 }
 
-type CallExpr struct {
+type CallCmd struct {
 	Call  Pos
 	Ident IdentExpr
 	Args  []Expr
 }
 
-// Repr helpers
+//
+// Repr Helpers
+//
 func ReprNodes(nodeList interface{}) string {
 	realNodeList := make([]Node, 0)
 	switch nodeList := nodeList.(type) {
@@ -263,7 +215,7 @@ func ReprNodes(nodeList interface{}) string {
 		}
 		return reprNodesInt(realNodeList)
 
-	case []Func:
+	case []Function:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
@@ -288,107 +240,69 @@ func reprNodesInt(nodeList []Node) string {
 	return strings.Join(nodes, ", ")
 }
 
-// Identifier
-func (IdentExpr) lvalueExprNode() {}
-func (IdentExpr) exprNode()       {}
-func (x IdentExpr) Pos() Pos      { return x.NamePos }
-func (x IdentExpr) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
-func (x IdentExpr) Repr() string {
-	if x.Name == "" {
-		return "IdentExpr(<missing name>)"
+//
+// Types
+//
+
+// Basic Type
+func (bt BasicType) Equals(t2 Type) bool {
+	if _, ok := t2.(PairType); ok && bt.TypeId == PAIR {
+		return true
+	} else if bt2, ok := t2.(BasicType); ok {
+		return bt2.TypeId == bt.TypeId
 	}
-	return "IdentExpr(" + x.Name + ")"
+	return false
 }
-
-// Basic Literal
-func (BasicLit) exprNode()  {}
-func (x BasicLit) Pos() Pos { return x.ValuePos }
-func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
-func (x BasicLit) Repr() string {
-	return "Lit(" + x.Type.Repr() + ", " + x.Value + ")"
-}
-
-// Pair selector expressions
-func (PairSelectorExpr) lvalueExprNode() {}
-func (PairSelectorExpr) exprNode()       {}
-func (x PairSelectorExpr) Pos() Pos      { return x.SelectorPos }
-func (x PairSelectorExpr) End() Pos      { return Pos(int(x.SelectorPos) + 3) } // TODO: unbreak that
-func (x PairSelectorExpr) Repr() string {
-	return fmt.Sprintf("PairSelectorExpr(%d, %f)", x.SelectorType, x.Operand)
-}
-
-// Array literal
-func (ArrayLit) exprNode()  {}
-func (x ArrayLit) Pos() Pos { return x.ValuesPos }
-func (x ArrayLit) End() Pos {
-	if x.Values == nil {
-		return Pos(int(x.ValuesPos) + 1) /* CLose bracket */
+func (bt BasicType) Repr() string {
+	switch bt.TypeId {
+	case INT:
+		return "INT"
+	case BOOL:
+		return "BOOL"
+	case CHAR:
+		return "CHAR"
+	case STRING:
+		return "STRING"
+	case PAIR: // null
+		return "PAIR(_, _)"
+	default:
+		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
 	}
-	return Pos(int(x.Values[len(x.Values)-1].End()) + 1)
 }
-func (x ArrayLit) Repr() string {
-	if x.Values == nil {
-		return "ArrayLit([])"
+
+// Array Type
+func (at ArrayType) Equals(t2 Type) bool {
+	if at2, ok := t2.(ArrayType); ok {
+		return at2.BaseType.Equals(at.BaseType)
 	}
-	return "ArrayLit([" + ReprNodes(x.Values) + "])"
+	return false
+}
+func (at ArrayType) Repr() string {
+	return at.BaseType.Repr() + "[]"
 }
 
-// Pairs
-func (PairExpr) exprNode()  {}
-func (x PairExpr) Pos() Pos { return x.ValuePos }
-func (x PairExpr) End() Pos {
-	return Pos(int(x.ValuePos) + len(x.RightExpr.Repr()) + 1) // Right bracket
-}
-func (x PairExpr) Repr() string {
-	if x.LeftExpr == nil || x.RightExpr == nil {
-		return "Pair(<missing elements>)"
+// Pair Type
+func (pt PairType) Equals(t2 Type) bool {
+	if pt2, ok := t2.(PairType); ok {
+		return pt2.Fst.Equals(pt.Fst) && pt2.Snd.Equals(pt.Snd)
 	}
-	return "Pair(" + x.LeftType.Repr() + ", " + x.LeftExpr.Repr() +
-		", " + x.RightType.Repr() + ", " + x.RightExpr.Repr() + ")"
+	return false
+}
+func (pt PairType) Repr() string {
+	return "PAIR(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
 }
 
-// Unary Expression
-func (UnaryExpr) exprNode()  {}
-func (x UnaryExpr) Pos() Pos { return x.OperatorPos }
-func (x UnaryExpr) End() Pos { return x.Operand.End() }
-func (x UnaryExpr) Repr() string {
-	if x.Operand == nil {
-		return "Unary(" + x.Operator + ", <missing operand>)"
-	}
-	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
+// Error Type
+func (ErrorType) Equals(Type) bool {
+	return false
+}
+func (ErrorType) Repr() string {
+	return "ERROR_TYPE"
 }
 
-// Binary Expression
-func (BinaryExpr) exprNode()  {}
-func (x BinaryExpr) Pos() Pos { return x.Left.Pos() }
-func (x BinaryExpr) End() Pos { return x.Right.End() }
-func (x BinaryExpr) Repr() string {
-	if x.Left == nil || x.Right == nil {
-		return "Binary(" + x.Operator + ", , )"
-	}
-	return "Binary(" + x.Operator + ", " +
-		x.Left.Repr() + ", " + x.Right.Repr() + ")"
-}
-
-// Array index expression
-func (IndexExpr) exprNode()  {}
-func (x IndexExpr) Pos() Pos { return x.VolumePos }
-func (x IndexExpr) End() Pos {
-	return x.Index.End() + 1 /* Close bracket*/
-}
-func (x IndexExpr) Repr() string {
-	return "Index(" + x.Volume.Repr() + ", " + x.Index.Repr() + ")"
-}
-
-// Function call
-func (CallExpr) exprNode()  {}
-func (x CallExpr) Pos() Pos { return x.Call }
-func (x CallExpr) End() Pos {
-	return x.Call /* TODO */
-}
-func (x CallExpr) Repr() string {
-	return "Call(" + x.Ident.Repr() + ", " + ReprNodes(x.Args) + ")"
-}
+//
+// Statements
+//
 
 // Program Statement
 func (ProgStmt) stmtNode()  {}
@@ -508,12 +422,12 @@ func (s WhileStmt) Repr() string {
 }
 
 // Function Statement
-func (s Func) Pos() Pos { return s.Func }
-func (s Func) End() Pos {
+func (s Function) Pos() Pos { return s.Func }
+func (s Function) End() Pos {
 	return s.Stmts[len(s.Stmts)-1].End()
 }
-func (s Func) Repr() string {
-	return "Func(type:" + s.Type.Repr() +
+func (s Function) Repr() string {
+	return "Function(type:" + s.Type.Repr() +
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprNodes(s.Params) +
 		"), body:(" + ReprNodes(s.Stmts) + ")"
@@ -526,4 +440,115 @@ func (s Param) Repr() string {
 	return "Param(" + s.Type.Repr() + ", " + s.Ident.Repr() + ")"
 }
 
-// Pair selectors (fst/snd)
+//
+// LValue Expressions
+//
+
+// Identifier
+func (IdentExpr) lvalueExprNode() {}
+func (IdentExpr) exprNode()       {}
+func (x IdentExpr) Pos() Pos      { return x.NamePos }
+func (x IdentExpr) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
+func (x IdentExpr) Repr() string {
+	if x.Name == "" {
+		return "IdentExpr(<missing name>)"
+	}
+	return "IdentExpr(" + x.Name + ")"
+}
+
+// Array element expression
+func (ArrayElemExpr) exprNode()  {}
+func (x ArrayElemExpr) Pos() Pos { return x.VolumePos }
+func (x ArrayElemExpr) End() Pos {
+	return x.Index.End() + 1 /* Close bracket*/
+}
+func (x ArrayElemExpr) Repr() string {
+	return "ArrayElem(" + x.Volume.Repr() + ", " + x.Index.Repr() + ")"
+}
+
+// Pair selector expressions
+func (PairElemExpr) lvalueExprNode() {}
+func (PairElemExpr) exprNode()       {}
+func (x PairElemExpr) Pos() Pos      { return x.SelectorPos }
+func (x PairElemExpr) End() Pos      { return Pos(int(x.SelectorPos) + 3) } // TODO: unbreak that
+func (x PairElemExpr) Repr() string {
+	return fmt.Sprintf("PairElem(%d, %f)", x.SelectorType, x.Operand)
+}
+
+//
+// Expressions
+//
+
+// Basic Literal
+func (BasicLit) exprNode()  {}
+func (x BasicLit) Pos() Pos { return x.ValuePos }
+func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
+func (x BasicLit) Repr() string {
+	return "Lit(" + x.Type.Repr() + ", " + x.Value + ")"
+}
+
+// Array literal
+func (ArrayLit) exprNode()  {}
+func (x ArrayLit) Pos() Pos { return x.ValuesPos }
+func (x ArrayLit) End() Pos {
+	if x.Values == nil {
+		return Pos(int(x.ValuesPos) + 1) /* CLose bracket */
+	}
+	return Pos(int(x.Values[len(x.Values)-1].End()) + 1)
+}
+func (x ArrayLit) Repr() string {
+	if x.Values == nil {
+		return "ArrayLit([])"
+	}
+	return "ArrayLit([" + ReprNodes(x.Values) + "])"
+}
+
+// Unary Expression
+func (UnaryExpr) exprNode()  {}
+func (x UnaryExpr) Pos() Pos { return x.OperatorPos }
+func (x UnaryExpr) End() Pos { return x.Operand.End() }
+func (x UnaryExpr) Repr() string {
+	if x.Operand == nil {
+		return "Unary(" + x.Operator + ", <missing operand>)"
+	}
+	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
+}
+
+// Binary Expression
+func (BinaryExpr) exprNode()  {}
+func (x BinaryExpr) Pos() Pos { return x.Left.Pos() }
+func (x BinaryExpr) End() Pos { return x.Right.End() }
+func (x BinaryExpr) Repr() string {
+	if x.Left == nil || x.Right == nil {
+		return "Binary(" + x.Operator + ", , )"
+	}
+	return "Binary(" + x.Operator + ", " +
+		x.Left.Repr() + ", " + x.Right.Repr() + ")"
+}
+
+//
+// Commands: Expressions which are only used in assignments
+//
+
+// Pairs
+func (NewPairCmd) exprNode()  {}
+func (x NewPairCmd) Pos() Pos { return x.ValuePos }
+func (x NewPairCmd) End() Pos {
+	return Pos(int(x.ValuePos) + len(x.RightExpr.Repr()) + 1) // Right bracket
+}
+func (x NewPairCmd) Repr() string {
+	if x.LeftExpr == nil || x.RightExpr == nil {
+		return "NewPair(<missing elements>)"
+	}
+	return "NewPair(" + x.LeftExpr.Repr() + ", " + x.RightExpr.Repr() + ")"
+}
+
+// Function call
+func (CallCmd) exprNode()  {}
+func (x CallCmd) Pos() Pos { return x.Call }
+func (x CallCmd) End() Pos {
+	return x.Call /* TODO */
+}
+func (x CallCmd) Repr() string {
+	return "Call(" + x.Ident.Repr() + ", " + ReprNodes(x.Args) + ")"
+}
