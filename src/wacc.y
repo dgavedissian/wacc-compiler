@@ -14,7 +14,6 @@
   Params []Param
   Param  Param
   Type   Type
-  Ident  IdentExpr
   lines  int
   Exprs  []Expr
 }
@@ -56,7 +55,7 @@ body
 func
     : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Function{0, $1.Type, $2.Ident, $4.Params, $7.Stmts}
+        $$.Func = &Function{0, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
       }
     ;
 
@@ -71,7 +70,7 @@ param_list
     ;
 
 param
-    : type identifier { $$.Param = Param{0, $1.Type, $2.Ident, 0} }
+    : type identifier { $$.Param = Param{0, $1.Type, $2.Expr.(*IdentExpr), 0} }
     ;
 
 /* Statements */
@@ -83,8 +82,8 @@ statement_list
 
 statement
     : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Type, $2.Ident, $4.Expr} }
-    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Ident, $3.Expr} }
+    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
+    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
     | READ assign_lhs {}
     | FREE expression {}
     | RETURN expression { $$.Stmt = &ReturnStmt{0, $2.Expr} }
@@ -101,8 +100,8 @@ statement
     ;
 
 assign_lhs
-    : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
-    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, &$1.Ident, $3.Expr} }
+    : identifier     { $$.Expr = $1.Expr }
+    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
     | pair_elem      { $$.Expr = $1.Expr }
     ;
 
@@ -111,13 +110,13 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &NewPairCmd{0, $3.Expr, $5.Expr}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{0, $2.Ident, $4.Exprs} }
+    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{0, $2.Expr.(*IdentExpr), $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
     | pair_elem
     ;
 
 identifier
-    : IDENT { $$.Ident = IdentExpr{0, $1.Value}; $$.Expr = &IdentExpr{0, $1.Value} }
+    : IDENT { $$.Expr = &IdentExpr{0, $1.Value} }
     ;
 
 optional_arg_list
@@ -184,7 +183,7 @@ array_expression
     ;
 
 primary_expression
-    : identifier          { $$.Expr = &IdentExpr{0, $1.Value} ; $$.Ident = IdentExpr{0, $1.Value} }
+    : identifier          { $$.Expr = &IdentExpr{0, $1.Value} }
     | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
     | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
     | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }

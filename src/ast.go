@@ -76,12 +76,12 @@ type SkipStmt struct {
 type DeclStmt struct {
 	TypeKw Pos // Position of the type keyword
 	Type   Type
-	Ident  IdentExpr
+	Ident  *IdentExpr
 	Right  Expr
 }
 
 type AssignStmt struct {
-	Ident IdentExpr
+	Left  LValueExpr
 	Right Expr
 }
 
@@ -119,7 +119,7 @@ type WhileStmt struct {
 type Function struct {
 	Func   Pos
 	Type   Type
-	Ident  IdentExpr
+	Ident  *IdentExpr
 	Params []Param
 	Stmts  []Stmt
 }
@@ -127,7 +127,7 @@ type Function struct {
 type Param struct {
 	Start  Pos
 	Type   Type
-	Ident  IdentExpr
+	Ident  *IdentExpr
 	Finish Pos
 }
 
@@ -190,7 +190,7 @@ type NewPairCmd struct {
 
 type CallCmd struct {
 	Call  Pos
-	Ident IdentExpr
+	Ident *IdentExpr
 	Args  []Expr
 }
 
@@ -336,13 +336,13 @@ func (s DeclStmt) Repr() string {
 
 // Assign Statement
 func (AssignStmt) stmtNode()  {}
-func (s AssignStmt) Pos() Pos { return s.Ident.Pos() }
+func (s AssignStmt) Pos() Pos { return s.Left.Pos() }
 func (s AssignStmt) End() Pos { return s.Pos() } // TODO
 func (s AssignStmt) Repr() string {
 	if s.Right == nil {
-		return "Assign(" + s.Ident.Repr() + ", <missing rhs>)"
+		return "Assign(" + s.Left.Repr() + ", <missing rhs>)"
 	}
-	return "Assign(" + s.Ident.Repr() + ", " + s.Right.Repr() + ")"
+	return "Assign(" + s.Left.Repr() + ", " + s.Right.Repr() + ")"
 }
 
 // Exit Statement
@@ -457,8 +457,9 @@ func (x IdentExpr) Repr() string {
 }
 
 // Array element expression
-func (ArrayElemExpr) exprNode()  {}
-func (x ArrayElemExpr) Pos() Pos { return x.VolumePos }
+func (ArrayElemExpr) lvalueExprNode() {}
+func (ArrayElemExpr) exprNode()       {}
+func (x ArrayElemExpr) Pos() Pos      { return x.VolumePos }
 func (x ArrayElemExpr) End() Pos {
 	return x.Index.End() + 1 /* Close bracket*/
 }

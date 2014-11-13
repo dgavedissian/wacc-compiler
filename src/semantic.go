@@ -62,7 +62,7 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		}
 
 	case *AssignStmt:
-		t1, t2 := cxt.LookupType(statement.Ident), DeriveType(cxt, statement.Right)
+		t1, t2 := cxt.LookupType(statement.Left), DeriveType(cxt, statement.Right)
 		if !t1.Equals(t2) {
 			SemanticError(0, "semantic error - Cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
 		}
