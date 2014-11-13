@@ -77,89 +77,47 @@
 package main
 
 import (
-  "os"
-  "fmt"
-  "flag"
-  "strconv"
+	"os"
+	"fmt"
+	"flag"
+	"strconv"
 )
-
-const SYNTAX_ERROR = 100
-const SEMANTIC_ERROR = 200
 
 var lex *Lexer
 var exitFlag int = 0
 
 func ProcessStr(s string) string {
-  s = s[1:len(s) - 1]
+	s = s[1:len(s) - 1]
 
-  // Replace escaped characters with their unicode equivalent
-  output := ""
-  for i := 0; i < len(s); i++ {
-    if s[i] == '\\' {
-      i++
-      switch s[i] {
-        case '0': output += "\000"
-        case 'b': output += "\b"
-        case 't': output += "\t"
-        case 'n': output += "\n"
-        case 'f': output += "\f"
-        case 'r': output += "\r"
-        case '\047': output += "\047"
-        case '\042': output += "\042"
-        case '\\': output += "\\"
-        default: panic("Encountered an unknown escape sequence, this should never happen")
-      }
-    } else {
-      output += string(s[i])
-    }
-  }
-  return output
+	// Replace escaped characters with their unicode equivalent
+	output := ""
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' {
+			i++
+			switch s[i] {
+				case '0': output += "\000"
+				case 'b': output += "\b"
+				case 't': output += "\t"
+				case 'n': output += "\n"
+				case 'f': output += "\f"
+				case 'r': output += "\r"
+				case '\047': output += "\047"
+				case '\042': output += "\042"
+				case '\\': output += "\\"
+				default: panic("Encountered an unknown escape sequence, this should never happen")
+			}
+		} else {
+			output += string(s[i])
+		}
+	}
+	return output
 }
 
 // Callback for goyacc
 func (l *Lexer) Error(s string) {
-  unexpectedToken := "<EOF>"
-  if len(l.stack) > 0 {
-    unexpectedToken = strconv.Quote(l.Text())
-  }
-  SyntaxError(l.l, "%s -- unexpected %s", s, unexpectedToken)
-}
-
-func SyntaxError(lineNo int, s string, a... interface{}) {
-  errorStr := fmt.Sprintf(s, a...)
-  fmt.Printf("Line %d: %s\n", lineNo, errorStr)
-  exitFlag = SYNTAX_ERROR
-}
-
-func SemanticError(lineNo int, s string, a... interface{}) {
-  errorStr := fmt.Sprintf(s, a...)
-  fmt.Printf("Line %d: %s\n", lineNo, errorStr)
-  exitFlag = SEMANTIC_ERROR
-}
-
-func main() {
-  enableDebug := flag.Bool("d", false, "Enable debug mode")
-  flag.Parse()
-
-  if *enableDebug {
-    yyDebug = 20
-  }
-
-  // Parse the code, build the AST using the yacc file, and syntax-check.
-  // We tend to think of the first line as line 1, not line 0
-  lex = NewLexerWithInit(os.Stdin, func(l *Lexer){ l.l = 1 })
-  yyParse(lex)
-  if exitFlag != 0 {
-    os.Exit(exitFlag)
-  }
-
-  // Semantic-check the tree
-  VerifySemantics(top.Stmt.(*ProgStmt))
-  if exitFlag != 0 {
-    os.Exit(exitFlag)
-  }
-
-  // Print the representation of the tree
-  fmt.Println("Compilation successful!")
-  fmt.Println(top.Stmt.Repr())
+	unexpectedToken := "<EOF>"
+	if len(l.stack) > 0 {
+		unexpectedToken = strconv.Quote(l.Text())
+	}
+	SyntaxError(l.l, "%s -- unexpected %s", s, unexpectedToken)
 }
