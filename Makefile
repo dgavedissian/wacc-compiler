@@ -5,7 +5,6 @@ BASE_DIR     := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SOURCE_DIR	 := src
 SCRIPTS_DIR  := scripts
 EXAMPLES_DIR := examples
-TESTS_DIR    := tests
 
 # Tools
 FIND	:= find
@@ -40,17 +39,17 @@ clean:
 	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go frontend
 
 
-test:
-	python $(TESTS_DIR)/run.py
+test: frontend
+	$(SCRIPTS_DIR)/test_examples.py
 
 testvalid: frontend
-	python $(TESTS_DIR)/run.py "Valid"
+	$(SCRIPTS_DIR)/test_examples.py "Valid"
 
 testinvalidsyntax: frontend
-	python $(TESTS_DIR)/run.py "Invalid Syntax"
+	$(SCRIPTS_DIR)/test_examples.py "Invalid Syntax"
 
 testinvalidsemantic: frontend
-	python $(TESTS_DIR)/run.py "Invalid Semantic"
+	$(SCRIPTS_DIR)/test_examples.py "Invalid Semantic"
 
 
 .PHONY: clean all nex test go testvalid testinvalidsyntax testinvalidsemantic
