@@ -56,6 +56,11 @@ type PairType struct {
 	Snd Type
 }
 
+// Special case used in empty array literals
+type AnyType struct {
+}
+
+// Special case used to propagate errors
 type ErrorType struct {
 }
 
@@ -306,6 +311,14 @@ func (pt PairType) Equals(t2 Type) bool {
 }
 func (pt PairType) Repr() string {
 	return "PAIR(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
+}
+
+// Any Type
+func (AnyType) Equals(Type) bool {
+	return true
+}
+func (AnyType) Repr() string {
+	return "ANY_TYPE"
 }
 
 // Error Type

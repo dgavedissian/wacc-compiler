@@ -52,8 +52,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 	case *ArrayLit:
 		// Check if the array has any elements
 		if len(expr.Values) == 0 {
-			SemanticError(0, "semantic error - Array literal cannot be empty")
-			return ErrorType{}
+			return ArrayType{AnyType{}}
 		}
 
 		// Check that all the types match
