@@ -85,6 +85,16 @@ type AssignStmt struct {
 	Right Expr
 }
 
+type ReadStmt struct {
+	Read Pos
+	Dest LValueExpr
+}
+
+type FreeStmt struct {
+	Free   Pos
+	Object Expr
+}
+
 type ExitStmt struct {
 	Exit   Pos  // position of "exit" keyword
 	Result Expr // result expression
@@ -235,7 +245,11 @@ func ReprNodes(nodeList interface{}) string {
 func reprNodesInt(nodeList []Node) string {
 	nodes := []string{}
 	for _, f := range nodeList {
-		nodes = append(nodes, f.(Node).Repr())
+		if f, ok := f.(Node); ok {
+			nodes = append(nodes, f.(Node).Repr())
+		} else {
+			nodes = append(nodes, "<nil_node>")
+		}
 	}
 	return strings.Join(nodes, ", ")
 }
@@ -264,7 +278,7 @@ func (bt BasicType) Repr() string {
 	case STRING:
 		return "STRING"
 	case PAIR: // null
-		return "PAIR(_, _)"
+		return "PAIR"
 	default:
 		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
 	}
@@ -283,7 +297,9 @@ func (at ArrayType) Repr() string {
 
 // Pair Type
 func (pt PairType) Equals(t2 Type) bool {
-	if pt2, ok := t2.(PairType); ok {
+	if bt2, ok := t2.(BasicType); ok {
+		return bt2.TypeId == PAIR
+	} else if pt2, ok := t2.(PairType); ok {
 		return pt2.Fst.Equals(pt.Fst) && pt2.Snd.Equals(pt.Snd)
 	}
 	return false
@@ -343,6 +359,28 @@ func (s AssignStmt) Repr() string {
 		return "Assign(" + s.Left.Repr() + ", <missing rhs>)"
 	}
 	return "Assign(" + s.Left.Repr() + ", " + s.Right.Repr() + ")"
+}
+
+// Read Statement
+func (ReadStmt) stmtNode()  {}
+func (s ReadStmt) Pos() Pos { return s.Read }
+func (s ReadStmt) End() Pos { return s.Pos() } // TODO
+func (s ReadStmt) Repr() string {
+	if s.Dest == nil {
+		return "Read(<missing destination>)"
+	}
+	return "Read(" + s.Dest.Repr() + ")"
+}
+
+// Free Statement
+func (FreeStmt) stmtNode()  {}
+func (s FreeStmt) Pos() Pos { return s.Free }
+func (s FreeStmt) End() Pos { return s.Pos() } // TODO
+func (s FreeStmt) Repr() string {
+	if s.Object == nil {
+		return "Free(<missing object>)"
+	}
+	return "Free(" + s.Object.Repr() + ")"
 }
 
 // Exit Statement
