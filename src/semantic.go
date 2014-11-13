@@ -8,7 +8,11 @@ type Context struct {
 func (cxt *Context) Add(expr LValueExpr, t Type) {
 	switch expr := expr.(type) {
 	case *IdentExpr:
-		cxt.types[expr.Name] = t
+		if _, ok := cxt.types[expr.Name]; ok {
+			SemanticError(0, "semantic error - Variable '%s' already exists in this scope", expr.Name)
+		} else {
+			cxt.types[expr.Name] = t
+		}
 
 	default:
 		SemanticError(0, "IMPLEMENT_ME: Context.Add not defined for type %T", expr)
