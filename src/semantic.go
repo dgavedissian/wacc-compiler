@@ -81,14 +81,54 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 	case *BinaryExpr:
 		t1, t2 := cxt.DeriveType(expr.Left), cxt.DeriveType(expr.Right)
 
-		// TODO: Check whether binary operator supports the operand types
-		// Refer to the table in the spec
+		switch expr.Operator {
+		case "*", "/", "%", "+", "-":
+			if !t1.Equals(BasicType{INT}) {
+				SemanticError(0, "semantic error - Invalid type on left of operator '%s' (expected: INT, actual: %s)", expr.Operator, t1.Repr())
+				return ErrorType{}
+			}
+			if !t2.Equals(BasicType{INT}) {
+				SemanticError(0, "semantic error - Invalid type on right of operator '%s' (expected: INT, actual: %s)", expr.Operator, t2.Repr())
+				return ErrorType{}
+			}
+			return BasicType{INT}
 
-		if !t1.Equals(t2) {
-			SemanticError(0, "semantic error - Types of binary expression operands do not match (%s != %s)", t1.Repr(), t2.Repr())
+		case ">", ">=", "<", "<=":
+			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
+				SemanticError(0, "semantic error - Invalid type on left of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t1.Repr())
+				return ErrorType{}
+			}
+			if !t2.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
+				SemanticError(0, "semantic error - Invalid type on right of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t2.Repr())
+				return ErrorType{}
+			}
+			if !t1.Equals(t2) {
+				SemanticError(0, "semantic error - Types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
+				return ErrorType{}
+			}
+			return BasicType{BOOL}
+
+		case "==", "!=":
+			if !t1.Equals(t2) {
+				SemanticError(0, "semantic error - Types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
+				return ErrorType{}
+			}
+			return BasicType{BOOL}
+
+		case "&&", "||":
+			if !t1.Equals(BasicType{BOOL}) {
+				SemanticError(0, "semantic error - Invalid type on left of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t1.Repr())
+				return ErrorType{}
+			}
+			if !t2.Equals(BasicType{BOOL}) {
+				SemanticError(0, "semantic error - Invalid type on right of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t2.Repr())
+				return ErrorType{}
+			}
+			return BasicType{BOOL}
+
+		default:
+			SemanticError(0, "IMPLEMENT_ME - Operator '%s' unhandled", expr.Operator)
 			return ErrorType{}
-		} else {
-			return t1
 		}
 
 	case *NewPairCmd:
