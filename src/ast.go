@@ -151,7 +151,7 @@ type IdentExpr struct {
 
 type ArrayElemExpr struct {
 	VolumePos Pos
-	Volume    Expr
+	Volume    LValueExpr
 	Index     Expr
 }
 

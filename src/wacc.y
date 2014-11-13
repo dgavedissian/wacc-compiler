@@ -101,7 +101,7 @@ statement
 
 assign_lhs
     : identifier     { $$.Expr = $1.Expr }
-    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
+    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
     | pair_elem      { $$.Expr = $1.Expr }
     ;
 
@@ -178,8 +178,8 @@ array_contents
 
 /* Expression */
 array_expression
-    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
-    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr, $3.Expr} }
+    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
+    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
     ;
 
 primary_expression

@@ -26,6 +26,10 @@ func (cxt Context) LookupType(expr LValueExpr) Type {
 			return t
 		}
 
+	case *ArrayElemExpr:
+		t := cxt.LookupType(expr.Volume).(ArrayType)
+		return t.BaseType
+
 	default:
 		SemanticError(0, "IMPLEMENT_ME: Context.LookupType not defined for type %T", expr)
 		return ErrorType{}
