@@ -69,7 +69,7 @@ type ErrorType struct {
 //
 type ProgStmt struct {
 	BeginKw Pos // position of "begin" keyword
-	Funcs   []Function
+	Funcs   []*Function
 	Body    []Stmt
 	EndKw   Pos // position of "end keyword
 }
@@ -236,7 +236,7 @@ func ReprNodes(nodeList interface{}) string {
 		}
 		return reprNodesInt(realNodeList)
 
-	case []Function:
+	case []*Function:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}

@@ -7,7 +7,7 @@
 %union {
   Expr   Expr
   Value  string
-  Funcs  []Function
+  Funcs  []*Function
   Func   *Function
   Stmts  []Stmt
   Stmt   Stmt
@@ -46,7 +46,7 @@ program
 body
     : func body {
         $$.Stmts = $2.Stmts
-        $$.Funcs = append([]Function{*$1.Func}, $2.Funcs...)
+        $$.Funcs = append([]*Function{$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
     ;
