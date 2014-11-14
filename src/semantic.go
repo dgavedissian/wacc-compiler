@@ -4,7 +4,8 @@ package main
 type Context struct {
 	functions       map[string]*Function
 	currentFunction *Function
-	types           map[string]Type
+	types           []map[string]Type
+	depth           int
 }
 
 //
@@ -27,22 +28,49 @@ func (cxt *Context) AddFunction(f *Function) {
 // Scope
 //
 func (cxt *Context) PushScope() {
+	cxt.types = append(cxt.types, make(map[string]Type))
+	cxt.depth++
 }
 
 func (cxt *Context) LookupVariable(ident *IdentExpr) (Type, bool) {
-	t, ok := cxt.types[ident.Name]
-	return t, ok
+	var t Type
+	var ok bool
+
+	// Search for variables in each scope
+	for i := cxt.depth - 1; i >= 0; i-- {
+		if t, ok = cxt.types[i][ident.Name]; ok {
+			break
+		}
+	}
+
+	// If the variable does not exist in this scope and we're in a function,
+	// then search for a parameter
+	if !ok && cxt.currentFunction != nil {
+		// Search for a function parameter
+		for _, param := range cxt.currentFunction.Params {
+			if param.Ident.Name == ident.Name {
+				return param.Type, true
+			}
+		}
+
+		// Give up otherwise
+		return nil, false
+	} else {
+		return t, ok
+	}
 }
 
 func (cxt *Context) AddVariable(t Type, ident *IdentExpr) {
-	if _, ok := cxt.LookupVariable(ident); ok {
+	if _, ok := cxt.types[cxt.depth-1][ident.Name]; ok {
 		SemanticError(0, "semantic error -- variable '%s' already exists in this scope", ident.Name)
 	} else {
-		cxt.types[ident.Name] = t
+		cxt.types[cxt.depth-1][ident.Name] = t
 	}
 }
 
 func (cxt *Context) PopScope() {
+	cxt.types = cxt.types[:cxt.depth-1]
+	cxt.depth--
 }
 
 //
@@ -237,11 +265,17 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 
 // Semantic Checking
 func VerifySemantics(program *ProgStmt) {
-	cxt := &Context{make(map[string]*Function), nil, make(map[string]Type)}
+	cxt := &Context{make(map[string]*Function), nil, nil, 0}
+
+	// Verify functions
 	for _, f := range program.Funcs {
 		VerifyFunctionSemantics(cxt, f)
 	}
+
+	// Verify main
+	cxt.PushScope()
 	VerifyStatementListSemantics(cxt, program.Body)
+	cxt.PopScope()
 }
 
 func VerifyFunctionSemantics(cxt *Context, f *Function) {
