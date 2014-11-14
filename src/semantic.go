@@ -320,8 +320,10 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 
 	case *ReadStmt:
 		t := cxt.DeriveType(statement.Dest)
-		if t.Equals(PairType{AnyType{}, AnyType{}}) || t.Equals(ArrayType{AnyType{}}) {
-			SemanticError(0, "semantic error -- destination of read must not be a pair or an array (actual: %s)", t.Repr())
+		if t.Equals(PairType{AnyType{}, AnyType{}}) ||
+			t.Equals(ArrayType{AnyType{}}) ||
+			t.Equals(BasicType{BOOL}) {
+			SemanticError(0, "semantic error -- destination of read must not be a pair, an array or a bool (actual: %s)", t.Repr())
 		}
 
 	case *FreeStmt:
@@ -350,7 +352,8 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		}
 
 	case *PrintStmt:
-		// Nothing to check
+		// Verify expression by attempting to derive the type
+		cxt.DeriveType(statement.Right)
 
 	case *IfStmt:
 		// Check the condition
