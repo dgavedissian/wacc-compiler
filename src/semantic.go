@@ -1,30 +1,57 @@
 package main
 
-// Context (Variable Store)
+// Context
 type Context struct {
-	functions map[string]*Function
-	types     map[string]Type
+	functions       map[string]*Function
+	currentFunction *Function
+	types           map[string]Type
 }
 
-func (cxt *Context) Add(expr LValueExpr, t Type) {
-	switch expr := expr.(type) {
-	case *IdentExpr:
-		if _, ok := cxt.types[expr.Name]; ok {
-			SemanticError(0, "semantic error -- variable '%s' already exists in this scope", expr.Name)
-		} else {
-			cxt.types[expr.Name] = t
-		}
+//
+// Functions
+//
+func (cxt *Context) LookupFunction(ident *IdentExpr) (*Function, bool) {
+	f, ok := cxt.functions[ident.Name]
+	return f, ok
+}
 
-	default:
-		SemanticError(0, "IMPLEMENT_ME: Context.Add not defined for type %T", expr)
+func (cxt *Context) AddFunction(f *Function) {
+	if _, ok := cxt.LookupFunction(f.Ident); ok {
+		SemanticError(0, "semantic error -- function '%s' already exists in this program", f.Ident.Name)
+	} else {
+		cxt.functions[f.Ident.Name] = f
 	}
 }
 
+//
+// Scope
+//
+func (cxt *Context) PushScope() {
+}
+
+func (cxt *Context) LookupVariable(ident *IdentExpr) (Type, bool) {
+	t, ok := cxt.types[ident.Name]
+	return t, ok
+}
+
+func (cxt *Context) AddVariable(t Type, ident *IdentExpr) {
+	if _, ok := cxt.LookupVariable(ident); ok {
+		SemanticError(0, "semantic error -- variable '%s' already exists in this scope", ident.Name)
+	} else {
+		cxt.types[ident.Name] = t
+	}
+}
+
+func (cxt *Context) PopScope() {
+}
+
+//
+// Derive Type
+//
 func (cxt *Context) DeriveType(expr Expr) Type {
 	switch expr := expr.(type) {
 	case *IdentExpr:
-		t, ok := cxt.types[expr.Name]
-		if !ok {
+		if t, ok := cxt.LookupVariable(expr); !ok {
 			SemanticError(0, "semantic error -- use of undeclared variable '%s'", expr.Name)
 			return ErrorType{}
 		} else {
@@ -178,7 +205,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		return PairType{cxt.DeriveType(expr.Left), cxt.DeriveType(expr.Right)}
 
 	case *CallCmd:
-		if f, ok := cxt.functions[expr.Ident.Name]; ok {
+		if f, ok := cxt.LookupFunction(expr.Ident); ok {
 			// Verify arguments
 
 			// Return function type
@@ -187,6 +214,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 			SemanticError(0, "semantic error -- use of undefined function '%s'", expr.Ident.Name)
 			return ErrorType{}
 		}
+
 	default:
 		SemanticError(0, "IMPLEMENT_ME: unhandled type in DeriveType - type: %T", expr)
 		return ErrorType{}
@@ -195,23 +223,23 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 
 // Semantic Checking
 func VerifySemantics(program *ProgStmt) {
-	cxt := &Context{make(map[string]*Function), make(map[string]Type)}
+	cxt := &Context{make(map[string]*Function), nil, make(map[string]Type)}
 	for _, f := range program.Funcs {
 		VerifyFunctionSemantics(cxt, f)
 	}
 	VerifyStatementListSemantics(cxt, program.Body)
 }
 
-func VerifyFunctionSemantics(cxt *Context, function *Function) {
-	// Verify this function
-	// TODO
-
+func VerifyFunctionSemantics(cxt *Context, f *Function) {
 	// Add this function
-	if _, ok := cxt.functions[function.Ident.Name]; ok {
-		SemanticError(0, "semantic error -- function '%s' already exists in this program", function.Ident.Name)
-	} else {
-		cxt.functions[function.Ident.Name] = function
-	}
+	cxt.AddFunction(f)
+
+	// Verify this function
+	cxt.PushScope()
+	cxt.currentFunction = f
+	VerifyStatementListSemantics(cxt, f.Body)
+	cxt.currentFunction = nil
+	cxt.PopScope()
 }
 
 func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {
@@ -228,7 +256,7 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 			SemanticError(0, "semantic error -- value being used to initialise '%s' does not match it's type (%s != %s)",
 				statement.Ident.Name, t1.Repr(), t2.Repr())
 		} else {
-			cxt.Add(statement.Ident, statement.Type)
+			cxt.AddVariable(statement.Type, statement.Ident)
 		}
 
 	case *AssignStmt:
@@ -238,7 +266,7 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		}
 
 	case *IfStmt:
-		// Check for boolean condition
+		// Check the condition
 		t := cxt.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
 			SemanticError(0, "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
