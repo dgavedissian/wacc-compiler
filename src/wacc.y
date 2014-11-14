@@ -143,7 +143,7 @@ base_type
     : INT    { $$.Type = BasicType{INT} }
     | BOOL   { $$.Type = BasicType{BOOL} }
     | CHAR   { $$.Type = BasicType{CHAR} }
-    | STRING { $$.Type = BasicType{STRING} }
+    | STRING { $$.Type = ArrayType{BasicType{CHAR}} }
     ;
 
 array_type
@@ -187,7 +187,7 @@ primary_expression
     | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
     | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
     | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{0, BasicType{STRING}, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{0, ArrayType{BasicType{CHAR}}, $1.Value} }
     | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
