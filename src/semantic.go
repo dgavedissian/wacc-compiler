@@ -273,6 +273,12 @@ func VerifySemantics(program *ProgStmt) {
 	cxt := &Context{make(map[string]*Function), nil, nil, 0}
 
 	// Verify functions
+	// This needs to be done in two passes. Firstly, add the functions to the
+	// function list, then verify the functions afterwards. This is to allow
+	// mutual recursion
+	for _, f := range program.Funcs {
+		cxt.AddFunction(f)
+	}
 	for _, f := range program.Funcs {
 		VerifyFunctionSemantics(cxt, f)
 	}
@@ -284,10 +290,6 @@ func VerifySemantics(program *ProgStmt) {
 }
 
 func VerifyFunctionSemantics(cxt *Context, f *Function) {
-	// Add this function
-	cxt.AddFunction(f)
-
-	// Verify this function
 	cxt.PushScope()
 	cxt.currentFunction = f
 	VerifyStatementListSemantics(cxt, f.Body)
