@@ -76,12 +76,7 @@
 //
 package main
 
-import (
-	"strconv"
-)
-
 var lex *Lexer
-var exitFlag int = 0
 
 func ProcessStr(s string) string {
 	s = s[1:len(s) - 1]
@@ -114,7 +109,7 @@ func ProcessStr(s string) string {
 func (l *Lexer) Error(s string) {
 	unexpectedToken := "<EOF>"
 	if len(l.stack) > 0 {
-		unexpectedToken = strconv.Quote(l.Text())
+		unexpectedToken = l.Text()
 	}
-	SyntaxError(l.l, "%s -- unexpected %s", s, unexpectedToken)
+	SyntaxError(l.l, "%s -- unexpected '%s'", s, unexpectedToken)
 }

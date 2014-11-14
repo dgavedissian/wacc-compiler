@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+var exitFlag int = 0
+
 func main() {
 	enableDebug := flag.Bool("d", false, "Enable debug mode")
 	flag.Parse()
