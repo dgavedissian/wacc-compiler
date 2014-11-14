@@ -268,8 +268,10 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 	}
 }
 
+//
 // Semantic Checking
-func VerifySemantics(program *ProgStmt) {
+//
+func VerifyProgram(program *ProgStmt) {
 	cxt := &Context{make(map[string]*Function), nil, nil, 0}
 
 	// Verify functions
@@ -280,30 +282,26 @@ func VerifySemantics(program *ProgStmt) {
 		cxt.AddFunction(f)
 	}
 	for _, f := range program.Funcs {
-		VerifyFunctionSemantics(cxt, f)
+		cxt.PushScope()
+		cxt.currentFunction = f
+		cxt.VerifyStatementList(f.Body)
+		cxt.currentFunction = nil
+		cxt.PopScope()
 	}
 
 	// Verify main
 	cxt.PushScope()
-	VerifyStatementListSemantics(cxt, program.Body)
+	cxt.VerifyStatementList(program.Body)
 	cxt.PopScope()
 }
 
-func VerifyFunctionSemantics(cxt *Context, f *Function) {
-	cxt.PushScope()
-	cxt.currentFunction = f
-	VerifyStatementListSemantics(cxt, f.Body)
-	cxt.currentFunction = nil
-	cxt.PopScope()
-}
-
-func VerifyStatementListSemantics(cxt *Context, statementList []Stmt) {
+func (cxt *Context) VerifyStatementList(statementList []Stmt) {
 	for _, s := range statementList {
-		VerifyStatementSemantics(cxt, s)
+		cxt.VerifyStatement(s)
 	}
 }
 
-func VerifyStatementSemantics(cxt *Context, statement Stmt) {
+func (cxt *Context) VerifyStatement(statement Stmt) {
 	switch statement := statement.(type) {
 	case *DeclStmt:
 		t1, t2 := statement.Type, cxt.DeriveType(statement.Right)
@@ -366,12 +364,12 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 
 		// Verify true branch
 		cxt.PushScope()
-		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.VerifyStatementList(statement.Body)
 		cxt.PopScope()
 
 		// Verify false branch
 		cxt.PushScope()
-		VerifyStatementListSemantics(cxt, statement.Else)
+		cxt.VerifyStatementList(statement.Else)
 		cxt.PopScope()
 
 	case *WhileStmt:
@@ -383,12 +381,12 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 
 		// Verfy body
 		cxt.PushScope()
-		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.VerifyStatementList(statement.Body)
 		cxt.PopScope()
 
 	case *ScopeStmt:
 		cxt.PushScope()
-		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.VerifyStatementList(statement.Body)
 		cxt.PopScope()
 	}
 }

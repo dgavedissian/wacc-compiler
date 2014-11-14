@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Semantic-check the tree
-	VerifySemantics(top.Stmt.(*ProgStmt))
+	VerifyProgram(top.Stmt.(*ProgStmt))
 	if exitFlag != 0 {
 		os.Exit(exitFlag)
 	}
