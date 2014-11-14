@@ -206,7 +206,21 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 
 	case *CallCmd:
 		if f, ok := cxt.LookupFunction(expr.Ident); ok {
-			// Verify arguments
+			// Verify number of arguments
+			argsLen, paramLen := len(expr.Args), len(f.Params)
+			if argsLen != paramLen {
+				SemanticError(0, "semantic error -- wrong number of arguments specified (expected: %d, actual: %d)", argsLen, paramLen)
+				return ErrorType{}
+			}
+
+			// Verify argument types
+			for i := 0; i < argsLen; i++ {
+				argType, paramType := cxt.DeriveType(expr.Args[i]), f.Params[i].Type
+				if !argType.Equals(paramType) {
+					SemanticError(0, "semantic error -- parameter type mismatch (expected: %s, actual: %s)", paramType.Repr(), argType.Repr())
+					return ErrorType{}
+				}
+			}
 
 			// Return function type
 			return f.Type
