@@ -364,9 +364,15 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 			SemanticError(0, "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
-		// Verify branches
+		// Verify true branch
+		cxt.PushScope()
 		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.PopScope()
+
+		// Verify false branch
+		cxt.PushScope()
 		VerifyStatementListSemantics(cxt, statement.Else)
+		cxt.PopScope()
 
 	case *WhileStmt:
 		// Check the condition
@@ -376,7 +382,9 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		}
 
 		// Verfy body
+		cxt.PushScope()
 		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.PopScope()
 
 	case *ScopeStmt:
 		cxt.PushScope()
