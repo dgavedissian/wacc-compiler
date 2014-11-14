@@ -131,12 +131,18 @@ type WhileStmt struct {
 	Done  Pos
 }
 
+type ScopeStmt struct {
+	BeginPos Pos
+	Body     []Stmt
+	EndPos   Pos
+}
+
 type Function struct {
 	Func   Pos
 	Type   Type
 	Ident  *IdentExpr
 	Params []Param
-	Stmts  []Stmt
+	Body   []Stmt
 }
 
 type Param struct {
@@ -472,16 +478,26 @@ func (s WhileStmt) Repr() string {
 		")Done"
 }
 
+// Scope Statement
+func (ScopeStmt) stmtNode()  {}
+func (s ScopeStmt) Pos() Pos { return s.BeginPos }
+func (s ScopeStmt) End() Pos {
+	return s.EndPos + Pos(len("end")) // TODO
+}
+func (s ScopeStmt) Repr() string {
+	return "Scope(" + ReprNodes(s.Body) + ")"
+}
+
 // Function Statement
 func (s Function) Pos() Pos { return s.Func }
 func (s Function) End() Pos {
-	return s.Stmts[len(s.Stmts)-1].End()
+	return s.Body[len(s.Body)-1].End()
 }
 func (s Function) Repr() string {
 	return "Function(type:" + s.Type.Repr() +
 		", name:" + s.Ident.Repr() +
 		", params:(" + ReprNodes(s.Params) +
-		"), body:(" + ReprNodes(s.Stmts) + ")"
+		"), body:(" + ReprNodes(s.Body) + ")"
 }
 
 // Function Parameter

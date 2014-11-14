@@ -27,7 +27,7 @@
 /char/      { lval.Type = BasicType{CHAR}; return CHAR }
 /string/    { lval.Type = BasicType{STRING}; return STRING }
 /pair/      { lval.Type = BasicType{PAIR}; return PAIR }
-/is/        { return FUNC_IS }
+/is/        { return IS }
 
 /if/        { return IF }
 /then/      { return THEN }

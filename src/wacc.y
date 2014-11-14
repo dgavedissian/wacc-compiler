@@ -28,7 +28,7 @@
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
 %token INT BOOL CHAR STRING PAIR
-%token FUNC_IS
+%token IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
 %token LEN ORD CHR FST SND
@@ -53,7 +53,7 @@ body
 
 /* Functions */
 func
-    : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
+    : type identifier '(' optional_param_list ')' IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
         $$.Func = &Function{0, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
       }
@@ -90,7 +90,7 @@ statement
     | EXIT expression                 { $$.Stmt = &ExitStmt{0, $2.Expr} }
     | PRINT expression                { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
     | PRINTLN expression              { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
-    | BEGIN statement_list END        { $$.Stmts = $2.Stmts }
+    | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{0, $2.Stmts, 0} }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
