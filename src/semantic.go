@@ -209,7 +209,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
-				SemanticError(0, "semantic error -- wrong number of arguments specified (expected: %d, actual: %d)", argsLen, paramLen)
+				SemanticError(0, "semantic error -- wrong number of arguments to '%s' specified (expected: %d, actual: %d)", f.Ident.Name, argsLen, paramLen)
 				return ErrorType{}
 			}
 
