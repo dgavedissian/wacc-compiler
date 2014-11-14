@@ -2,11 +2,11 @@
 /[ \t]/     { /* Skip blanks and tabs. */ }
 
 
-/[0-9]+/    { lval.Value = yylex.Text(); lval.Type = BasicType{INT}; return INT_LIT }
-/(false|true)/ { lval.Value = yylex.Text(); lval.Type = BasicType{BOOL}; return BOOL_LIT }
-/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); lval.Type = BasicType{STRING}; return STRING_LIT }
-/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); lval.Type = BasicType{CHAR}; return CHAR_LIT }
-/null/      { lval.Value = yylex.Text(); lval.Type = BasicType{PAIR}; return PAIR_LIT }
+/[0-9]+/    { lval.Value = yylex.Text(); return INT_LIT }
+/(false|true)/ { lval.Value = yylex.Text(); return BOOL_LIT }
+/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); return STRING_LIT }
+/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); return CHAR_LIT }
+/null/      { lval.Value = yylex.Text(); return PAIR_LIT }
 
 /begin/     { return BEGIN }
 /end/       { return END }
@@ -22,11 +22,11 @@
 /newpair/   { return NEWPAIR }
 /call/      { return CALL }
 
-/int/       { lval.Type = BasicType{INT}; return INT }
-/bool/      { lval.Type = BasicType{BOOL}; return BOOL }
-/char/      { lval.Type = BasicType{CHAR}; return CHAR }
-/string/    { lval.Type = BasicType{STRING}; return STRING }
-/pair/      { lval.Type = BasicType{PAIR}; return PAIR }
+/int/       { return INT }
+/bool/      { return BOOL }
+/char/      { return CHAR }
+/string/    { return STRING }
+/pair/      { return PAIR }
 /is/        { return IS }
 
 /if/        { return IF }

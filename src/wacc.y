@@ -140,10 +140,10 @@ type
     ;
 
 base_type
-    : INT    { $$.Type = $1.Type }
-    | BOOL   { $$.Type = $1.Type }
-    | CHAR   { $$.Type = $1.Type }
-    | STRING { $$.Type = $1.Type }
+    : INT    { $$.Type = BasicType{INT} }
+    | BOOL   { $$.Type = BasicType{BOOL} }
+    | CHAR   { $$.Type = BasicType{CHAR} }
+    | STRING { $$.Type = BasicType{STRING} }
     ;
 
 array_type
@@ -155,9 +155,9 @@ pair_type
     ;
 
 pair_elem_type
-    : base_type   { $$.Expr = $1.Expr }
-    | array_type  { $$.Expr = $1.Expr }
-    | PAIR        { $$.Expr = $1.Expr }
+    : base_type
+    | array_type
+    | PAIR        { $$.Type = BasicType{PAIR} }
     ;
 
 pair_elem
