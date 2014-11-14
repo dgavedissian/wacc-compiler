@@ -313,6 +313,40 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 			SemanticError(0, "semantic error -- cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
 		}
 
+	case *ReadStmt:
+		t := cxt.DeriveType(statement.Dest)
+		if t.Equals(PairType{AnyType{}, AnyType{}}) || t.Equals(ArrayType{AnyType{}}) {
+			SemanticError(0, "semantic error -- destination of read must not be a pair or an array (actual: %s)", t.Repr())
+		}
+
+	case *FreeStmt:
+		t := cxt.DeriveType(statement.Object)
+		if !t.Equals(PairType{AnyType{}, AnyType{}}) && !t.Equals(ArrayType{AnyType{}}) {
+			SemanticError(0, "semantic error - object being freed must be either a pair or an array (actual: %s)", t.Repr())
+		}
+
+	case *ExitStmt:
+		t := cxt.DeriveType(statement.Result)
+		if !t.Equals(BasicType{INT}) {
+			SemanticError(0, "semantic error - incorrect type in exit statement (expected: INT, actual: %s)", t.Repr())
+		}
+
+	case *ReturnStmt:
+		// Check if we're in a function
+		if cxt.currentFunction == nil {
+			SemanticError(0, "semantic error - cannot call return in the program body")
+		} else {
+			// Check if the type of the operand matches the return type
+			t := cxt.DeriveType(statement.Result)
+			if !t.Equals(cxt.currentFunction.Type) {
+				SemanticError(0, "semantic error - type in return statement must match the return type of the function (expected: %s, actual: %s)",
+					cxt.currentFunction.Type.Repr(), t.Repr())
+			}
+		}
+
+	case *PrintStmt:
+		// Nothing to check
+
 	case *IfStmt:
 		// Check the condition
 		t := cxt.DeriveType(statement.Cond)
@@ -338,8 +372,5 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 		cxt.PushScope()
 		VerifyStatementListSemantics(cxt, statement.Body)
 		cxt.PopScope()
-
-	default:
-		SemanticError(0, "IMPLEMENT_ME - unhandled statement %T", statement)
 	}
 }
