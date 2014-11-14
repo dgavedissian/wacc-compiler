@@ -333,5 +333,13 @@ func VerifyStatementSemantics(cxt *Context, statement Stmt) {
 
 		// Verfy body
 		VerifyStatementListSemantics(cxt, statement.Body)
+
+	case *ScopeStmt:
+		cxt.PushScope()
+		VerifyStatementListSemantics(cxt, statement.Body)
+		cxt.PopScope()
+
+	default:
+		SemanticError(0, "IMPLEMENT_ME - unhandled statement %T", statement)
 	}
 }
