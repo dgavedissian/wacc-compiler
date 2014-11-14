@@ -87,8 +87,13 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		}
 
 	case *ArrayElemExpr:
-		t := cxt.DeriveType(expr.Volume).(ArrayType)
-		return t.BaseType
+		t := cxt.DeriveType(expr.Volume) // given a[i] - find a
+		if array, ok := t.(ArrayType); ok {
+			return array.BaseType
+		} else {
+			SemanticError(0, "semantic error -- cannot index a variable which isn't an array (actual: %s)", t.Repr())
+			return ErrorType{}
+		}
 
 	case *PairElemExpr:
 		t := cxt.DeriveType(expr.Operand)
