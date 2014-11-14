@@ -2,11 +2,11 @@
 /[ \t]/     { /* Skip blanks and tabs. */ }
 
 
-/[0-9]+/    { lval.Value = yylex.Text(); lval.Kind = INT; return INT_LIT }
-/(false|true)/ { lval.Value = yylex.Text(); lval.Kind = BOOL; return BOOL_LIT }
-/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); lval.Kind = STRING; return STRING_LIT }
-/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); lval.Kind = CHAR; return CHAR_LIT }
-/null/      { return PAIR_LIT }
+/[0-9]+/    { lval.Value = yylex.Text(); return INT_LIT }
+/(false|true)/ { lval.Value = yylex.Text(); return BOOL_LIT }
+/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); return STRING_LIT }
+/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); return CHAR_LIT }
+/null/      { lval.Value = yylex.Text(); return PAIR_LIT }
 
 /begin/     { return BEGIN }
 /end/       { return END }
@@ -22,12 +22,12 @@
 /newpair/   { return NEWPAIR }
 /call/      { return CALL }
 
-/int/       { lval.Kind = INT; return INT }
-/bool/      { lval.Kind = BOOL; return BOOL }
-/char/      { lval.Kind = CHAR; return CHAR }
-/string/    { lval.Kind = STRING; return STRING }
-/pair/      { lval.Kind = PAIR; return PAIR }
-/is/        { return FUNC_IS }
+/int/       { return INT }
+/bool/      { return BOOL }
+/char/      { return CHAR }
+/string/    { return STRING }
+/pair/      { return PAIR }
+/is/        { return IS }
 
 /if/        { return IF }
 /then/      { return THEN }
@@ -76,17 +76,7 @@
 //
 package main
 
-import (
-	"os"
-	"fmt"
-	"flag"
-	"strconv"
-)
-
-const SYNTAX_ERROR = 100
-
 var lex *Lexer
-var exitFlag int = 0
 
 func ProcessStr(s string) string {
 	s = s[1:len(s) - 1]
@@ -115,30 +105,11 @@ func ProcessStr(s string) string {
 	return output
 }
 
-func (*Lexer) Error(s string) {
+// Callback for goyacc
+func (l *Lexer) Error(s string) {
 	unexpectedToken := "<EOF>"
-	if len(lex.stack) > 0 {
-		unexpectedToken = strconv.Quote(lex.Text())
+	if len(l.stack) > 0 {
+		unexpectedToken = l.Text()
 	}
-	fmt.Printf("Line %d: %s -- unexpected %s\n", lex.l, s, unexpectedToken)
-	exitFlag = SYNTAX_ERROR
-}
-
-func main() {
-	enableDebug := flag.Bool("d", false, "Enable debug mode")
-	flag.Parse()
-
-	if *enableDebug {
-		yyDebug = 20
-	}
-
-	// Parse the tree
-	// We tend to think of the first line as line 1, not line 0
-	lex = NewLexerWithInit(os.Stdin, func(l *Lexer){l.l = 1})
-	yyParse(lex)
-	if exitFlag != 0 {
-		os.Exit(SYNTAX_ERROR)
-	}
-	
-	fmt.Println(top.Stmt.Repr())
+	SyntaxError(l.l, "%s -- unexpected '%s'", s, unexpectedToken)
 }

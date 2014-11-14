@@ -5,18 +5,17 @@
 %}
 
 %union {
-    Expr   Expr
-    Value  string
-    Funcs  []Func
-    Func   *Func
-    Stmts  []Stmt
-    Stmt   Stmt
-    Params []Param
-    Param  Param
-    Kind   int
-    Ident  Ident
-    lines  int
-    Exprs  []Expr
+  Expr   Expr
+  Value  string
+  Funcs  []*Function
+  Func   *Function
+  Stmts  []Stmt
+  Stmt   Stmt
+  Params []Param
+  Param  Param
+  Type   Type
+  lines  int
+  Exprs  []Expr
 }
 
 %{
@@ -25,13 +24,11 @@
 
 %token BEGIN END
 %token INT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
-%token INT_SIGN
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
-%token INT BOOL CHAR STRING
-%token PAIR
-%token FUNC_IS
+%token INT BOOL CHAR STRING PAIR
+%token IS
 %token IF THEN ELSE FI
 %token WHILE DO DONE
 %token LEN ORD CHR FST SND
@@ -49,16 +46,16 @@ program
 body
     : func body {
         $$.Stmts = $2.Stmts
-        $$.Funcs = append([]Func{*$1.Func}, $2.Funcs...)
+        $$.Funcs = append([]*Function{$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
     ;
 
 /* Functions */
 func
-    : type identifier '(' optional_param_list ')' FUNC_IS statement_list END {
+    : type identifier '(' optional_param_list ')' IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Func{0, $1.Kind, $2.Ident, $4.Params, $7.Stmts}
+        $$.Func = &Function{0, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
       }
     ;
 
@@ -73,7 +70,7 @@ param_list
     ;
 
 param
-    : type identifier { $$.Param = Param{0, $1.Kind, $2.Ident, 0} }
+    : type identifier { $$.Param = Param{0, $1.Type, $2.Expr.(*IdentExpr), 0} }
     ;
 
 /* Statements */
@@ -84,16 +81,16 @@ statement_list
     ;
 
 statement
-    : SKIP { $$.Stmt = &SkipStmt{0} }
-    | type identifier '=' assign_rhs { $$.Stmt = &DeclStmt{0, $1.Kind, $2.Ident, $4.Expr} }
-    | assign_lhs '=' assign_rhs { $$.Stmt = &AssignStmt{$1.Ident, $3.Expr} }
-    | READ assign_lhs {}
-    | FREE expression {}
-    | RETURN expression { $$.Stmt = &ReturnStmt{0, $2.Expr} }
-    | EXIT expression { $$.Stmt = &ExitStmt{0, $2.Expr} }
-    | PRINT expression { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
-    | PRINTLN expression { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
-    | BEGIN statement_list END { $$.Stmts = $2.Stmts }
+    : SKIP                            { $$.Stmt = &SkipStmt{0} }
+    | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{0, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
+    | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
+    | READ assign_lhs                 { $$.Stmt = &ReadStmt{0, $2.Expr.(LValueExpr)} }
+    | FREE expression                 { $$.Stmt = &FreeStmt{0, $2.Expr} }
+    | RETURN expression               { $$.Stmt = &ReturnStmt{0, $2.Expr} }
+    | EXIT expression                 { $$.Stmt = &ExitStmt{0, $2.Expr} }
+    | PRINT expression                { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
+    | PRINTLN expression              { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
+    | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{0, $2.Stmts, 0} }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
       }
@@ -103,23 +100,23 @@ statement
     ;
 
 assign_lhs
-    : identifier     { $$.Expr = $1.Expr; $$.Ident = $1.Ident }
-    | identifier '[' expression ']' { $$.Expr = &IndexExpr{0, &$1.Ident, $3.Expr} }
+    : identifier     { $$.Expr = $1.Expr }
+    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
     | pair_elem      { $$.Expr = $1.Expr }
     ;
 
 assign_rhs
     : expression {$$.Expr = $1.Expr}
     | NEWPAIR '(' expression ',' expression ')' {
-        $$.Expr = &PairExpr{0, $3.Kind, $3.Expr, $5.Kind, $5.Expr}
+        $$.Expr = &NewPairCmd{0, $3.Expr, $5.Expr}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallExpr{0, $2.Ident, $4.Exprs} }
+    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{0, $2.Expr.(*IdentExpr), $4.Exprs} }
     | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
     | pair_elem
     ;
 
 identifier
-    : IDENT { $$.Ident = Ident{0, $1.Value}; $$.Expr = &Ident{0, $1.Value} }
+    : IDENT { $$.Expr = &IdentExpr{0, $1.Value} }
     ;
 
 optional_arg_list
@@ -139,33 +136,33 @@ arg_list
 type
     : base_type
     | pair_type
-    | type '[' ']'
+    | type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
 base_type
-    : INT    { $$.Kind = $1.Kind }
-    | BOOL   { $$.Kind = $1.Kind }
-    | CHAR   { $$.Kind = $1.Kind }
-    | STRING { $$.Kind = $1.Kind }
+    : INT    { $$.Type = BasicType{INT} }
+    | BOOL   { $$.Type = BasicType{BOOL} }
+    | CHAR   { $$.Type = BasicType{CHAR} }
+    | STRING { $$.Type = ArrayType{BasicType{CHAR}} }
     ;
 
 array_type
-    : type '[' ']'
+    : type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
 pair_type
-    : PAIR '(' pair_elem_type ',' pair_elem_type ')' {}
+    : PAIR '(' pair_elem_type ',' pair_elem_type ')' { $$.Type = PairType{$3.Type, $5.Type} }
     ;
 
 pair_elem_type
-    : base_type   { $$.Expr = $1.Expr }
-    | array_type  { $$.Expr = $1.Expr }
-    | PAIR        { $$.Expr = $1.Expr }
+    : base_type
+    | array_type
+    | PAIR        { $$.Type = BasicType{PAIR} }
     ;
 
 pair_elem
-    : FST expression { $$.Expr = &UnaryExpr{0, "fst", $2.Expr} }
-    | SND expression { $$.Expr = &UnaryExpr{0, "snd", $2.Expr} }
+    : FST expression { $$.Expr = &PairElemExpr{0, FST, $2.Expr} }
+    | SND expression { $$.Expr = &PairElemExpr{0, SND, $2.Expr} }
 
 array_liter
     : array_contents
@@ -181,17 +178,17 @@ array_contents
 
 /* Expression */
 array_expression
-    : identifier '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
-    | array_expression '[' expression ']' { $$.Expr = &IndexExpr{0, $1.Expr, $3.Expr} }
+    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
+    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
     ;
 
 primary_expression
-    : identifier          { $$.Expr = &Ident{0, $1.Value} ; $$.Ident = Ident{0, $1.Value} }
-    | INT_LIT             { $$.Expr = &BasicLit{0, INT_LIT, $1.Value} }
-    | BOOL_LIT            { $$.Expr = &BasicLit{0, BOOL_LIT, $1.Value} }
-    | CHAR_LIT            { $$.Expr = &BasicLit{0, CHAR_LIT, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{0, STRING_LIT, $1.Value} }
-    | PAIR_LIT            { $$.Expr = &BasicLit{0, PAIR_LIT, $1.Value} }
+    : identifier          { $$.Expr = &IdentExpr{0, $1.Value} }
+    | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
+    | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
+    | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{0, ArrayType{BasicType{CHAR}}, $1.Value} }
+    | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
     ;
