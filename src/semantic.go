@@ -9,6 +9,33 @@ type Context struct {
 }
 
 //
+// Semantic Checking
+//
+func VerifyProgram(program *ProgStmt) {
+	cxt := &Context{make(map[string]*Function), nil, nil, 0}
+
+	// Verify functions
+	// This needs to be done in two passes. Firstly, add the functions to the
+	// function list, then verify the functions afterwards. This is to allow
+	// mutual recursion
+	for _, f := range program.Funcs {
+		cxt.AddFunction(f)
+	}
+	for _, f := range program.Funcs {
+		cxt.PushScope()
+		cxt.currentFunction = f
+		cxt.VerifyStatementList(f.Body)
+		cxt.currentFunction = nil
+		cxt.PopScope()
+	}
+
+	// Verify main
+	cxt.PushScope()
+	cxt.VerifyStatementList(program.Body)
+	cxt.PopScope()
+}
+
+//
 // Functions
 //
 func (cxt *Context) LookupFunction(ident *IdentExpr) (*Function, bool) {
@@ -269,32 +296,8 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 }
 
 //
-// Semantic Checking
+// Verify Statements
 //
-func VerifyProgram(program *ProgStmt) {
-	cxt := &Context{make(map[string]*Function), nil, nil, 0}
-
-	// Verify functions
-	// This needs to be done in two passes. Firstly, add the functions to the
-	// function list, then verify the functions afterwards. This is to allow
-	// mutual recursion
-	for _, f := range program.Funcs {
-		cxt.AddFunction(f)
-	}
-	for _, f := range program.Funcs {
-		cxt.PushScope()
-		cxt.currentFunction = f
-		cxt.VerifyStatementList(f.Body)
-		cxt.currentFunction = nil
-		cxt.PopScope()
-	}
-
-	// Verify main
-	cxt.PushScope()
-	cxt.VerifyStatementList(program.Body)
-	cxt.PopScope()
-}
-
 func (cxt *Context) VerifyStatementList(statementList []Stmt) {
 	for _, s := range statementList {
 		cxt.VerifyStatement(s)
@@ -320,10 +323,8 @@ func (cxt *Context) VerifyStatement(statement Stmt) {
 
 	case *ReadStmt:
 		t := cxt.DeriveType(statement.Dest)
-		if t.Equals(PairType{AnyType{}, AnyType{}}) ||
-			t.Equals(ArrayType{AnyType{}}) ||
-			t.Equals(BasicType{BOOL}) {
-			SemanticError(0, "semantic error -- destination of read must not be a pair, an array or a bool (actual: %s)", t.Repr())
+		if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{CHAR}) {
+			SemanticError(0, "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
 		}
 
 	case *FreeStmt:
