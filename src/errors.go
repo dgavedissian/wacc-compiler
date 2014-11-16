@@ -15,9 +15,12 @@ const POINTER_LINE_CHAR = '-'
 const POINTER_POINTER_CHAR = '^'
 
 var ERROR_COLOUR = ansi.ColorCode("red+h:black")
+var LINE_COLOUR = ansi.ColorCode("yellow:black")
 var BAD_LINE_COLOUR = ansi.ColorCode("yellow+h:black")
 var POINTER_COLOUR = ansi.ColorCode("green+h:black")
 var RESET = ansi.ColorCode("reset")
+
+const CONTEXT_TO_PRINT = 3
 
 func SyntaxError(lineNo int, s string, a ...interface{}) {
 	errorStr := fmt.Sprintf(s, a...)
@@ -61,14 +64,31 @@ func SetUpErrorOutput(r io.Reader) io.Reader {
 }
 
 func dumpLineData(position *Position) {
-	if len(errBuffer) < position.Line() {
+	lineToPrint := position.Line() - 1
+
+	if len(errBuffer) <= lineToPrint {
 		return
 	}
 
-	fmt.Println(BAD_LINE_COLOUR + errBuffer[position.Line()-1] + RESET)
+	for currentLine := lineToPrint - CONTEXT_TO_PRINT; currentLine < lineToPrint; currentLine += 1 {
+		if currentLine < 0 {
+			continue
+		}
+		fmt.Println(LINE_COLOUR + errBuffer[currentLine])
+	}
+
+	fmt.Println(BAD_LINE_COLOUR + errBuffer[lineToPrint])
 
 	dashes := strings.Repeat(string(POINTER_LINE_CHAR), position.Column()-1)
 	caret := string(POINTER_POINTER_CHAR)
-	fmt.Println(POINTER_COLOUR + dashes + caret + RESET)
-	fmt.Println()
+	fmt.Println(POINTER_COLOUR + dashes + caret)
+
+	for currentLine := lineToPrint + 1; currentLine < lineToPrint+CONTEXT_TO_PRINT; currentLine += 1 {
+		if currentLine >= len(errBuffer) {
+			continue
+		}
+		fmt.Println(LINE_COLOUR + errBuffer[currentLine])
+	}
+
+	fmt.Println(RESET)
 }
