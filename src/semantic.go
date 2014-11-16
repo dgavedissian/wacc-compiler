@@ -45,7 +45,7 @@ func (cxt *Context) LookupFunction(ident *IdentExpr) (*Function, bool) {
 
 func (cxt *Context) AddFunction(f *Function) {
 	if _, ok := cxt.LookupFunction(f.Ident); ok {
-		SemanticError(0, "semantic error -- function '%s' already exists in this program", f.Ident.Name)
+		SemanticError(f.Pos(), "semantic error -- function '%s' already exists in this program", f.Ident.Name)
 	} else {
 		cxt.functions[f.Ident.Name] = f
 	}
@@ -89,7 +89,7 @@ func (cxt *Context) LookupVariable(ident *IdentExpr) (Type, bool) {
 
 func (cxt *Context) AddVariable(t Type, ident *IdentExpr) {
 	if _, ok := cxt.types[cxt.depth-1][ident.Name]; ok {
-		SemanticError(0, "semantic error -- variable '%s' already exists in this scope", ident.Name)
+		SemanticError(ident.Pos(), "semantic error -- variable '%s' already exists in this scope", ident.Name)
 	} else {
 		cxt.types[cxt.depth-1][ident.Name] = t
 	}
@@ -107,7 +107,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 	switch expr := expr.(type) {
 	case *IdentExpr:
 		if t, ok := cxt.LookupVariable(expr); !ok {
-			SemanticError(0, "semantic error -- use of undeclared variable '%s'", expr.Name)
+			SemanticError(expr.Pos(), "semantic error -- use of undeclared variable '%s'", expr.Name)
 			return ErrorType{}
 		} else {
 			return t
@@ -118,7 +118,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		if array, ok := t.(ArrayType); ok {
 			return array.BaseType
 		} else {
-			SemanticError(0, "semantic error -- cannot index a variable which isn't an array (actual: %s)", t.Repr())
+			SemanticError(expr.Pos(), "semantic error -- cannot index a variable which isn't an array (actual: %s)", t.Repr())
 			return ErrorType{}
 		}
 
@@ -134,7 +134,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 				panic("expr.SelectorType must be either FST or SND")
 			}
 		} else {
-			SemanticError(0, "semantic error -- operand of pair selector must be a pair type (actual: %s)", t.Repr())
+			SemanticError(expr.Pos(), "semantic error -- operand of pair selector must be a pair type (actual: %s)", t.Repr())
 			return ErrorType{}
 		}
 
@@ -151,7 +151,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		t := cxt.DeriveType(expr.Values[0])
 		for i := 1; i < len(expr.Values); i++ {
 			if !t.Equals(cxt.DeriveType(expr.Values[i])) {
-				SemanticError(0, "semantic error -- all expressions in the array literal must have the same type")
+				SemanticError(expr.Pos(), "semantic error -- all expressions in the array literal must have the same type")
 				return ErrorType{}
 			}
 		}
@@ -166,7 +166,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		case "!":
 			expected := BasicType{BOOL}
 			if !t.Equals(expected) {
-				SemanticError(0, "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			return BasicType{BOOL}
@@ -174,7 +174,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		case "-":
 			expected := BasicType{INT}
 			if !t.Equals(expected) {
-				SemanticError(0, "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			return BasicType{INT}
@@ -182,7 +182,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		case "len":
 			expected := ArrayType{AnyType{}}
 			if !t.Equals(expected) {
-				SemanticError(0, "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			return BasicType{INT}
@@ -190,7 +190,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		case "ord":
 			expected := BasicType{CHAR}
 			if !t.Equals(expected) {
-				SemanticError(0, "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			return BasicType{INT}
@@ -198,13 +198,13 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		case "chr":
 			expected := BasicType{INT}
 			if !t.Equals(expected) {
-				SemanticError(0, "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			return BasicType{CHAR}
 
 		default:
-			SemanticError(0, "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)
+			SemanticError(expr.Pos(), "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)
 			return ErrorType{}
 		}
 
@@ -214,50 +214,50 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 		switch expr.Operator {
 		case "*", "/", "%", "+", "-":
 			if !t1.Equals(BasicType{INT}) {
-				SemanticError(0, "semantic error -- invalid type on left of operator '%s' (expected: INT, actual: %s)", expr.Operator, t1.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on left of operator '%s' (expected: INT, actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
 			if !t2.Equals(BasicType{INT}) {
-				SemanticError(0, "semantic error -- invalid type on right of operator '%s' (expected: INT, actual: %s)", expr.Operator, t2.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on right of operator '%s' (expected: INT, actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
 			return BasicType{INT}
 
 		case ">", ">=", "<", "<=":
 			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
-				SemanticError(0, "semantic error -- invalid type on left of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t1.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on left of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
 			if !t2.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
-				SemanticError(0, "semantic error -- invalid type on right of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t2.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on right of operator '%s' (expected: {INT, CHAR}, actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
 			if !t1.Equals(t2) {
-				SemanticError(0, "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
+				SemanticError(expr.Pos(), "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
 				return ErrorType{}
 			}
 			return BasicType{BOOL}
 
 		case "==", "!=":
 			if !t1.Equals(t2) {
-				SemanticError(0, "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
+				SemanticError(expr.Pos(), "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
 				return ErrorType{}
 			}
 			return BasicType{BOOL}
 
 		case "&&", "||":
 			if !t1.Equals(BasicType{BOOL}) {
-				SemanticError(0, "semantic error -- invalid type on left of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t1.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on left of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
 			if !t2.Equals(BasicType{BOOL}) {
-				SemanticError(0, "semantic error -- invalid type on right of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t2.Repr())
+				SemanticError(expr.Pos(), "semantic error -- invalid type on right of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
 			return BasicType{BOOL}
 
 		default:
-			SemanticError(0, "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)
+			SemanticError(expr.Pos(), "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)
 			return ErrorType{}
 		}
 
@@ -269,7 +269,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
-				SemanticError(0, "semantic error -- wrong number of arguments to '%s' specified (expected: %d, actual: %d)", f.Ident.Name, argsLen, paramLen)
+				SemanticError(expr.Pos(), "semantic error -- wrong number of arguments to '%s' specified (expected: %d, actual: %d)", f.Ident.Name, argsLen, paramLen)
 				return ErrorType{}
 			}
 
@@ -277,7 +277,7 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 			for i := 0; i < argsLen; i++ {
 				argType, paramType := cxt.DeriveType(expr.Args[i]), f.Params[i].Type
 				if !argType.Equals(paramType) {
-					SemanticError(0, "semantic error -- parameter type mismatch (expected: %s, actual: %s)", paramType.Repr(), argType.Repr())
+					SemanticError(expr.Pos(), "semantic error -- parameter type mismatch (expected: %s, actual: %s)", paramType.Repr(), argType.Repr())
 					return ErrorType{}
 				}
 			}
@@ -285,12 +285,12 @@ func (cxt *Context) DeriveType(expr Expr) Type {
 			// Return function type
 			return f.Type
 		} else {
-			SemanticError(0, "semantic error -- use of undefined function '%s'", expr.Ident.Name)
+			SemanticError(expr.Pos(), "semantic error -- use of undefined function '%s'", expr.Ident.Name)
 			return ErrorType{}
 		}
 
 	default:
-		SemanticError(0, "IMPLEMENT_ME: unhandled type in DeriveType - type: %T", expr)
+		SemanticError(expr.Pos(), "IMPLEMENT_ME: unhandled type in DeriveType - type: %T", expr)
 		return ErrorType{}
 	}
 }
@@ -309,7 +309,7 @@ func (cxt *Context) VerifyStatement(statement Stmt) {
 	case *DeclStmt:
 		t1, t2 := statement.Type, cxt.DeriveType(statement.Right)
 		if !t1.Equals(t2) {
-			SemanticError(0, "semantic error -- value being used to initialise '%s' does not match it's type (%s != %s)",
+			SemanticError(statement.Pos(), "semantic error -- value being used to initialise '%s' does not match it's type (%s != %s)",
 				statement.Ident.Name, t1.Repr(), t2.Repr())
 		} else {
 			cxt.AddVariable(statement.Type, statement.Ident)
@@ -318,36 +318,36 @@ func (cxt *Context) VerifyStatement(statement Stmt) {
 	case *AssignStmt:
 		t1, t2 := cxt.DeriveType(statement.Left), cxt.DeriveType(statement.Right)
 		if !t1.Equals(t2) {
-			SemanticError(0, "semantic error -- cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
+			SemanticError(statement.Pos(), "semantic error -- cannot assign rvalue to lvalue with a different type (%s != %s)", t1.Repr(), t2.Repr())
 		}
 
 	case *ReadStmt:
 		t := cxt.DeriveType(statement.Dest)
 		if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{CHAR}) {
-			SemanticError(0, "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
+			SemanticError(statement.Dest.Pos(), "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
 		}
 
 	case *FreeStmt:
 		t := cxt.DeriveType(statement.Object)
 		if !t.Equals(PairType{AnyType{}, AnyType{}}) && !t.Equals(ArrayType{AnyType{}}) {
-			SemanticError(0, "semantic error - object being freed must be either a pair or an array (actual: %s)", t.Repr())
+			SemanticError(statement.Object.Pos(), "semantic error - object being freed must be either a pair or an array (actual: %s)", t.Repr())
 		}
 
 	case *ExitStmt:
 		t := cxt.DeriveType(statement.Result)
 		if !t.Equals(BasicType{INT}) {
-			SemanticError(0, "semantic error - incorrect type in exit statement (expected: INT, actual: %s)", t.Repr())
+			SemanticError(statement.Result.Pos(), "semantic error - incorrect type in exit statement (expected: INT, actual: %s)", t.Repr())
 		}
 
 	case *ReturnStmt:
 		// Check if we're in a function
 		if cxt.currentFunction == nil {
-			SemanticError(0, "semantic error - cannot call return in the program body")
+			SemanticError(statement.Pos(), "semantic error - cannot call return in the program body")
 		} else {
 			// Check if the type of the operand matches the return type
 			t := cxt.DeriveType(statement.Result)
 			if !t.Equals(cxt.currentFunction.Type) {
-				SemanticError(0, "semantic error - type in return statement must match the return type of the function (expected: %s, actual: %s)",
+				SemanticError(statement.Result.Pos(), "semantic error - type in return statement must match the return type of the function (expected: %s, actual: %s)",
 					cxt.currentFunction.Type.Repr(), t.Repr())
 			}
 		}
@@ -360,7 +360,7 @@ func (cxt *Context) VerifyStatement(statement Stmt) {
 		// Check the condition
 		t := cxt.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
-			SemanticError(0, "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
+			SemanticError(statement.Cond.Pos(), "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
 		// Verify true branch
@@ -377,7 +377,7 @@ func (cxt *Context) VerifyStatement(statement Stmt) {
 		// Check the condition
 		t := cxt.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
-			SemanticError(0, "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
+			SemanticError(statement.Cond.Pos(), "semantic error -- condition '%s' is not a bool (actual type: %s)", statement.Cond.Repr(), t.Repr())
 		}
 
 		// Verfy body

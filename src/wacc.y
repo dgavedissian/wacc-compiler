@@ -16,6 +16,8 @@
   Type   Type
   lines  int
   Exprs  []Expr
+
+  Position *Position
 }
 
 %{
@@ -40,7 +42,7 @@ top
     ;
 
 program
-    : BEGIN body END { $$.Stmt = &ProgStmt{0, $2.Funcs, $2.Stmts, 0} }
+    : BEGIN body END { $$.Stmt = &ProgStmt{$1.Position, $2.Funcs, $2.Stmts, $3.Position} }
     ;
 
 body
@@ -55,7 +57,7 @@ body
 func
     : type identifier '(' optional_param_list ')' IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Function{0, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
+        $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
       }
     ;
 
@@ -70,7 +72,7 @@ param_list
     ;
 
 param
-    : type identifier { $$.Param = Param{0, $1.Type, $2.Expr.(*IdentExpr), 0} }
+    : type identifier { $$.Param = Param{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $2.Position} }
     ;
 
 /* Statements */
@@ -81,42 +83,42 @@ statement_list
     ;
 
 statement
-    : SKIP                            { $$.Stmt = &SkipStmt{0} }
-    | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{0, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
+    : SKIP                            { $$.Stmt = &SkipStmt{$1.Position} }
+    | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
     | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
-    | READ assign_lhs                 { $$.Stmt = &ReadStmt{0, $2.Expr.(LValueExpr)} }
-    | FREE expression                 { $$.Stmt = &FreeStmt{0, $2.Expr} }
-    | RETURN expression               { $$.Stmt = &ReturnStmt{0, $2.Expr} }
-    | EXIT expression                 { $$.Stmt = &ExitStmt{0, $2.Expr} }
-    | PRINT expression                { $$.Stmt = &PrintStmt{0, $2.Expr, false} }
-    | PRINTLN expression              { $$.Stmt = &PrintStmt{0, $2.Expr, true} }
-    | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{0, $2.Stmts, 0} }
+    | READ assign_lhs                 { $$.Stmt = &ReadStmt{$1.Position, $2.Expr.(LValueExpr)} }
+    | FREE expression                 { $$.Stmt = &FreeStmt{$1.Position, $2.Expr} }
+    | RETURN expression               { $$.Stmt = &ReturnStmt{$1.Position, $2.Expr} }
+    | EXIT expression                 { $$.Stmt = &ExitStmt{$1.Position, $2.Expr} }
+    | PRINT expression                { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, false} }
+    | PRINTLN expression              { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, true} }
+    | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{$1.Position, $2.Stmts, $3.Position} }
     | IF expression THEN statement_list ELSE statement_list FI {
-        $$.Stmt = &IfStmt{0, $2.Expr, $4.Stmts, $6.Stmts, 0}
+        $$.Stmt = &IfStmt{$1.Position, $2.Expr, $4.Stmts, $6.Stmts, $7.Position}
       }
     | WHILE expression DO statement_list DONE {
-        $$.Stmt = &WhileStmt{ 0, $2.Expr, $4.Stmts ,0 }
+        $$.Stmt = &WhileStmt{ $1.Position, $2.Expr, $4.Stmts , $5.Position }
       }
     ;
 
 assign_lhs
     : identifier     { $$.Expr = $1.Expr }
-    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
+    | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{$1.Position, $1.Expr.(LValueExpr), $3.Expr, $4.Position} }
     | pair_elem      { $$.Expr = $1.Expr }
     ;
 
 assign_rhs
     : expression {$$.Expr = $1.Expr}
     | NEWPAIR '(' expression ',' expression ')' {
-        $$.Expr = &NewPairCmd{0, $3.Expr, $5.Expr}
+        $$.Expr = &NewPairCmd{$1.Position, $3.Expr, $5.Expr, $6.Position}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{0, $2.Expr.(*IdentExpr), $4.Exprs} }
-    | '[' array_liter ']' { $$.Expr = &ArrayLit{0, $2.Exprs} }
+    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position} }
+    | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position} }
     | pair_elem
     ;
 
 identifier
-    : IDENT { $$.Expr = &IdentExpr{0, $1.Value} }
+    : IDENT { $$.Expr = &IdentExpr{$1.Position, $1.Value} }
     ;
 
 optional_arg_list
@@ -161,8 +163,8 @@ pair_elem_type
     ;
 
 pair_elem
-    : FST expression { $$.Expr = &PairElemExpr{0, FST, $2.Expr} }
-    | SND expression { $$.Expr = &PairElemExpr{0, SND, $2.Expr} }
+    : FST expression { $$.Expr = &PairElemExpr{$1.Position, FST, $2.Expr, $2.Position} }
+    | SND expression { $$.Expr = &PairElemExpr{$1.Position, SND, $2.Expr, $2.Position} }
 
 array_liter
     : array_contents
@@ -178,29 +180,29 @@ array_contents
 
 /* Expression */
 array_expression
-    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
-    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{0, $1.Expr.(LValueExpr), $3.Expr} }
+    : identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{$1.Position, $1.Expr.(LValueExpr), $3.Expr, $4.Position} }
+    | array_expression '[' expression ']' { $$.Expr = &ArrayElemExpr{$1.Position, $1.Expr.(LValueExpr), $3.Expr, $4.Position} }
     ;
 
 primary_expression
-    : identifier          { $$.Expr = &IdentExpr{0, $1.Value} }
-    | INT_LIT             { $$.Expr = &BasicLit{0, BasicType{INT}, $1.Value} }
-    | BOOL_LIT            { $$.Expr = &BasicLit{0, BasicType{BOOL}, $1.Value} }
-    | CHAR_LIT            { $$.Expr = &BasicLit{0, BasicType{CHAR}, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{0, ArrayType{BasicType{CHAR}}, $1.Value} }
-    | PAIR_LIT            { $$.Expr = &BasicLit{0, BasicType{PAIR}, $1.Value} }
+    : identifier          { $$.Expr = &IdentExpr{$1.Position, $1.Value} }
+    | INT_LIT             { $$.Expr = &BasicLit{$1.Position, BasicType{INT}, $1.Value} }
+    | BOOL_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{BOOL}, $1.Value} }
+    | CHAR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{CHAR}, $1.Value} }
+    | STRING_LIT          { $$.Expr = &BasicLit{$1.Position, ArrayType{BasicType{CHAR}}, $1.Value} }
+    | PAIR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
     ;
 
 unary_expression
     : primary_expression   { $$.Expr = $1.Expr }
-    | '!' unary_expression { $$.Expr = &UnaryExpr{0, "!", $2.Expr} }
-    | '+' unary_expression { $$.Expr = &UnaryExpr{0, "+", $2.Expr} }
-    | '-' unary_expression { $$.Expr = &UnaryExpr{0, "-", $2.Expr} }
-    | LEN unary_expression { $$.Expr = &UnaryExpr{0, "len", $2.Expr} }
-    | ORD unary_expression { $$.Expr = &UnaryExpr{0, "ord", $2.Expr} }
-    | CHR unary_expression { $$.Expr = &UnaryExpr{0, "chr", $2.Expr} }
+    | '!' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "!", $2.Expr} }
+    | '+' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "+", $2.Expr} }
+    | '-' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "-", $2.Expr} }
+    | LEN unary_expression { $$.Expr = &UnaryExpr{$1.Position, "len", $2.Expr} }
+    | ORD unary_expression { $$.Expr = &UnaryExpr{$1.Position, "ord", $2.Expr} }
+    | CHR unary_expression { $$.Expr = &UnaryExpr{$1.Position, "chr", $2.Expr} }
     ;
 
 multiplicative_expression
@@ -208,39 +210,39 @@ multiplicative_expression
         VerifyNoOverflows($1.Expr)
         $$.Expr = $1.Expr
     }
-    | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "*", $3.Expr} }
-    | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "/", $3.Expr} }
-    | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "%", $3.Expr} }
+    | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "*", $3.Expr} }
+    | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "/", $3.Expr} }
+    | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "%", $3.Expr} }
     ;
 
 additive_expression
     : multiplicative_expression { $$.Expr = $1.Expr }
-    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "+", $3.Expr} }
-    | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "-", $3.Expr} }
+    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "+", $3.Expr} }
+    | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "-", $3.Expr} }
     ;
 
 relational_expression
     : additive_expression { $$.Expr = $1.Expr }
-    | relational_expression '<' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "<", $3.Expr} }
-    | relational_expression '>' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, ">", $3.Expr} }
-    | relational_expression LE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "<=", $3.Expr} }
-    | relational_expression GE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, ">=", $3.Expr} }
+    | relational_expression '<' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<", $3.Expr} }
+    | relational_expression '>' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">", $3.Expr} }
+    | relational_expression LE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<=", $3.Expr} }
+    | relational_expression GE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">=", $3.Expr} }
     ;
 
 equality_expression
     : relational_expression { $$.Expr = $1.Expr }
-    | equality_expression EQ relational_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "==", $3.Expr} }
-    | equality_expression NE relational_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "!=", $3.Expr} }
+    | equality_expression EQ relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "==", $3.Expr} }
+    | equality_expression NE relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "!=", $3.Expr} }
     ;
 
 logical_and_expression
     : equality_expression { $$.Expr = $1.Expr }
-    | logical_and_expression AND equality_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "&&", $3.Expr} }
+    | logical_and_expression AND equality_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "&&", $3.Expr} }
     ;
 
 logical_or_expression
     : logical_and_expression { $$.Expr = $1.Expr }
-    | logical_or_expression OR logical_and_expression { $$.Expr = &BinaryExpr{$1.Expr, 0, "||", $3.Expr} }
+    | logical_or_expression OR logical_and_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "||", $3.Expr} }
     ;
 
 expression

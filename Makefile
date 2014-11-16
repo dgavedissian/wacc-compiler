@@ -18,14 +18,15 @@ GO      := GOPATH=$$HOME/go go
 
 all: frontend
 
-frontend: $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/ast.go $(SOURCE_DIR)/syntax.go $(SOURCE_DIR)/semantic.go $(SOURCE_DIR)/errors.go $(SOURCE_DIR)/main.go
+frontend: $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/ast.go $(SOURCE_DIR)/syntax.go $(SOURCE_DIR)/semantic.go $(SOURCE_DIR)/errors.go $(SOURCE_DIR)/main.go $(SOURCE_DIR)/position.go
 	$(GO) build -o frontend $^
 
 $(SOURCE_DIR)/parser.go: go $(SOURCE_DIR)/wacc.y
 	$(GO) tool yacc -o $(SOURCE_DIR)/parser.go -v y.output $(SOURCE_DIR)/wacc.y
 
-$(SOURCE_DIR)/lexer.go: go nex $(SOURCE_DIR)/wacc.nex
+$(SOURCE_DIR)/lexer.go: go nex $(SOURCE_DIR)/wacc.nex $(SCRIPTS_DIR)/add_fields.sh
 	$(NEX) -e=true -o $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/wacc.nex
+	$(SCRIPTS_DIR)/add_fields.sh $(SOURCE_DIR)/lexer.go
 
 
 nex:

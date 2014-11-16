@@ -2,17 +2,13 @@ package main
 
 import (
 	"fmt"
-	"go/token"
 	"strings"
 )
 
-type Pos token.Pos
-type Position token.Position
-
 type Node interface {
-	Pos() Pos     // Position of first character belonging to the node
-	End() Pos     // Position of first character immediately after the node
-	Repr() string // Representation
+	Pos() *Position // *Positionition of first character belonging to the node
+	End() *Position // *Positionition of first character immediately after the node
+	Repr() string   // Representation
 }
 
 type Expr interface {
@@ -68,18 +64,18 @@ type ErrorType struct {
 // Statements
 //
 type ProgStmt struct {
-	BeginKw Pos // position of "begin" keyword
+	BeginKw *Position // position of "begin" keyword
 	Funcs   []*Function
 	Body    []Stmt
-	EndKw   Pos // position of "end keyword
+	EndKw   *Position // position of "end keyword
 }
 
 type SkipStmt struct {
-	Skip Pos // position of "skip" keyword
+	Skip *Position // position of "skip" keyword
 }
 
 type DeclStmt struct {
-	TypeKw Pos // Position of the type keyword
+	TypeKw *Position // *Positionition of the type keyword
 	Type   Type
 	Ident  *IdentExpr
 	Right  Expr
@@ -91,54 +87,54 @@ type AssignStmt struct {
 }
 
 type ReadStmt struct {
-	Read Pos
+	Read *Position
 	Dest LValueExpr
 }
 
 type FreeStmt struct {
-	Free   Pos
+	Free   *Position
 	Object Expr
 }
 
 type ExitStmt struct {
-	Exit   Pos  // position of "exit" keyword
-	Result Expr // result expression
+	Exit   *Position // position of "exit" keyword
+	Result Expr      // result expression
 }
 
 type ReturnStmt struct {
-	Return Pos
+	Return *Position
 	Result Expr
 }
 
 type PrintStmt struct {
-	Print   Pos // position of print keyword
+	Print   *Position // position of print keyword
 	Right   Expr
 	NewLine bool
 }
 
 type IfStmt struct {
-	If   Pos
+	If   *Position
 	Cond Expr
 	Body []Stmt
 	Else []Stmt
-	Fi   Pos
+	Fi   *Position
 }
 
 type WhileStmt struct {
-	While Pos
+	While *Position
 	Cond  Expr
 	Body  []Stmt
-	Done  Pos
+	Done  *Position
 }
 
 type ScopeStmt struct {
-	BeginPos Pos
+	BeginPos *Position
 	Body     []Stmt
-	EndPos   Pos
+	EndPos   *Position
 }
 
 type Function struct {
-	Func   Pos
+	Func   *Position
 	Type   Type
 	Ident  *IdentExpr
 	Params []Param
@@ -146,56 +142,59 @@ type Function struct {
 }
 
 type Param struct {
-	Start  Pos
+	Start  *Position
 	Type   Type
 	Ident  *IdentExpr
-	Finish Pos
+	Finish *Position
 }
 
 //
 // LValue Expressions
 //
 type IdentExpr struct {
-	NamePos Pos
+	NamePos *Position
 	Name    string
 }
 
 type ArrayElemExpr struct {
-	VolumePos Pos
-	Volume    LValueExpr
-	Index     Expr
+	VolumePos       *Position
+	Volume          LValueExpr
+	Index           Expr
+	CloseBracketPos *Position
 }
 
 // Technically not an expression - but can be used as an lvalue
 type PairElemExpr struct {
-	SelectorPos  Pos
+	SelectorPos  *Position
 	SelectorType int
 	Operand      Expr
+	EndPos       *Position
 }
 
 //
 // Expressions
 //
 type BasicLit struct {
-	ValuePos Pos  // Literal position
-	Type     Type // Token kind (e.g. INT_LIT, CHAR_LIT)
+	ValuePos *Position // Literal position
+	Type     Type      // Token kind (e.g. INT_LIT, CHAR_LIT)
 	Value    string
 }
 
 type ArrayLit struct {
-	ValuesPos Pos
+	ValuesPos *Position
 	Values    []Expr
+	EndPos    *Position
 }
 
 type UnaryExpr struct {
-	OperatorPos Pos
+	OperatorPos *Position
 	Operator    string
 	Operand     Expr
 }
 
 type BinaryExpr struct {
 	Left        Expr
-	OperatorPos Pos
+	OperatorPos *Position
 	Operator    string
 	Right       Expr
 }
@@ -204,15 +203,17 @@ type BinaryExpr struct {
 // Commands: Expressions which are only used in assignments
 //
 type NewPairCmd struct {
-	ValuePos Pos
-	Left     Expr
-	Right    Expr
+	ValuePos     *Position
+	Left         Expr
+	Right        Expr
+	RightBracket *Position
 }
 
 type CallCmd struct {
-	Call  Pos
-	Ident *IdentExpr
-	Args  []Expr
+	Call         *Position
+	Ident        *IdentExpr
+	Args         []Expr
+	RightBracket *Position
 }
 
 //
@@ -340,10 +341,10 @@ func (ErrorType) Repr() string {
 //
 
 // Program Statement
-func (ProgStmt) stmtNode()  {}
-func (s ProgStmt) Pos() Pos { return s.BeginKw }
-func (s ProgStmt) End() Pos {
-	return s.EndKw + Pos(len("end"))
+func (ProgStmt) stmtNode()        {}
+func (s ProgStmt) Pos() *Position { return s.BeginKw }
+func (s ProgStmt) End() *Position {
+	return s.EndKw.End()
 }
 func (s ProgStmt) Repr() string {
 	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
@@ -351,17 +352,17 @@ func (s ProgStmt) Repr() string {
 }
 
 // Skip Statement
-func (SkipStmt) stmtNode()  {}
-func (s SkipStmt) Pos() Pos { return s.Skip }
-func (s SkipStmt) End() Pos {
-	return s.Skip + Pos(len("skip"))
+func (SkipStmt) stmtNode()        {}
+func (s SkipStmt) Pos() *Position { return s.Skip }
+func (s SkipStmt) End() *Position {
+	return s.Skip.End()
 }
 func (s SkipStmt) Repr() string { return "Skip" }
 
 // Declaration statement
-func (DeclStmt) stmtNode()  {}
-func (s DeclStmt) Pos() Pos { return s.TypeKw }
-func (s DeclStmt) End() Pos { return s.Pos() } // TODO
+func (DeclStmt) stmtNode()        {}
+func (s DeclStmt) Pos() *Position { return s.TypeKw }
+func (s DeclStmt) End() *Position { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
 		return "Decl(" + s.Type.Repr() + ", " + s.Ident.Repr() + ", <missing rhs>)"
@@ -370,9 +371,9 @@ func (s DeclStmt) Repr() string {
 }
 
 // Assign Statement
-func (AssignStmt) stmtNode()  {}
-func (s AssignStmt) Pos() Pos { return s.Left.Pos() }
-func (s AssignStmt) End() Pos { return s.Pos() } // TODO
+func (AssignStmt) stmtNode()        {}
+func (s AssignStmt) Pos() *Position { return s.Left.Pos() }
+func (s AssignStmt) End() *Position { return s.Right.Pos().End() }
 func (s AssignStmt) Repr() string {
 	if s.Right == nil {
 		return "Assign(" + s.Left.Repr() + ", <missing rhs>)"
@@ -381,9 +382,9 @@ func (s AssignStmt) Repr() string {
 }
 
 // Read Statement
-func (ReadStmt) stmtNode()  {}
-func (s ReadStmt) Pos() Pos { return s.Read }
-func (s ReadStmt) End() Pos { return s.Pos() } // TODO
+func (ReadStmt) stmtNode()        {}
+func (s ReadStmt) Pos() *Position { return s.Read }
+func (s ReadStmt) End() *Position { return s.Dest.Pos().End() }
 func (s ReadStmt) Repr() string {
 	if s.Dest == nil {
 		return "Read(<missing destination>)"
@@ -392,9 +393,9 @@ func (s ReadStmt) Repr() string {
 }
 
 // Free Statement
-func (FreeStmt) stmtNode()  {}
-func (s FreeStmt) Pos() Pos { return s.Free }
-func (s FreeStmt) End() Pos { return s.Pos() } // TODO
+func (FreeStmt) stmtNode()        {}
+func (s FreeStmt) Pos() *Position { return s.Free }
+func (s FreeStmt) End() *Position { return s.Object.Pos().End() }
 func (s FreeStmt) Repr() string {
 	if s.Object == nil {
 		return "Free(<missing object>)"
@@ -403,13 +404,13 @@ func (s FreeStmt) Repr() string {
 }
 
 // Exit Statement
-func (ExitStmt) stmtNode()  {}
-func (s ExitStmt) Pos() Pos { return s.Exit }
-func (s ExitStmt) End() Pos {
+func (ExitStmt) stmtNode()        {}
+func (s ExitStmt) Pos() *Position { return s.Exit }
+func (s ExitStmt) End() *Position {
 	if s.Result != nil {
 		return s.Result.End()
 	}
-	return s.Exit + Pos(len("exit"))
+	return s.Exit.End()
 }
 func (s ExitStmt) Repr() string {
 	if s.Result != nil {
@@ -420,13 +421,13 @@ func (s ExitStmt) Repr() string {
 }
 
 // Return Statement
-func (ReturnStmt) stmtNode()  {}
-func (s ReturnStmt) Pos() Pos { return s.Return }
-func (s ReturnStmt) End() Pos {
+func (ReturnStmt) stmtNode()        {}
+func (s ReturnStmt) Pos() *Position { return s.Return }
+func (s ReturnStmt) End() *Position {
 	if s.Result != nil {
 		return s.Result.End()
 	}
-	return s.Return + Pos(len("return"))
+	return s.Return.End()
 }
 func (s ReturnStmt) Repr() string {
 	if s.Result != nil {
@@ -437,9 +438,9 @@ func (s ReturnStmt) Repr() string {
 }
 
 // Print Statement
-func (PrintStmt) stmtNode()  {}
-func (s PrintStmt) Pos() Pos { return s.Print }
-func (s PrintStmt) End() Pos { return s.Pos() }
+func (PrintStmt) stmtNode()        {}
+func (s PrintStmt) Pos() *Position { return s.Print }
+func (s PrintStmt) End() *Position { return s.Right.End() }
 func (s PrintStmt) Repr() string {
 	var v string
 	if s.Right == nil {
@@ -455,10 +456,10 @@ func (s PrintStmt) Repr() string {
 }
 
 // If Statement
-func (IfStmt) stmtNode()  {}
-func (s IfStmt) Pos() Pos { return s.If }
-func (s IfStmt) End() Pos {
-	return s.Fi + Pos(len("Fi"))
+func (IfStmt) stmtNode()        {}
+func (s IfStmt) Pos() *Position { return s.If }
+func (s IfStmt) End() *Position {
+	return s.Fi.End()
 }
 func (s IfStmt) Repr() string {
 	return "If(" + s.Cond.Repr() +
@@ -467,10 +468,10 @@ func (s IfStmt) Repr() string {
 }
 
 // While Statement
-func (WhileStmt) stmtNode()  {}
-func (s WhileStmt) Pos() Pos { return s.While }
-func (s WhileStmt) End() Pos {
-	return s.Done + Pos(len("Done")) // TODO
+func (WhileStmt) stmtNode()        {}
+func (s WhileStmt) Pos() *Position { return s.While }
+func (s WhileStmt) End() *Position {
+	return s.Done.End()
 }
 func (s WhileStmt) Repr() string {
 	return "While(" + s.Cond.Repr() +
@@ -479,18 +480,18 @@ func (s WhileStmt) Repr() string {
 }
 
 // Scope Statement
-func (ScopeStmt) stmtNode()  {}
-func (s ScopeStmt) Pos() Pos { return s.BeginPos }
-func (s ScopeStmt) End() Pos {
-	return s.EndPos + Pos(len("end")) // TODO
+func (ScopeStmt) stmtNode()        {}
+func (s ScopeStmt) Pos() *Position { return s.BeginPos }
+func (s ScopeStmt) End() *Position {
+	return s.EndPos.End()
 }
 func (s ScopeStmt) Repr() string {
 	return "Scope(" + ReprNodes(s.Body) + ")"
 }
 
 // Function Statement
-func (s Function) Pos() Pos { return s.Func }
-func (s Function) End() Pos {
+func (s Function) Pos() *Position { return s.Func }
+func (s Function) End() *Position {
 	return s.Body[len(s.Body)-1].End()
 }
 func (s Function) Repr() string {
@@ -501,8 +502,8 @@ func (s Function) Repr() string {
 }
 
 // Function Parameter
-func (s Param) Pos() Pos { return s.Start }
-func (s Param) End() Pos { return s.Finish }
+func (s Param) Pos() *Position { return s.Start }
+func (s Param) End() *Position { return s.Finish.End() }
 func (s Param) Repr() string {
 	return "Param(" + s.Type.Repr() + ", " + s.Ident.Repr() + ")"
 }
@@ -512,10 +513,10 @@ func (s Param) Repr() string {
 //
 
 // Identifier
-func (IdentExpr) lvalueExprNode() {}
-func (IdentExpr) exprNode()       {}
-func (x IdentExpr) Pos() Pos      { return x.NamePos }
-func (x IdentExpr) End() Pos      { return Pos(int(x.NamePos) + len(x.Name)) }
+func (IdentExpr) lvalueExprNode()  {}
+func (IdentExpr) exprNode()        {}
+func (x IdentExpr) Pos() *Position { return x.NamePos }
+func (x IdentExpr) End() *Position { return x.NamePos.End() }
 func (x IdentExpr) Repr() string {
 	if x.Name == "" {
 		return "IdentExpr(<missing name>)"
@@ -524,21 +525,21 @@ func (x IdentExpr) Repr() string {
 }
 
 // Array element expression
-func (ArrayElemExpr) lvalueExprNode() {}
-func (ArrayElemExpr) exprNode()       {}
-func (x ArrayElemExpr) Pos() Pos      { return x.VolumePos }
-func (x ArrayElemExpr) End() Pos {
-	return x.Index.End() + 1 /* Close bracket*/
+func (ArrayElemExpr) lvalueExprNode()  {}
+func (ArrayElemExpr) exprNode()        {}
+func (x ArrayElemExpr) Pos() *Position { return x.VolumePos }
+func (x ArrayElemExpr) End() *Position {
+	return x.CloseBracketPos.End()
 }
 func (x ArrayElemExpr) Repr() string {
 	return "ArrayElem(" + x.Volume.Repr() + ", " + x.Index.Repr() + ")"
 }
 
 // Pair selector expressions
-func (PairElemExpr) lvalueExprNode() {}
-func (PairElemExpr) exprNode()       {}
-func (x PairElemExpr) Pos() Pos      { return x.SelectorPos }
-func (x PairElemExpr) End() Pos      { return Pos(int(x.SelectorPos) + 3) } // TODO: unbreak that
+func (PairElemExpr) lvalueExprNode()  {}
+func (PairElemExpr) exprNode()        {}
+func (x PairElemExpr) Pos() *Position { return x.SelectorPos }
+func (x PairElemExpr) End() *Position { return x.EndPos.End() }
 func (x PairElemExpr) Repr() string {
 	return fmt.Sprintf("PairElem(%d, %f)", x.SelectorType, x.Operand)
 }
@@ -548,21 +549,18 @@ func (x PairElemExpr) Repr() string {
 //
 
 // Basic Literal
-func (BasicLit) exprNode()  {}
-func (x BasicLit) Pos() Pos { return x.ValuePos }
-func (x BasicLit) End() Pos { return Pos(int(x.ValuePos) + len(x.Value)) }
+func (BasicLit) exprNode()        {}
+func (x BasicLit) Pos() *Position { return x.ValuePos }
+func (x BasicLit) End() *Position { return x.ValuePos.End() }
 func (x BasicLit) Repr() string {
 	return "Lit(" + x.Type.Repr() + ", " + x.Value + ")"
 }
 
 // Array literal
-func (ArrayLit) exprNode()  {}
-func (x ArrayLit) Pos() Pos { return x.ValuesPos }
-func (x ArrayLit) End() Pos {
-	if x.Values == nil {
-		return Pos(int(x.ValuesPos) + 1) /* CLose bracket */
-	}
-	return Pos(int(x.Values[len(x.Values)-1].End()) + 1)
+func (ArrayLit) exprNode()        {}
+func (x ArrayLit) Pos() *Position { return x.ValuesPos }
+func (x ArrayLit) End() *Position {
+	return x.EndPos.End()
 }
 func (x ArrayLit) Repr() string {
 	if x.Values == nil {
@@ -572,9 +570,9 @@ func (x ArrayLit) Repr() string {
 }
 
 // Unary Expression
-func (UnaryExpr) exprNode()  {}
-func (x UnaryExpr) Pos() Pos { return x.OperatorPos }
-func (x UnaryExpr) End() Pos { return x.Operand.End() }
+func (UnaryExpr) exprNode()        {}
+func (x UnaryExpr) Pos() *Position { return x.OperatorPos }
+func (x UnaryExpr) End() *Position { return x.Operand.End() }
 func (x UnaryExpr) Repr() string {
 	if x.Operand == nil {
 		return "Unary(" + x.Operator + ", <missing operand>)"
@@ -583,9 +581,9 @@ func (x UnaryExpr) Repr() string {
 }
 
 // Binary Expression
-func (BinaryExpr) exprNode()  {}
-func (x BinaryExpr) Pos() Pos { return x.Left.Pos() }
-func (x BinaryExpr) End() Pos { return x.Right.End() }
+func (BinaryExpr) exprNode()        {}
+func (x BinaryExpr) Pos() *Position { return x.Left.Pos() }
+func (x BinaryExpr) End() *Position { return x.Right.End() }
 func (x BinaryExpr) Repr() string {
 	if x.Left == nil || x.Right == nil {
 		return "Binary(" + x.Operator + ", , )"
@@ -599,10 +597,10 @@ func (x BinaryExpr) Repr() string {
 //
 
 // Pairs
-func (NewPairCmd) exprNode()  {}
-func (x NewPairCmd) Pos() Pos { return x.ValuePos }
-func (x NewPairCmd) End() Pos {
-	return Pos(int(x.ValuePos) + len(x.Right.Repr()) + 1) // Right bracket
+func (NewPairCmd) exprNode()        {}
+func (x NewPairCmd) Pos() *Position { return x.ValuePos }
+func (x NewPairCmd) End() *Position {
+	return x.RightBracket.End()
 }
 func (x NewPairCmd) Repr() string {
 	if x.Left == nil || x.Right == nil {
@@ -612,10 +610,10 @@ func (x NewPairCmd) Repr() string {
 }
 
 // Function call
-func (CallCmd) exprNode()  {}
-func (x CallCmd) Pos() Pos { return x.Call }
-func (x CallCmd) End() Pos {
-	return x.Call /* TODO */
+func (CallCmd) exprNode()        {}
+func (x CallCmd) Pos() *Position { return x.Call }
+func (x CallCmd) End() *Position {
+	return x.RightBracket.End()
 }
 func (x CallCmd) Repr() string {
 	return "Call(" + x.Ident.Repr() + ", " + ReprNodes(x.Args) + ")"
