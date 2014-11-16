@@ -1,77 +1,202 @@
-/[\n]/      { lex.l += 1 }
-/[ \t]/     { /* Skip blanks and tabs. */ }
+/[\n]/      {
+                lex.l += 1
+            }
+/[ \t]/     {
+                /* Skip blanks and tabs. */
+            }
 
 
-/[0-9]+/    { lval.Value = yylex.Text(); return INT_LIT }
-/(false|true)/ { lval.Value = yylex.Text(); return BOOL_LIT }
-/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ { lval.Value = ProcessStr(yylex.Text()); return STRING_LIT }
-/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ { lval.Value = ProcessStr(yylex.Text()); return CHAR_LIT }
-/null/      { lval.Value = yylex.Text(); return PAIR_LIT }
+/[0-9]+/    { 
+                lval.Value = yylex.Text()
+                return INT_LIT
+            }
+/(false|true)/ {
+                lval.Value = yylex.Text()
+                return BOOL_LIT
+            }
+/"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ {
+                lval.Value = ProcessStr(yylex.Text())
+                return STRING_LIT
+            }
+/'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ {
+                lval.Value = ProcessStr(yylex.Text())
+                return CHAR_LIT
+            }
+/null/      {
+                lval.Value = yylex.Text()
+                return PAIR_LIT
+            }
 
-/begin/     { return BEGIN }
-/end/       { return END }
+/begin/     {
+                return BEGIN
+            }
+/end/       {
+                return END
+            }
 
-/skip/      { return SKIP }
-/=/         { return '=' }
-/read/      { return READ }
-/free/      { return FREE }
-/return/    { return RETURN }
-/exit/      { return EXIT }
-/print/     { return PRINT }
-/println/   { return PRINTLN }
-/newpair/   { return NEWPAIR }
-/call/      { return CALL }
+/skip/      {
+                return SKIP
+            }
+/=/         {
+                return '='
+            }
+/read/      {
+                return READ
+            }
+/free/      {
+                return FREE
+            }
+/return/    {
+                return RETURN
+            }
+/exit/      {
+                return EXIT
+            }
+/print/     {
+                return PRINT
+            }
+/println/   {
+                return PRINTLN
+            }
+/newpair/   {
+                return NEWPAIR
+            }
+/call/      {
+                return CALL
+            }
 
-/int/       { return INT }
-/bool/      { return BOOL }
-/char/      { return CHAR }
-/string/    { return STRING }
-/pair/      { return PAIR }
-/is/        { return IS }
+/int/       {
+                return INT
+            }
+/bool/      {
+                return BOOL
+            }
+/char/      {
+                return CHAR
+            }
+/string/    {
+                return STRING
+            }
+/pair/      {
+                return PAIR
+            }
+/is/        {
+                return IS
+            }
 
-/if/        { return IF }
-/then/      { return THEN }
-/else/      { return ELSE }
-/fi/        { return FI }
+/if/        {
+                return IF
+            }
+/then/      {
+                return THEN
+            }
+/else/      {
+                return ELSE
+            }
+/fi/        {
+                return FI
+            }
 
-/while/     { return WHILE }
-/do/        { return DO }
-/done/      { return DONE }
+/while/     {
+                return WHILE
+            }
+/do/        {
+                return DO
+            }
+/done/      {
+                return DONE
+            }
 
-/;/         { return ';' }
-/,/         { return ',' }
+/;/         {
+                return ';'
+            }
+/,/         {
+                return ','
+            }
 
-/!/         { return '!' }
-/len/       { return LEN }
-/ord/       { return ORD }
-/chr/       { return CHR }
-/fst/       { return FST }
-/snd/       { return SND }
+/!/         {
+                return '!'
+            }
+/len/       {
+                return LEN
+            }
+/ord/       {
+                return ORD
+            }
+/chr/       {
+                return CHR
+            }
+/fst/       {
+                return FST
+            }
+/snd/       {
+                return SND
+            }
 
-/\*/        { return '*' }
-/\//        { return '/' }
-/%/         { return '%' }
-/\+/        { return '+' }
-/\-/        { return '-' }
-/</         { return '<' }
-/>/         { return '>' }
-/<=/        { return LE }
-/>=/        { return GE }
-/==/        { return EQ }
-/!=/        { return NE }
-/&&/        { return AND }
-/\|\|/      { return OR }
+/\*/        {
+                return '*'
+            }
+/\//        {
+                return '/'
+            }
+/%/         {
+                return '%'
+            }
+/\+/        {
+                return '+'
+            }
+/\-/        {
+                return '-'
+            }
+/</         {
+                return '<'
+            }
+/>/         {
+                return '>'
+            }
+/<=/        {
+                return LE
+            }
+/>=/        {
+                return GE
+            }
+/==/        {
+                return EQ
+            }
+/!=/        {
+                return NE
+            }
+/&&/        {
+                return AND
+            }
+/\|\|/      {
+                return OR
+            }
 
-/[_a-zA-Z][_a-zA-Z0-9]*/ { lval.Value = yylex.Text(); return IDENT }
+/[_a-zA-Z][_a-zA-Z0-9]*/ {
+                lval.Value = yylex.Text(); return IDENT
+            }
 
-/\[/        { return '[' }
-/\]/        { return ']' }
-/\(/        { return '(' }
-/\)/        { return ')' }
+/\[/        {
+                return '['
+            }
+/\]/        {
+                return ']'
+            }
+/\(/        {
+                return '('
+            }
+/\)/        {
+                return ')'
+            }
 
-/#[^\n]*\n/ { lex.l += 1 /* Comments should be ignored */ }
+/#[^\n]*\n/ {
+                lex.l += 1 /* Comments should be ignored */
+            }
 
-/./         { lex.Error("Invalid Char") }
+/./         {
+                lex.Error("Invalid Char")
+            }
 
 //
 package main
@@ -79,37 +204,37 @@ package main
 var lex *Lexer
 
 func ProcessStr(s string) string {
-	s = s[1:len(s) - 1]
+    s = s[1:len(s) - 1]
 
-	// Replace escaped characters with their unicode equivalent
-	output := ""
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' {
-			i++
-			switch s[i] {
-				case '0': output += "\000"
-				case 'b': output += "\b"
-				case 't': output += "\t"
-				case 'n': output += "\n"
-				case 'f': output += "\f"
-				case 'r': output += "\r"
-				case '\047': output += "\047"
-				case '\042': output += "\042"
-				case '\\': output += "\\"
-				default: panic("Encountered an unknown escape sequence, this should never happen")
-			}
-		} else {
-			output += string(s[i])
-		}
-	}
-	return output
+    // Replace escaped characters with their unicode equivalent
+    output := ""
+    for i := 0; i < len(s); i++ {
+        if s[i] == '\\' {
+            i++
+            switch s[i] {
+                case '0': output += "\000"
+                case 'b': output += "\b"
+                case 't': output += "\t"
+                case 'n': output += "\n"
+                case 'f': output += "\f"
+                case 'r': output += "\r"
+                case '\047': output += "\047"
+                case '\042': output += "\042"
+                case '\\': output += "\\"
+                default: panic("Encountered an unknown escape sequence, this should never happen")
+            }
+        } else {
+            output += string(s[i])
+        }
+    }
+    return output
 }
 
 // Callback for goyacc
 func (l *Lexer) Error(s string) {
-	unexpectedToken := "<EOF>"
-	if len(l.stack) > 0 {
-		unexpectedToken = l.Text()
-	}
-	SyntaxError(l.l, "%s -- unexpected '%s'", s, unexpectedToken)
+    unexpectedToken := "<EOF>"
+    if len(l.stack) > 0 {
+        unexpectedToken = l.Text()
+    }
+    SyntaxError(l.l, "%s -- unexpected '%s'", s, unexpectedToken)
 }
