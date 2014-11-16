@@ -31,10 +31,10 @@ $(SOURCE_DIR)/lexer.go: godeps $(SOURCE_DIR)/wacc.nex
 
 
 nex: go
-	$(GO) get github.com/blynn/nex
+	$(GO) get -u github.com/blynn/nex
 
 ansi: go
-	$(GO) get github.com/mgutz/ansi
+	$(GO) get -u github.com/mgutz/ansi
 
 godeps: nex ansi
 
