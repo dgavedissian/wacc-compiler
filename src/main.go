@@ -18,14 +18,15 @@ func main() {
 
 	// Parse the code, build the AST using the yacc file, and syntax-check.
 	// We tend to think of the first line as line 1, not line 0
-	lex = NewLexerWithInit(os.Stdin, func(l *Lexer) { l.l = 1 })
+	lex = NewLexerWithInit(SetUpErrorOutput(os.Stdin), func(l *Lexer) {
+	})
 	yyParse(lex)
 	if exitFlag != 0 {
 		os.Exit(exitFlag)
 	}
 
 	// Semantic-check the tree
-	VerifySemantics(top.Stmt.(*ProgStmt))
+	VerifyProgram(top.Stmt.(*ProgStmt))
 	if exitFlag != 0 {
 		os.Exit(exitFlag)
 	}
