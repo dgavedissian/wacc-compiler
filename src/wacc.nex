@@ -1,4 +1,4 @@
-/[ \t\n]/   {
+/[ \t\n]/	{
 				/* Skip blanks and tabs. */
 			}
 
@@ -23,34 +23,34 @@
 				lval.Value = ProcessStr(yylex.Text())
 				return CHAR_LIT
 			}
-/null/	  {
+/null/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				lval.Value = yylex.Text()
 				return PAIR_LIT
 			}
 
-/begin/	 {
+/begin/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return BEGIN
 			}
-/end/	   {
+/end/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return END
 			}
 
-/skip/	  {
+/skip/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return SKIP
 			}
-/=/		 {
+/=/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return '='
 			}
-/read/	  {
+/read/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return READ
 			}
-/free/	  {
+/free/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return FREE
 			}
@@ -58,36 +58,36 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return RETURN
 			}
-/exit/	  {
+/exit/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return EXIT
 			}
-/print/	 {
+/print/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return PRINT
 			}
-/println/   {
+/println/	{
 				lval.Position = NewPositionFromLexer(yylex)
 				return PRINTLN
 			}
-/newpair/   {
+/newpair/	{
 				lval.Position = NewPositionFromLexer(yylex)
 				return NEWPAIR
 			}
-/call/	  {
+/call/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return CALL
 			}
 
-/int/	   {
+/int/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return INT
 			}
-/bool/	  {
+/bool/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return BOOL
 			}
-/char/	  {
+/char/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return CHAR
 			}
@@ -95,7 +95,7 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return STRING
 			}
-/pair/	  {
+/pair/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return PAIR
 			}
@@ -108,11 +108,11 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return IF
 			}
-/then/	  {
+/then/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return THEN
 			}
-/else/	  {
+/else/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return ELSE
 			}
@@ -121,7 +121,7 @@
 				return FI
 			}
 
-/while/	 {
+/while/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return WHILE
 			}
@@ -129,41 +129,41 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return DO
 			}
-/done/	  {
+/done/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return DONE
 			}
 
-/;/		 {
+/;/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return ';'
 			}
-/,/		 {
+/,/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return ','
 			}
 
-/!/		 {
+/!/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return '!'
 			}
-/len/	   {
+/len/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return LEN
 			}
-/ord/	   {
+/ord/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return ORD
 			}
-/chr/	   {
+/chr/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return CHR
 			}
-/fst/	   {
+/fst/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return FST
 			}
-/snd/	   {
+/snd/		{
 				lval.Position = NewPositionFromLexer(yylex)
 				return SND
 			}
@@ -176,7 +176,7 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return '/'
 			}
-/%/		 {
+/%/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return '%'
 			}
@@ -188,11 +188,11 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return '-'
 			}
-/</		 {
+/</			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return '<'
 			}
-/>/		 {
+/>/			{
 				lval.Position = NewPositionFromLexer(yylex)
 				return '>'
 			}
@@ -216,7 +216,7 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return AND
 			}
-/\|\|/	  {
+/\|\|/  	{
 				lval.Position = NewPositionFromLexer(yylex)
 				return OR
 			}
@@ -243,11 +243,11 @@
 				return ')'
 			}
 
-/#[^\n]*\n/ {
+/#[^\n]*\n/	{
 				/* Comments should be ignored */
 			}
 
-/./		 {
+/./ 		{
 				lex.Error("Invalid Char")
 			}
 
