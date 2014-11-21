@@ -43,7 +43,7 @@ go:
 
 clean:
 	$(GO) clean
-	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go frontend
+	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go frontend y.output
 
 
 test: frontend
