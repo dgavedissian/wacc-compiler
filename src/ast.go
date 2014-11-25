@@ -6,8 +6,8 @@ import (
 )
 
 type Node interface {
-	Pos() *Position // *Positionition of first character belonging to the node
-	End() *Position // *Positionition of first character immediately after the node
+	Pos() *Position // *Position of first character belonging to the node
+	End() *Position // *Position of first character immediately after the node
 	Repr() string   // Representation
 }
 
