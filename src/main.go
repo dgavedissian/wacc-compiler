@@ -34,4 +34,6 @@ func main() {
 	// Print the representation of the tree
 	fmt.Println("Compilation successful!")
 	fmt.Println(top.Stmt.Repr())
+
+	fmt.Println(GenerateIntermediateForm(top.Stmt.(*ProgStmt)))
 }
