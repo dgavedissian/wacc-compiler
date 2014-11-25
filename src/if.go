@@ -2,57 +2,148 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
+type IFExpr interface {
+	ifExpr()
+	Repr() string
+}
+
+type ConstExpr struct {
+	Value int
+}
+
+type NameExpr struct {
+	Label string
+}
+
+type TempExpr struct {
+	Id int
+}
+
+type BinOpExpr struct {
+	Left  IFExpr
+	Right IFExpr
+}
+
+func (ConstExpr) ifExpr()        {}
+func (e ConstExpr) Repr() string { return fmt.Sprintf("CONST %d", e.Value) }
+
+func (NameExpr) ifExpr()        {}
+func (e NameExpr) Repr() string { return "NAME " + e.Label }
+
+func (TempExpr) ifExpr()        {}
+func (e TempExpr) Repr() string { return fmt.Sprintf("t%d", e.Id) }
+
+func (BinOpExpr) ifExpr()        {}
+func (e BinOpExpr) Repr() string { return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr()) }
+
+type InstrList struct {
+	Head Instr
+	Tail *InstrList
+}
+
 type Instr interface {
-	instrNode()
+	instr()
+	Repr() string
 }
 
-type NoopInstr struct {
-	Next Instr
+type NoOpInstr struct {
 }
 
-func (NoopInstr) instrNode() {}
-
-type IfContext struct {
-	labels        map[string]Instr
-	startNode     Instr
-	nextTemporary int
+type LabelInstr struct {
+	Label string
 }
 
-func (ctx *IfContext) generateIf(nodes []Stmt) Instr {
-	if len(nodes) == 0 {
-		panic("zero-length array passed to generateIf")
+type SysCallInstr struct {
+	SysCallID int
+}
+
+type MoveInstr struct {
+	Src IFExpr
+	Dst IFExpr
+}
+
+func (NoOpInstr) instr()       {}
+func (NoOpInstr) Repr() string { return "NOOP" }
+
+func (LabelInstr) instr() {}
+func (i LabelInstr) Repr() string {
+	return fmt.Sprintf("LABEL %s", i.Label)
+}
+
+func (SysCallInstr) instr() {}
+func (i SysCallInstr) Repr() string {
+	return fmt.Sprintf("SYSCALL %d", i.SysCallID)
+}
+
+func (MoveInstr) instr() {}
+func (i MoveInstr) Repr() string {
+	return fmt.Sprintf("MOVE %s %s", i.Src.Repr(), i.Dst.Repr())
+}
+
+type IFContext struct {
+	labels       map[string]Instr
+	instructions []Instr
+	nextTemp     int
+}
+
+func (cxt *IFContext) addInstr(i Instr) {
+	cxt.instructions = append(cxt.instructions, i)
+}
+
+func (cxt *IFContext) newTemp() *TempExpr {
+	cxt.nextTemp++
+	return &TempExpr{cxt.nextTemp}
+}
+
+func (cxt *IFContext) generateExpr(expr Expr) IFExpr {
+	switch expr := expr.(type) {
+	case *BasicLit:
+		value, _ := strconv.Atoi(expr.Value)
+		return &ConstExpr{value}
+
+	case *BinaryExpr:
+		return &BinOpExpr{cxt.generateExpr(expr.Left), cxt.generateExpr(expr.Right)}
+
+	default:
+		panic(fmt.Sprintf("Unhandled expression %T", expr))
 	}
+}
 
-	var nextInstr Instr
-
-	for i := len(nodes) - 1; i >= 0; i -= 1 {
-		switch node := nodes[i].(type) {
-		case *ProgStmt:
-			if len(node.Funcs) != 0 {
-				panic("not yet implemented")
-			}
-			return ctx.generateIf(node.Body)
-		case *SkipStmt:
-			thisInstr := new(NoopInstr)
-			thisInstr.Next = nextInstr
-			nextInstr = thisInstr
-		default:
-			panic(fmt.Sprintf("what is a %s?", node.Repr()))
+func (cxt *IFContext) generate(node Stmt) Instr {
+	switch node := node.(type) {
+	case *ProgStmt:
+		cxt.addInstr(&LabelInstr{"main"})
+		for _, n := range node.Body {
+			cxt.generate(n)
 		}
+
+	case *ExitStmt:
+		cxt.addInstr(&SysCallInstr{0})
+
+	case *SkipStmt:
+		cxt.addInstr(&NoOpInstr{})
+
+	case *DeclStmt:
+		cxt.addInstr(&MoveInstr{cxt.generateExpr(node.Right), &NameExpr{node.Ident.Name}})
+
+	default:
+		panic(fmt.Sprintf("Unhandled statement %T", node))
 	}
 
-	if nextInstr == nil {
-		panic("reached end of function with no head. I'm headless")
-	}
-	return nextInstr
+	return nil
 }
 
-func GenerateIntermediateForm(program *ProgStmt) *IfContext {
-	ctx := new(IfContext)
+func GenerateIntermediateForm(program *ProgStmt) *IFContext {
+	cxt := new(IFContext)
 
-	ctx.startNode = ctx.generateIf([]Stmt{program})
+	cxt.generate(program)
 
-	return ctx
+	for _, i := range cxt.instructions {
+		fmt.Println(i.Repr())
+	}
+
+	return cxt
 }

@@ -24,16 +24,19 @@ func main() {
 	if exitFlag != 0 {
 		os.Exit(exitFlag)
 	}
+	fmt.Println("Syntax check successful")
 
 	// Semantic-check the tree
 	VerifyProgram(top.Stmt.(*ProgStmt))
 	if exitFlag != 0 {
 		os.Exit(exitFlag)
 	}
-
-	// Print the representation of the tree
-	fmt.Println("Compilation successful!")
+	fmt.Println("Semantic check successful")
 	fmt.Println(top.Stmt.Repr())
+	fmt.Println()
 
-	fmt.Println(GenerateIntermediateForm(top.Stmt.(*ProgStmt)))
+	// Generate the intermediate form
+	fmt.Println("Generated intermediate form:")
+	GenerateIntermediateForm(top.Stmt.(*ProgStmt))
+
 }
