@@ -3,6 +3,17 @@
 import os
 import subprocess
 import sys
+import multiprocessing
+
+
+def run_test(filename):
+    '''Runs the test and returns the filename, return code and output'''
+    command = [compile_script_path, filename]
+    p = subprocess.Popen(command, stdout=subprocess.PIPE)
+    output = p.communicate()[0].decode("utf-8").strip('\n')
+    returncode = p.returncode
+    return (filename, returncode, output)
+
 
 tests_path = os.path.dirname(os.path.abspath(__file__))
 base_path = os.path.dirname(tests_path)
@@ -41,6 +52,8 @@ passed_tests = dict(zip(categories, [(0, 0)] * len(categories)))
 if len(sys.argv) > 1:
     categories = sys.argv[1:]
 
+pool = multiprocessing.Pool(multiprocessing.cpu_count())
+
 for category in categories:
     filenames = files[category]
     passed = 0
@@ -48,12 +61,9 @@ for category in categories:
 
     print("Running {} tests...".format(category))
 
-    for filename in filenames:
-        command = [compile_script_path, filename]
-        p = subprocess.Popen(command, stdout=subprocess.PIPE)
-        output = p.communicate()[0].decode("utf-8").strip('\n')
-        returncode = p.returncode
+    results = pool.map(run_test, filenames)
 
+    for filename, returncode, output in results:
         if returncode != expected_error_codes[category]:
             print('=' * 80)
             print("{} test {} FAILED!".format(category, total))
