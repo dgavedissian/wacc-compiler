@@ -139,7 +139,7 @@ func (cxt *IFContext) generate(node Stmt) Instr {
 func GenerateIntermediateForm(program *ProgStmt) *IFContext {
 	cxt := new(IFContext)
 
-	cxt.generate(program)
+	//cxt.generate(program)
 
 	for _, i := range cxt.instructions {
 		fmt.Println(i.Repr())
