@@ -39,7 +39,7 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 			n := IntLiteralToIntConst(*operand)
 			// Smallest 32bit literal is -(1<<31)
 			// The lexer always generates positive literals
-			return n > (1 << 31)
+			return n < (1 << 31)
 		}
 		return false
 
