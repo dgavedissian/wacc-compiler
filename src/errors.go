@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mgutz/ansi"
 	"io"
 	"strings"
+
+	"github.com/mgutz/ansi"
 )
 
 const SYNTAX_ERROR = 100
