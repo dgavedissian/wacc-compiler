@@ -184,10 +184,30 @@ func (ctx *IFContext) generate(node Stmt) {
 
 		// Print
 
-		// If
+	case *IfStmt:
+		startElse := ctx.makeNode(&LabelInstr{"else_begin"})
+		endIfElse := ctx.makeNode(&LabelInstr{"ifelse_end"})
+
+		ctx.addInstr(&TestInstr{ctx.generateExpr(node.Cond)})
+		ctx.addInstr(&JmpZeroInstr{startElse})
+
+		// Build main branch
+		for _, n := range node.Body {
+			ctx.generate(n)
+		}
+
+		ctx.addInstr(&JmpInstr{endIfElse})
+		ctx.appendNode(startElse)
+
+		// Build else branch
+		for _, n := range node.Else {
+			ctx.generate(n)
+		}
+
+		// Build end
+		ctx.appendNode(endIfElse)
 
 	case *WhileStmt:
-		// Create begin and end labels
 		beginWhile := ctx.makeNode(&LabelInstr{"while_begin"})
 		endWhile := ctx.makeNode(&LabelInstr{"while_end"})
 
