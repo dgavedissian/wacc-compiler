@@ -39,9 +39,9 @@ func (e TempExpr) Repr() string { return fmt.Sprintf("t%d", e.Id) }
 func (BinOpExpr) ifExpr()        {}
 func (e BinOpExpr) Repr() string { return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr()) }
 
-type InstrList struct {
-	Head Instr
-	Tail *InstrList
+type InstrNode struct {
+	Instr Instr
+	Next  *InstrNode
 }
 
 type Instr interface {
@@ -80,70 +80,95 @@ func (i SysCallInstr) Repr() string {
 
 func (MoveInstr) instr() {}
 func (i MoveInstr) Repr() string {
-	return fmt.Sprintf("MOVE %s %s", i.Src.Repr(), i.Dst.Repr())
+	return fmt.Sprintf("MOVE (%s) (%s)", i.Src.Repr(), i.Dst.Repr())
 }
 
 type IFContext struct {
-	labels       map[string]Instr
-	instructions []Instr
-	nextTemp     int
+	labels   map[string]Instr
+	first    *InstrNode
+	current  *InstrNode
+	nextTemp int
 }
 
-func (cxt *IFContext) addInstr(i Instr) {
-	cxt.instructions = append(cxt.instructions, i)
+func (ctx *IFContext) addInstr(i Instr) {
+	if ctx.first == nil {
+		ctx.first = &InstrNode{i, nil}
+		ctx.current = ctx.first
+	} else {
+		ctx.current.Next = &InstrNode{i, nil}
+		ctx.current = ctx.current.Next
+	}
 }
 
-func (cxt *IFContext) newTemp() *TempExpr {
-	cxt.nextTemp++
-	return &TempExpr{cxt.nextTemp}
+func (ctx *IFContext) newTemp() *TempExpr {
+	ctx.nextTemp++
+	return &TempExpr{ctx.nextTemp}
 }
 
-func (cxt *IFContext) generateExpr(expr Expr) IFExpr {
+func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 	switch expr := expr.(type) {
 	case *BasicLit:
 		value, _ := strconv.Atoi(expr.Value)
 		return &ConstExpr{value}
 
 	case *BinaryExpr:
-		return &BinOpExpr{cxt.generateExpr(expr.Left), cxt.generateExpr(expr.Right)}
+		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
 
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))
 	}
 }
 
-func (cxt *IFContext) generate(node Stmt) Instr {
+func (ctx *IFContext) generate(node Stmt) {
 	switch node := node.(type) {
 	case *ProgStmt:
-		cxt.addInstr(&LabelInstr{"main"})
+		ctx.addInstr(&LabelInstr{"main"})
 		for _, n := range node.Body {
-			cxt.generate(n)
+			ctx.generate(n)
 		}
 
-	case *ExitStmt:
-		cxt.addInstr(&SysCallInstr{0})
-
 	case *SkipStmt:
-		cxt.addInstr(&NoOpInstr{})
+		ctx.addInstr(&NoOpInstr{})
 
 	case *DeclStmt:
-		cxt.addInstr(&MoveInstr{cxt.generateExpr(node.Right), &NameExpr{node.Ident.Name}})
+		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Ident.Name}})
+
+	case *AssignStmt:
+		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Left.(*IdentExpr).Name}})
+
+	// Read
+
+	// Free
+
+	case *ExitStmt:
+		ctx.addInstr(&SysCallInstr{0})
+
+		// Return
+
+		// Print
+
+		// If
+
+	//case *WhileStmt:
+	//beginWhile := &InstrNode{JumpZeroInstr{}, nil}
+
+	// Scope
 
 	default:
 		panic(fmt.Sprintf("Unhandled statement %T", node))
 	}
+}
 
-	return nil
+func printGraph(node *InstrNode) {
+	for node != nil {
+		fmt.Printf("| %s\n", node.Instr.Repr())
+		node = node.Next
+	}
 }
 
 func GenerateIntermediateForm(program *ProgStmt) *IFContext {
-	cxt := new(IFContext)
-
-	//cxt.generate(program)
-
-	for _, i := range cxt.instructions {
-		fmt.Println(i.Repr())
-	}
-
-	return cxt
+	ctx := new(IFContext)
+	ctx.generate(program)
+	printGraph(ctx.first)
+	return ctx
 }
