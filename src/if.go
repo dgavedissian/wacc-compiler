@@ -65,6 +65,18 @@ type MoveInstr struct {
 	Dst IFExpr
 }
 
+type TestInstr struct {
+	Cond IFExpr
+}
+
+type JmpInstr struct {
+	Dest *InstrNode
+}
+
+type JmpZeroInstr struct {
+	Dest *InstrNode
+}
+
 func (NoOpInstr) instr()       {}
 func (NoOpInstr) Repr() string { return "NOOP" }
 
@@ -83,6 +95,21 @@ func (i MoveInstr) Repr() string {
 	return fmt.Sprintf("MOVE (%s) (%s)", i.Src.Repr(), i.Dst.Repr())
 }
 
+func (TestInstr) instr() {}
+func (i TestInstr) Repr() string {
+	return fmt.Sprintf("TEST (%s)", i.Cond.Repr())
+}
+
+func (JmpInstr) instr() {}
+func (i JmpInstr) Repr() string {
+	return fmt.Sprintf("JMP (%s)", i.Dest.Instr.(*LabelInstr).Repr())
+}
+
+func (JmpZeroInstr) instr() {}
+func (i JmpZeroInstr) Repr() string {
+	return fmt.Sprintf("JZ (%s)", i.Dest.Instr.(*LabelInstr).Repr())
+}
+
 type IFContext struct {
 	labels   map[string]Instr
 	first    *InstrNode
@@ -90,14 +117,24 @@ type IFContext struct {
 	nextTemp int
 }
 
-func (ctx *IFContext) addInstr(i Instr) {
+func (ctx *IFContext) makeNode(i Instr) *InstrNode {
+	return &InstrNode{i, nil}
+}
+
+func (ctx *IFContext) appendNode(n *InstrNode) {
 	if ctx.first == nil {
-		ctx.first = &InstrNode{i, nil}
+		ctx.first = n
 		ctx.current = ctx.first
 	} else {
-		ctx.current.Next = &InstrNode{i, nil}
+		ctx.current.Next = n
 		ctx.current = ctx.current.Next
 	}
+}
+
+func (ctx *IFContext) addInstr(i Instr) *InstrNode {
+	newNode := ctx.makeNode(i)
+	ctx.appendNode(newNode)
+	return newNode
 }
 
 func (ctx *IFContext) newTemp() *TempExpr {
@@ -149,8 +186,24 @@ func (ctx *IFContext) generate(node Stmt) {
 
 		// If
 
-	//case *WhileStmt:
-	//beginWhile := &InstrNode{JumpZeroInstr{}, nil}
+	case *WhileStmt:
+		// Create begin and end labels
+		beginWhile := ctx.makeNode(&LabelInstr{"while_begin"})
+		endWhile := ctx.makeNode(&LabelInstr{"while_end"})
+
+		// Build condition
+		ctx.appendNode(beginWhile)
+		ctx.addInstr(&TestInstr{ctx.generateExpr(node.Cond)})
+		ctx.addInstr(&JmpZeroInstr{endWhile})
+
+		// Build body
+		for _, n := range node.Body {
+			ctx.generate(n)
+		}
+
+		// Build end
+		ctx.addInstr(&JmpInstr{beginWhile})
+		ctx.appendNode(endWhile)
 
 	// Scope
 
