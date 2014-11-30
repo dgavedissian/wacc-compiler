@@ -159,16 +159,16 @@ func (ctx *IFContext) generate(node Stmt) {
 	}
 }
 
-func printGraph(node *InstrNode) {
+func GenerateIF(program *ProgStmt) *IFContext {
+	ctx := new(IFContext)
+	ctx.generate(program)
+	return ctx
+}
+
+func DrawIFGraph(iform *IFContext) {
+	node := iform.first
 	for node != nil {
 		fmt.Printf("| %s\n", node.Instr.Repr())
 		node = node.Next
 	}
-}
-
-func GenerateIntermediateForm(program *ProgStmt) *IFContext {
-	ctx := new(IFContext)
-	ctx.generate(program)
-	printGraph(ctx.first)
-	return ctx
 }

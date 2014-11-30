@@ -13,7 +13,17 @@ MKDIR	:= mkdir -p
 NEX     := $$HOME/go/bin/nex
 GO      := GOPATH=$$HOME/go go
 
-SOURCE_FILES := $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/if.go $(SOURCE_DIR)/ast.go $(SOURCE_DIR)/syntax.go $(SOURCE_DIR)/semantic.go $(SOURCE_DIR)/errors.go $(SOURCE_DIR)/main.go $(SOURCE_DIR)/position.go
+SOURCE_FILES := \
+	$(SOURCE_DIR)/parser.go \
+	$(SOURCE_DIR)/lexer.go \
+	$(SOURCE_DIR)/ast.go \
+	$(SOURCE_DIR)/errors.go \
+	$(SOURCE_DIR)/generator.go \
+	$(SOURCE_DIR)/if.go \
+	$(SOURCE_DIR)/main.go \
+	$(SOURCE_DIR)/position.go \
+	$(SOURCE_DIR)/semantic.go \
+	$(SOURCE_DIR)/syntax.go
 
 
 # the make rules
