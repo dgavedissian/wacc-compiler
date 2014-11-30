@@ -28,10 +28,10 @@ SOURCE_FILES := \
 
 # the make rules
 
-all: frontend
+all: compile
 
-frontend: godeps $(SOURCE_FILES)
-	$(GO) build -o frontend $(SOURCE_FILES)
+compile: godeps $(SOURCE_FILES)
+	$(GO) build -o compile $(SOURCE_FILES)
 
 $(SOURCE_DIR)/parser.go: go $(SOURCE_DIR)/wacc.y
 	$(GO) tool yacc -o $(SOURCE_DIR)/parser.go -v y.output $(SOURCE_DIR)/wacc.y
@@ -53,19 +53,19 @@ go:
 
 clean:
 	$(GO) clean
-	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go frontend y.output
+	$(RM) $(SOURCE_DIR)/parser.go $(SOURCE_DIR)/lexer.go compile y.output
 
 
-test: frontend
+test: compile
 	$(SCRIPTS_DIR)/test_examples.py
 
-testvalid: frontend
+testvalid: compile
 	$(SCRIPTS_DIR)/test_examples.py "Valid"
 
-testinvalidsyntax: frontend
+testinvalidsyntax: compile
 	$(SCRIPTS_DIR)/test_examples.py "Invalid Syntax"
 
-testinvalidsemantic: frontend
+testinvalidsemantic: compile
 	$(SCRIPTS_DIR)/test_examples.py "Invalid Semantic"
 
 

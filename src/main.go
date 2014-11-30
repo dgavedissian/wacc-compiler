@@ -12,13 +12,24 @@ func main() {
 	enableDebug := flag.Bool("d", false, "Enable debug mode")
 	flag.Parse()
 
+	// Open file specified in the remaining argument
+	filename := flag.Arg(0)
+	input := os.Stdin
+	if filename != "-" {
+		f, err := os.Open(filename)
+		if err != nil {
+			panic(err)
+		}
+		input = f
+	}
+
 	if *enableDebug {
 		yyDebug = 20
 	}
 
 	// Parse the code, build the AST using the yacc file, and syntax-check.
 	// We tend to think of the first line as line 1, not line 0
-	lex = NewLexerWithInit(SetUpErrorOutput(os.Stdin), func(l *Lexer) {
+	lex = NewLexerWithInit(SetUpErrorOutput(input), func(l *Lexer) {
 	})
 	yyParse(lex)
 	if exitFlag != 0 {
