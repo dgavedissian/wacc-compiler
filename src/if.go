@@ -219,9 +219,59 @@ func GenerateIF(program *ProgStmt) *IFContext {
 }
 
 func DrawIFGraph(iform *IFContext) {
+	// Transform into a list
 	node := iform.first
+	var list []Instr
 	for node != nil {
-		fmt.Printf("| %s\n", node.Instr.Repr())
+		list = append(list, node.Instr)
 		node = node.Next
+	}
+	instrCount := len(list)
+
+	// To whoever reads this code... I'm sorry
+
+	// Referrals
+	var referredBy Instr
+	referStack := 0
+
+	// Iterate
+	for i, instr := range list {
+		fmt.Printf("%d  ", i)
+
+		// Are we a label?
+		if _, ok := instr.(*LabelInstr); ok {
+			// Does anyone else refer to me?
+			for j := 0; j < instrCount; j++ {
+				switch jmp := list[j].(type) {
+				case *JmpInstr:
+					if jmp.Dest.Instr == instr {
+						referredBy = jmp
+						referStack++
+						break
+					}
+				}
+			}
+
+			fmt.Printf("|")
+			for l := 0; l < referStack; l++ {
+				fmt.Printf("<-")
+			}
+		} else {
+			fmt.Printf("|")
+
+			// Have we reached the referred by?
+			if instr == referredBy {
+				referStack--
+				referredBy = nil
+				fmt.Printf("-'")
+			}
+
+			for l := 0; l < referStack; l++ {
+				fmt.Printf(" |")
+			}
+		}
+
+		// Instruction
+		fmt.Printf("  %s\n", instr.Repr())
 	}
 }
