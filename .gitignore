@@ -31,7 +31,9 @@
 *.nav
 *.toc
 *.output
+
+# compiler
 parser.go
 lexer.go
-frontend
+compile
 build
