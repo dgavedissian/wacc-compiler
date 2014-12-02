@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type IFExpr interface {
@@ -10,8 +11,17 @@ type IFExpr interface {
 	Repr() string
 }
 
-type ConstExpr struct {
+type IntConstExpr struct {
 	Value int
+}
+
+type CharConstExpr struct {
+	Value string
+}
+
+type ArrayExpr struct {
+	Type  BasicType
+	Elems []IFExpr
 }
 
 type NameExpr struct {
@@ -27,14 +37,26 @@ type BinOpExpr struct {
 	Right IFExpr
 }
 
-func (ConstExpr) ifExpr()        {}
-func (e ConstExpr) Repr() string { return fmt.Sprintf("CONST %d", e.Value) }
+func (IntConstExpr) ifExpr()        {}
+func (e IntConstExpr) Repr() string { return fmt.Sprintf("CONST %v", e.Value) }
+
+func (CharConstExpr) ifExpr()        {}
+func (e CharConstExpr) Repr() string { return fmt.Sprintf("CONST %v", strconv.QuoteToASCII(e.Value)) }
 
 func (NameExpr) ifExpr()        {}
 func (e NameExpr) Repr() string { return "NAME " + e.Label }
 
 func (TempExpr) ifExpr()        {}
 func (e TempExpr) Repr() string { return fmt.Sprintf("t%d", e.Id) }
+
+func (ArrayExpr) ifExpr() {}
+func (e ArrayExpr) Repr() string {
+	rs := make([]string, len(e.Elems))
+	for i, v := range e.Elems {
+		rs[i] = v.Repr()
+	}
+	return "ARRAYCONST [" + strings.Join(rs, ", ") + "]"
+}
 
 func (BinOpExpr) ifExpr()        {}
 func (e BinOpExpr) Repr() string { return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr()) }
@@ -56,8 +78,12 @@ type LabelInstr struct {
 	Label string
 }
 
-type SysCallInstr struct {
-	SysCallID int
+type ExitInstr struct {
+	Expr IFExpr
+}
+
+type PrintInstr struct {
+	Expr IFExpr
 }
 
 type MoveInstr struct {
@@ -70,11 +96,11 @@ type TestInstr struct {
 }
 
 type JmpInstr struct {
-	Dest *InstrNode
+	Dst *InstrNode
 }
 
 type JmpZeroInstr struct {
-	Dest *InstrNode
+	Dst *InstrNode
 }
 
 func (NoOpInstr) instr()       {}
@@ -85,9 +111,14 @@ func (i LabelInstr) Repr() string {
 	return fmt.Sprintf("LABEL %s", i.Label)
 }
 
-func (SysCallInstr) instr() {}
-func (i SysCallInstr) Repr() string {
-	return fmt.Sprintf("SYSCALL %d", i.SysCallID)
+func (ExitInstr) instr() {}
+func (i ExitInstr) Repr() string {
+	return fmt.Sprintf("EXIT %s", i.Expr.Repr())
+}
+
+func (PrintInstr) instr() {}
+func (i PrintInstr) Repr() string {
+	return fmt.Sprintf("PRINT %s", i.Expr.Repr())
 }
 
 func (MoveInstr) instr() {}
@@ -102,12 +133,12 @@ func (i TestInstr) Repr() string {
 
 func (JmpInstr) instr() {}
 func (i JmpInstr) Repr() string {
-	return fmt.Sprintf("JMP (%s)", i.Dest.Instr.(*LabelInstr).Repr())
+	return fmt.Sprintf("JMP (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
 
 func (JmpZeroInstr) instr() {}
 func (i JmpZeroInstr) Repr() string {
-	return fmt.Sprintf("JZ (%s)", i.Dest.Instr.(*LabelInstr).Repr())
+	return fmt.Sprintf("JZ (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
 
 type IFContext struct {
@@ -145,12 +176,31 @@ func (ctx *IFContext) newTemp() *TempExpr {
 func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 	switch expr := expr.(type) {
 	case *BasicLit:
-		value, _ := strconv.Atoi(expr.Value)
-		return &ConstExpr{value}
+		if expr.Type.Equals(BasicType{INT}) {
+			value, _ := strconv.Atoi(expr.Value)
+			return &IntConstExpr{value}
+		}
+
+		if expr.Type.Equals(BasicType{BOOL}) {
+			if expr.Value == "true" {
+				return &IntConstExpr{1}
+			}
+			return &IntConstExpr{0}
+		}
+
+		if expr.Type.Equals(BasicType{CHAR}) {
+			return &CharConstExpr{expr.Value}
+		}
+		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
 
 	case *BinaryExpr:
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
-
+	case *ArrayLit:
+		a := ArrayExpr{}
+		for _, e := range expr.Values {
+			a.Elems = append(a.Elems, ctx.generateExpr(e))
+		}
+		return a
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))
 	}
@@ -178,11 +228,14 @@ func (ctx *IFContext) generate(node Stmt) {
 	// Free
 
 	case *ExitStmt:
-		ctx.addInstr(&SysCallInstr{0})
+		ctx.addInstr(&ExitInstr{ctx.generateExpr(node.Result)})
 
+	case *PrintStmt:
+		ctx.addInstr(&PrintInstr{ctx.generateExpr(node.Right)})
+		if node.NewLine {
+			ctx.addInstr(&PrintInstr{CharConstExpr{"\n"}})
+		}
 		// Return
-
-		// Print
 
 	case *IfStmt:
 		startElse := ctx.makeNode(&LabelInstr{"else_begin"})
@@ -264,7 +317,7 @@ func DrawIFGraph(iform *IFContext) {
 			for j := 0; j < instrCount; j++ {
 				switch jmp := list[j].(type) {
 				case *JmpInstr:
-					if jmp.Dest.Instr == instr {
+					if jmp.Dst.Instr == instr {
 						referredBy = jmp
 						referStack++
 						break
