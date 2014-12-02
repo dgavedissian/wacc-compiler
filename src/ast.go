@@ -541,7 +541,7 @@ func (PairElemExpr) exprNode()        {}
 func (x PairElemExpr) Pos() *Position { return x.SelectorPos }
 func (x PairElemExpr) End() *Position { return x.EndPos.End() }
 func (x PairElemExpr) Repr() string {
-	return fmt.Sprintf("PairElem(%d, %f)", x.SelectorType, x.Operand)
+	return fmt.Sprintf("PairElem(%d, %v)", x.SelectorType, x.Operand)
 }
 
 //
