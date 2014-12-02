@@ -78,6 +78,14 @@ type LabelInstr struct {
 	Label string
 }
 
+type ReadInstr struct {
+	Dst IFExpr // LValueExpr
+}
+
+type FreeInstr struct {
+	Object IFExpr // LValueExpr
+}
+
 type ExitInstr struct {
 	Expr IFExpr
 }
@@ -88,7 +96,7 @@ type PrintInstr struct {
 
 type MoveInstr struct {
 	Src IFExpr
-	Dst IFExpr
+	Dst IFExpr // LValueExpr
 }
 
 type TestInstr struct {
@@ -109,6 +117,16 @@ func (NoOpInstr) Repr() string { return "NOOP" }
 func (LabelInstr) instr() {}
 func (i LabelInstr) Repr() string {
 	return fmt.Sprintf("LABEL %s", i.Label)
+}
+
+func (ReadInstr) instr() {}
+func (i ReadInstr) Repr() string {
+	return fmt.Sprintf("READ %s", i.Dst.Repr())
+}
+
+func (FreeInstr) instr() {}
+func (i FreeInstr) Repr() string {
+	return fmt.Sprintf("FREE %s", i.Object.Repr())
 }
 
 func (ExitInstr) instr() {}
@@ -199,6 +217,9 @@ func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 
 		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
 
+	case *IdentExpr:
+		return &NameExpr{expr.Name}
+
 	case *BinaryExpr:
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
 
@@ -232,9 +253,11 @@ func (ctx *IFContext) generate(node Stmt) {
 	case *AssignStmt:
 		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Left.(*IdentExpr).Name}})
 
-	// Read
+	case *ReadStmt:
+		ctx.addInstr(&ReadInstr{ctx.generateExpr(node.Dst)})
 
-	// Free
+	case *FreeStmt:
+		ctx.addInstr(&FreeInstr{ctx.generateExpr(node.Object)})
 
 	case *ExitStmt:
 		ctx.addInstr(&ExitInstr{ctx.generateExpr(node.Result)})
@@ -244,7 +267,8 @@ func (ctx *IFContext) generate(node Stmt) {
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{CharConstExpr{"\n"}})
 		}
-		// Return
+
+	// Return
 
 	case *IfStmt:
 		startElse := ctx.makeNode(&LabelInstr{"else_begin"})
