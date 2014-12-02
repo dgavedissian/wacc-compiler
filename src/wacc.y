@@ -2,6 +2,7 @@
 
 %{
   package main
+  import "strings"
 %}
 
 %union {
@@ -189,7 +190,14 @@ primary_expression
     | INT_LIT             { $$.Expr = &BasicLit{$1.Position, BasicType{INT}, $1.Value} }
     | BOOL_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{BOOL}, $1.Value} }
     | CHAR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{CHAR}, $1.Value} }
-    | STRING_LIT          { $$.Expr = &BasicLit{$1.Position, ArrayType{BasicType{CHAR}}, $1.Value} }
+    | STRING_LIT          {
+		chars := strings.Split($1.Value, "")
+		exprs := make([]Expr, len(chars))
+		for i, s := range(chars) {
+			exprs[i] = &BasicLit{$1.Position.Add(i), BasicType{CHAR}, s}
+		}
+		$$.Expr = &ArrayLit{$1.Position, exprs, $1.Position.Add(len($1.Value))}
+	}
     | PAIR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
     | array_expression
