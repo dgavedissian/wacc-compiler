@@ -248,7 +248,28 @@ func DrawIFGraph(iform *IFContext) {
 	}
 	instrCount := len(list)
 
-	// To whoever reads this code... I'm sorry
+	/*
+			Toothless defends this code
+
+		                         ^\    ^
+		                        / \\  / \
+		                       /.  \\/   \      |\___/|
+		    *----*           / / |  \\    \  __/  O  O\
+		    |   /          /  /  |   \\    \_\/  \     \
+		   / /\/         /   /   |    \\   _\/    '@___@
+		  /  /         /    /    |     \\ _\/       |U
+		  |  |       /     /     |      \\\/        |
+		  \  |     /_     /      |       \\  )   \ _|_
+		  \   \       ~-./_ _    |    .- ; (  \_ _ _,\'
+		  ~    ~.           .-~-.|.-*      _        {-,
+		   \      ~-. _ .-~                 \      /\'
+		    \                   }            {   .*
+		     ~.                 '-/        /.-~----.
+		       ~- _             /        >..----.\\\
+		           ~ - - - - ^}_ _ _ _ _ _ _.-\\\
+
+			To whoever reads from here onwards, I'm sorry...
+	*/
 
 	// Referrals
 	var referredBy Instr
