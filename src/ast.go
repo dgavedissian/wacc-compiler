@@ -75,7 +75,7 @@ type SkipStmt struct {
 }
 
 type DeclStmt struct {
-	TypePos *Position // *Positionition of the type keyword
+	TypePos *Position // Position of the type keyword
 	Type    Type
 	Ident   *IdentExpr
 	Right   Expr
