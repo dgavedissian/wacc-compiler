@@ -191,10 +191,17 @@ func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 		if expr.Type.Equals(BasicType{CHAR}) {
 			return &CharConstExpr{expr.Value}
 		}
+
+		// Null
+		if expr.Type.Equals(BasicType{PAIR}) {
+			return &IntConstExpr{0}
+		}
+
 		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
 
 	case *BinaryExpr:
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
+
 	case *ArrayLit:
 		a := ArrayExpr{}
 		a.Elems = make([]IFExpr, len(expr.Values))
@@ -202,6 +209,7 @@ func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 			a.Elems[i] = ctx.generateExpr(e)
 		}
 		return a
+
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))
 	}
