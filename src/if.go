@@ -197,8 +197,9 @@ func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
 	case *ArrayLit:
 		a := ArrayExpr{}
-		for _, e := range expr.Values {
-			a.Elems = append(a.Elems, ctx.generateExpr(e))
+		a.Elems = make([]IFExpr, len(expr.Values))
+		for i, e := range expr.Values {
+			a.Elems[i] = ctx.generateExpr(e)
 		}
 		return a
 	default:
