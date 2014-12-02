@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"./backend"
+	"./frontend"
 )
 
 var exitFlag int = 0
@@ -25,38 +28,28 @@ func main() {
 	}
 
 	if *enableDebug {
-		yyDebug = 20
+		frontend.EnableDebug()
 	}
 
-	// Parse the code, build the AST using the yacc file, and syntax-check.
-	// We tend to think of the first line as line 1, not line 0
-	lex = NewLexerWithInit(SetUpErrorOutput(input), func(l *Lexer) {
-	})
-	yyParse(lex)
-	if exitFlag != 0 {
-		os.Exit(exitFlag)
+	ast, err := frontend.GenerateAST(input)
+	if err {
+		os.Exit(frontend.ExitCode())
 	}
 
-	// Semantic-check the tree
-	VerifyProgram(top.Stmt.(*ProgStmt))
-	if exitFlag != 0 {
-		os.Exit(exitFlag)
-	}
 	fmt.Println("Abstract Syntax Tree:")
-	fmt.Println(top.Stmt.Repr())
+	fmt.Println(ast.Repr())
 	fmt.Println()
 
 	// Generate the intermediate form
 	fmt.Println("Generated intermediate form:")
-	iform := GenerateIF(top.Stmt.(*ProgStmt))
-	DrawIFGraph(iform)
+	iform := backend.GenerateIF(ast)
+	backend.DrawIFGraph(iform)
 	fmt.Println()
 
 	// Generate code
 	if *stopAtIF == false {
 		fmt.Println("Generated code:")
-		code := GenerateCode(iform)
+		code := backend.GenerateCode(iform)
 		fmt.Println(code)
 	}
-
 }

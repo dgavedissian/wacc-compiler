@@ -1,7 +1,7 @@
-/* File: wacc.y */
+/* File: parser.y */
 
 %{
-  package main
+  package frontend
   import "strings"
 %}
 

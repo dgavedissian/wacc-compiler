@@ -1,4 +1,4 @@
-package main
+package frontend
 
 type Position struct {
 	name   string

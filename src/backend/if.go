@@ -1,9 +1,11 @@
-package main
+package backend
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"../frontend"
 )
 
 type IFExpr interface {
@@ -20,7 +22,7 @@ type CharConstExpr struct {
 }
 
 type ArrayExpr struct {
-	Type  BasicType
+	Type  frontend.BasicType
 	Elems []IFExpr
 }
 
@@ -191,39 +193,39 @@ func (ctx *IFContext) newTemp() *TempExpr {
 	return &TempExpr{ctx.nextTemp}
 }
 
-func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
+func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
 	switch expr := expr.(type) {
-	case *BasicLit:
-		if expr.Type.Equals(BasicType{INT}) {
+	case *frontend.BasicLit:
+		if expr.Type.Equals(frontend.BasicType{frontend.INT}) {
 			value, _ := strconv.Atoi(expr.Value)
 			return &IntConstExpr{value}
 		}
 
-		if expr.Type.Equals(BasicType{BOOL}) {
+		if expr.Type.Equals(frontend.BasicType{frontend.BOOL}) {
 			if expr.Value == "true" {
 				return &IntConstExpr{1}
 			}
 			return &IntConstExpr{0}
 		}
 
-		if expr.Type.Equals(BasicType{CHAR}) {
+		if expr.Type.Equals(frontend.BasicType{frontend.CHAR}) {
 			return &CharConstExpr{expr.Value}
 		}
 
 		// Null
-		if expr.Type.Equals(BasicType{PAIR}) {
+		if expr.Type.Equals(frontend.BasicType{frontend.PAIR}) {
 			return &IntConstExpr{0}
 		}
 
 		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
 
-	case *IdentExpr:
+	case *frontend.IdentExpr:
 		return &NameExpr{expr.Name}
 
-	case *BinaryExpr:
+	case *frontend.BinaryExpr:
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
 
-	case *ArrayLit:
+	case *frontend.ArrayLit:
 		a := ArrayExpr{}
 		a.Elems = make([]IFExpr, len(expr.Values))
 		for i, e := range expr.Values {
@@ -236,33 +238,33 @@ func (ctx *IFContext) generateExpr(expr Expr) IFExpr {
 	}
 }
 
-func (ctx *IFContext) generate(node Stmt) {
+func (ctx *IFContext) generate(node frontend.Stmt) {
 	switch node := node.(type) {
-	case *ProgStmt:
+	case *frontend.ProgStmt:
 		ctx.addInstr(&LabelInstr{"main"})
 		for _, n := range node.Body {
 			ctx.generate(n)
 		}
 
-	case *SkipStmt:
+	case *frontend.SkipStmt:
 		ctx.addInstr(&NoOpInstr{})
 
-	case *DeclStmt:
+	case *frontend.DeclStmt:
 		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Ident.Name}})
 
-	case *AssignStmt:
-		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Left.(*IdentExpr).Name}})
+	case *frontend.AssignStmt:
+		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Left.(*frontend.IdentExpr).Name}})
 
-	case *ReadStmt:
+	case *frontend.ReadStmt:
 		ctx.addInstr(&ReadInstr{ctx.generateExpr(node.Dst)})
 
-	case *FreeStmt:
+	case *frontend.FreeStmt:
 		ctx.addInstr(&FreeInstr{ctx.generateExpr(node.Object)})
 
-	case *ExitStmt:
+	case *frontend.ExitStmt:
 		ctx.addInstr(&ExitInstr{ctx.generateExpr(node.Result)})
 
-	case *PrintStmt:
+	case *frontend.PrintStmt:
 		ctx.addInstr(&PrintInstr{ctx.generateExpr(node.Right)})
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{CharConstExpr{"\n"}})
@@ -270,7 +272,7 @@ func (ctx *IFContext) generate(node Stmt) {
 
 	// Return
 
-	case *IfStmt:
+	case *frontend.IfStmt:
 		startElse := ctx.makeNode(&LabelInstr{"else_begin"})
 		endIfElse := ctx.makeNode(&LabelInstr{"ifelse_end"})
 
@@ -293,7 +295,7 @@ func (ctx *IFContext) generate(node Stmt) {
 		// Build end
 		ctx.appendNode(endIfElse)
 
-	case *WhileStmt:
+	case *frontend.WhileStmt:
 		beginWhile := ctx.makeNode(&LabelInstr{"while_begin"})
 		endWhile := ctx.makeNode(&LabelInstr{"while_end"})
 
@@ -318,7 +320,7 @@ func (ctx *IFContext) generate(node Stmt) {
 	}
 }
 
-func GenerateIF(program *ProgStmt) *IFContext {
+func GenerateIF(program *frontend.ProgStmt) *IFContext {
 	ctx := new(IFContext)
 	ctx.generate(program)
 	return ctx
