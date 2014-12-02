@@ -64,10 +64,10 @@ type ErrorType struct {
 // Statements
 //
 type ProgStmt struct {
-	BeginKw *Position // position of "begin" keyword
-	Funcs   []*Function
-	Body    []Stmt
-	EndKw   *Position // position of "end keyword
+	BeginPos *Position // position of "begin" keyword
+	Funcs    []*Function
+	Body     []Stmt
+	EndPos   *Position // position of "end keyword
 }
 
 type SkipStmt struct {
@@ -75,10 +75,10 @@ type SkipStmt struct {
 }
 
 type DeclStmt struct {
-	TypeKw *Position // *Positionition of the type keyword
-	Type   Type
-	Ident  *IdentExpr
-	Right  Expr
+	TypePos *Position // *Positionition of the type keyword
+	Type    Type
+	Ident   *IdentExpr
+	Right   Expr
 }
 
 type AssignStmt struct {
@@ -342,9 +342,9 @@ func (ErrorType) Repr() string {
 
 // Program Statement
 func (ProgStmt) stmtNode()        {}
-func (s ProgStmt) Pos() *Position { return s.BeginKw }
+func (s ProgStmt) Pos() *Position { return s.BeginPos }
 func (s ProgStmt) End() *Position {
-	return s.EndKw.End()
+	return s.EndPos.End()
 }
 func (s ProgStmt) Repr() string {
 	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
@@ -361,7 +361,7 @@ func (s SkipStmt) Repr() string { return "Skip" }
 
 // Declaration statement
 func (DeclStmt) stmtNode()        {}
-func (s DeclStmt) Pos() *Position { return s.TypeKw }
+func (s DeclStmt) Pos() *Position { return s.TypePos }
 func (s DeclStmt) End() *Position { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
