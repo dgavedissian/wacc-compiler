@@ -88,7 +88,7 @@ type AssignStmt struct {
 
 type ReadStmt struct {
 	Read *Position
-	Dest LValueExpr
+	Dst  LValueExpr
 }
 
 type FreeStmt struct {
@@ -384,12 +384,12 @@ func (s AssignStmt) Repr() string {
 // Read Statement
 func (ReadStmt) stmtNode()        {}
 func (s ReadStmt) Pos() *Position { return s.Read }
-func (s ReadStmt) End() *Position { return s.Dest.Pos().End() }
+func (s ReadStmt) End() *Position { return s.Dst.Pos().End() }
 func (s ReadStmt) Repr() string {
-	if s.Dest == nil {
+	if s.Dst == nil {
 		return "Read(<missing destination>)"
 	}
-	return "Read(" + s.Dest.Repr() + ")"
+	return "Read(" + s.Dst.Repr() + ")"
 }
 
 // Free Statement
