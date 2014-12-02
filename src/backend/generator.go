@@ -1,4 +1,4 @@
-package main
+package backend
 
 func GenerateCode(iform *IFContext) string {
 	return ""

@@ -1,4 +1,4 @@
-package main
+package frontend
 
 import (
 	"bytes"
@@ -23,6 +23,16 @@ var RESET = ansi.ColorCode("reset")
 
 const CONTEXT_TO_PRINT = 3
 
+var exitCode int
+
+type ErrorContext struct {
+	exitCode int
+}
+
+func ExitCode() int {
+	return exitCode
+}
+
 func SyntaxError(lineNo int, s string, a ...interface{}) {
 	errorStr := fmt.Sprintf(s, a...)
 	fmt.Print(ERROR_COLOUR)
@@ -32,7 +42,7 @@ func SyntaxError(lineNo int, s string, a ...interface{}) {
 		fmt.Printf("%s\n", errorStr)
 	}
 	fmt.Print(RESET)
-	exitFlag = SYNTAX_ERROR
+	exitCode = SYNTAX_ERROR
 }
 
 func SemanticError(position *Position, s string, a ...interface{}) {
@@ -45,7 +55,7 @@ func SemanticError(position *Position, s string, a ...interface{}) {
 		fmt.Printf("%s\n", errorStr)
 	}
 	fmt.Print(RESET)
-	exitFlag = SEMANTIC_ERROR
+	exitCode = SEMANTIC_ERROR
 }
 
 var errBuffer []string

@@ -252,7 +252,7 @@
 			}
 
 //
-package main
+package frontend
 
 var lex *Lexer
 

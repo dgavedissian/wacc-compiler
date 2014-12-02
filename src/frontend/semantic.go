@@ -1,4 +1,4 @@
-package main
+package frontend
 
 // Context
 type Context struct {
