@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/mgutz/ansi"
+	"gitlab.doc.ic.ac.uk/np1813/ansi"
 )
 
 const SYNTAX_ERROR = 100

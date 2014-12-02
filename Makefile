@@ -9,9 +9,9 @@ EXAMPLES_DIR := examples
 # Tools
 FIND	:= find
 RM	    := rm -rf
-MKDIR	:= mkdir -p
 NEX     := $$HOME/go/bin/nex
 GO      := GOPATH=$$HOME/go go
+GOGET   := $(GO) get
 
 SOURCE_FILES := \
 	$(SOURCE_DIR)/parser.go \
@@ -41,10 +41,10 @@ $(SOURCE_DIR)/lexer.go: godeps $(SOURCE_DIR)/wacc.nex
 
 
 nex: go
-	$(GO) get -u github.com/blynn/nex
+	$(GOGET) gitlab.doc.ic.ac.uk/np1813/nex
 
 ansi: go
-	$(GO) get -u github.com/mgutz/ansi
+	$(GOGET) gitlab.doc.ic.ac.uk/np1813/ansi
 
 godeps: nex ansi
 
