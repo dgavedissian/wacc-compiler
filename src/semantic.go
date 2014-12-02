@@ -322,9 +322,9 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 		}
 
 	case *ReadStmt:
-		t := ctx.DeriveType(statement.Dest)
+		t := ctx.DeriveType(statement.Dst)
 		if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{CHAR}) {
-			SemanticError(statement.Dest.Pos(), "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
+			SemanticError(statement.Dst.Pos(), "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
 		}
 
 	case *FreeStmt:
