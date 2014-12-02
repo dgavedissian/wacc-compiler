@@ -10,6 +10,7 @@ var exitFlag int = 0
 
 func main() {
 	enableDebug := flag.Bool("d", false, "Enable debug mode")
+	stopAtIF := flag.Bool("if", true, "Stop the compile process once IF is generated")
 	flag.Parse()
 
 	// Open file specified in the remaining argument
@@ -52,8 +53,10 @@ func main() {
 	fmt.Println()
 
 	// Generate code
-	fmt.Println("Generated code:")
-	code := GenerateCode(iform)
-	fmt.Println(code)
+	if *stopAtIF == false {
+		fmt.Println("Generated code:")
+		code := GenerateCode(iform)
+		fmt.Println(code)
+	}
 
 }
