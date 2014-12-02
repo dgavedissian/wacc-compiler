@@ -9,10 +9,10 @@ import multiprocessing
 def run_test(filename):
     '''Runs the test and returns the filename, return code and output'''
     command = [compile_script_path, filename]
-    p = subprocess.Popen(command, stdout=subprocess.PIPE)
-    output = p.communicate()[0].decode("utf-8").strip('\n')
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, err = [s.decode("utf-8").strip('\n') for s in p.communicate()]
     returncode = p.returncode
-    return (filename, returncode, output)
+    return (filename, returncode, output, err)
 
 
 tests_path = os.path.dirname(os.path.abspath(__file__))
@@ -63,7 +63,7 @@ for category in categories:
 
     results = pool.map(run_test, filenames)
 
-    for filename, returncode, output in results:
+    for filename, returncode, output, err in results:
         if returncode != expected_error_codes[category]:
             print('=' * 80)
             print("{} test {} FAILED!".format(category, total))
@@ -72,6 +72,10 @@ for category in categories:
             print('-' * 80)
             print("Output:")
             print(output)
+            if err:
+                print('=' * 80)
+                print("Standard error:")
+                print(err)
             print('=' * 80)
             print()
         else:
