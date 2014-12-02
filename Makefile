@@ -33,11 +33,11 @@ all: compile
 compile: godeps $(SOURCE_FILES)
 	$(GO) build -o compile $(SOURCE_FILES)
 
-$(SOURCE_DIR)/parser.go: go $(SOURCE_DIR)/wacc.y
-	$(GO) tool yacc -o $(SOURCE_DIR)/parser.go -v y.output $(SOURCE_DIR)/wacc.y
+$(SOURCE_DIR)/parser.go: go $(SOURCE_DIR)/parser.y
+	$(GO) tool yacc -o $(SOURCE_DIR)/parser.go -v y.output $(SOURCE_DIR)/parser.y
 
-$(SOURCE_DIR)/lexer.go: godeps $(SOURCE_DIR)/wacc.nex
-	$(NEX) -e=true -o $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/wacc.nex
+$(SOURCE_DIR)/lexer.go: godeps $(SOURCE_DIR)/lexer.nex
+	$(NEX) -e=true -o $(SOURCE_DIR)/lexer.go $(SOURCE_DIR)/lexer.nex
 
 
 nex: go
