@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"../frontend"
 )
@@ -18,7 +19,8 @@ type IntConstExpr struct {
 }
 
 type CharConstExpr struct {
-	Value string
+	Value rune
+	Size  int
 }
 
 type ArrayExpr struct {
@@ -26,8 +28,12 @@ type ArrayExpr struct {
 	Elems []IFExpr
 }
 
-type NameExpr struct {
+type LocationExpr struct {
 	Label string
+}
+
+type VarExpr struct {
+	Name string
 }
 
 type TempExpr struct {
@@ -40,13 +46,18 @@ type BinOpExpr struct {
 }
 
 func (IntConstExpr) ifExpr()        {}
-func (e IntConstExpr) Repr() string { return fmt.Sprintf("CONST %v", e.Value) }
+func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
-func (CharConstExpr) ifExpr()        {}
-func (e CharConstExpr) Repr() string { return fmt.Sprintf("CONST %v", strconv.QuoteToASCII(e.Value)) }
+func (CharConstExpr) ifExpr() {}
+func (e CharConstExpr) Repr() string {
+	return fmt.Sprintf("CHAR %v", strconv.QuoteToASCII(string(e.Value)))
+}
 
-func (NameExpr) ifExpr()        {}
-func (e NameExpr) Repr() string { return "NAME " + e.Label }
+func (LocationExpr) ifExpr()        {}
+func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
+
+func (VarExpr) ifExpr()        {}
+func (e VarExpr) Repr() string { return "VAR " + e.Name }
 
 func (TempExpr) ifExpr()        {}
 func (e TempExpr) Repr() string { return fmt.Sprintf("t%d", e.Id) }
@@ -209,7 +220,8 @@ func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
 		}
 
 		if expr.Type.Equals(frontend.BasicType{frontend.CHAR}) {
-			return &CharConstExpr{expr.Value}
+			value, size := utf8.DecodeRuneInString(expr.Value)
+			return &CharConstExpr{value, size}
 		}
 
 		// Null
@@ -220,13 +232,13 @@ func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
 		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
 
 	case *frontend.IdentExpr:
-		return &NameExpr{expr.Name}
+		return &VarExpr{expr.Name}
 
 	case *frontend.BinaryExpr:
 		return &BinOpExpr{ctx.generateExpr(expr.Left), ctx.generateExpr(expr.Right)}
 
 	case *frontend.ArrayLit:
-		a := ArrayExpr{}
+		a := &ArrayExpr{}
 		a.Elems = make([]IFExpr, len(expr.Values))
 		for i, e := range expr.Values {
 			a.Elems[i] = ctx.generateExpr(e)
@@ -250,10 +262,10 @@ func (ctx *IFContext) generate(node frontend.Stmt) {
 		ctx.addInstr(&NoOpInstr{})
 
 	case *frontend.DeclStmt:
-		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Ident.Name}})
+		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &VarExpr{node.Ident.Name}})
 
 	case *frontend.AssignStmt:
-		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &NameExpr{node.Left.(*frontend.IdentExpr).Name}})
+		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &VarExpr{node.Left.(*frontend.IdentExpr).Name}})
 
 	case *frontend.ReadStmt:
 		ctx.addInstr(&ReadInstr{ctx.generateExpr(node.Dst)})
@@ -267,7 +279,7 @@ func (ctx *IFContext) generate(node frontend.Stmt) {
 	case *frontend.PrintStmt:
 		ctx.addInstr(&PrintInstr{ctx.generateExpr(node.Right)})
 		if node.NewLine {
-			ctx.addInstr(&PrintInstr{CharConstExpr{"\n"}})
+			ctx.addInstr(&PrintInstr{CharConstExpr{'\n', 1}})
 		}
 
 	// Return

@@ -1,6 +1,9 @@
 package backend
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type GeneratorContext struct {
 	out     string
@@ -9,7 +12,7 @@ type GeneratorContext struct {
 
 func (ctx *GeneratorContext) pushCode(s string) {
 	if ctx.inLabel {
-		ctx.out += "    "
+		ctx.out += "\t"
 	}
 	ctx.out += s + "\n"
 }
@@ -32,8 +35,18 @@ func (ctx *GeneratorContext) generateInstr(instr Instr) {
 
 	case *MoveInstr:
 		dst := "r0"
-		if expr, ok := instr.Src.(*IntConstExpr); ok {
-			ctx.pushCode(ctx.generateMovImm(expr.Value, dst))
+		switch src := instr.Src.(type) {
+		case *IntConstExpr:
+			ctx.pushCode(ctx.generateMovImm(src.Value, dst))
+
+		case *CharConstExpr:
+			ctx.pushCode(ctx.generateMovImm(int(src.Value), dst))
+
+		case *LocationExpr:
+			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Label))
+
+		default:
+			panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
 		}
 
 	case *ExitInstr:
@@ -57,7 +70,43 @@ func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
 func GenerateCode(ifCtx *IFContext) string {
 	ctx := &GeneratorContext{"", false}
 
-	// Generate header
+	// Data section
+	ctx.out += ".data\n"
+
+	// Search for any string array literals and replace them with labels in the
+	// data section
+	stringCounter := 0
+	VisitInstructions(ifCtx, func(i Instr) {
+		switch instr := i.(type) {
+		case *MoveInstr:
+			// Is the source an array of ascii chars?
+			if expr, ok := instr.Src.(*ArrayExpr); ok {
+				if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
+					if elem.Size == 1 {
+						// Build a string from the char array
+						str := ""
+						for _, e := range expr.Elems {
+							str += string(e.(*CharConstExpr).Value)
+						}
+
+						// Generate a label
+						label := fmt.Sprintf("stringlit%v", stringCounter)
+						stringCounter += 1
+
+						// Record the string in the data section
+						ctx.out += fmt.Sprintf("%v:\n", label)
+						ctx.out += fmt.Sprintf("\t.word %v\n", len(str))
+						ctx.out += fmt.Sprintf("\t.ascii %v\n", strconv.QuoteToASCII(str))
+
+						// Replace src with a label
+						instr.Src = &LocationExpr{label}
+					}
+				}
+			}
+		}
+	})
+
+	// Program code section
 	ctx.out += ".text\n"
 
 	// Add the label of each function to the global list
