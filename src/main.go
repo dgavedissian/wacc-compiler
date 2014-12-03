@@ -51,5 +51,13 @@ func main() {
 		fmt.Println("Generated code:")
 		code := backend.GenerateCode(iform)
 		fmt.Println(code)
+
+		// Write final .s file
+		f, err := os.Create("test.s")
+		if err != nil {
+			panic("Unable to open output file")
+		}
+		f.WriteString(code)
+		f.Close()
 	}
 }
