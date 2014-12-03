@@ -34,7 +34,7 @@ func (ctx *GeneratorContext) generateInstr(instr Instr) {
 		ctx.inLabel = true
 
 	case *MoveInstr:
-		dst := "r0"
+		dst := instr.Dst.(*RegisterExpr).Repr()
 		switch src := instr.Src.(type) {
 		case *IntConstExpr:
 			ctx.pushCode(ctx.generateMovImm(src.Value, dst))

@@ -54,7 +54,16 @@ func main() {
 	// Generate the intermediate form
 	iform := backend.GenerateIF(ast)
 	if *enableVerbose {
-		fmt.Println("Generated intermediate form:")
+		fmt.Println("First stage intermediate form:")
+		backend.DrawIFGraph(iform)
+		fmt.Println()
+	}
+
+	// Optimise the intermediate form
+	backend.AllocateRegisters(iform)
+	backend.OptimiseIF(iform)
+	if *enableVerbose {
+		fmt.Println("Second stage intermediate form:")
 		backend.DrawIFGraph(iform)
 		fmt.Println()
 	}

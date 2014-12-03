@@ -36,7 +36,7 @@ type VarExpr struct {
 	Name string
 }
 
-type TempExpr struct {
+type RegisterExpr struct {
 	Id int
 }
 
@@ -59,8 +59,8 @@ func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
 func (VarExpr) ifExpr()        {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
 
-func (TempExpr) ifExpr()        {}
-func (e TempExpr) Repr() string { return fmt.Sprintf("t%d", e.Id) }
+func (RegisterExpr) ifExpr()        {}
+func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
 
 func (ArrayExpr) ifExpr() {}
 func (e ArrayExpr) Repr() string {
@@ -197,11 +197,6 @@ func (ctx *IFContext) addInstr(i Instr) *InstrNode {
 	newNode := ctx.makeNode(i)
 	ctx.appendNode(newNode)
 	return newNode
-}
-
-func (ctx *IFContext) newTemp() *TempExpr {
-	ctx.nextTemp++
-	return &TempExpr{ctx.nextTemp}
 }
 
 func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
