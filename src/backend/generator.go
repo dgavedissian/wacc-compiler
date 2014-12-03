@@ -14,6 +14,16 @@ func (ctx *GeneratorContext) pushCode(s string) {
 	ctx.out += s + "\n"
 }
 
+func (ctx *GeneratorContext) generateMovImm(value int, dst string) string {
+	// MOV only supports immediate values which are 1 byte. Constants which
+	// are larger require LDR (which is unfortunately slower)
+	if value > 255 {
+		return fmt.Sprintf("ldr %v, =%v", dst, value)
+	} else {
+		return fmt.Sprintf("mov %v, #%v", dst, value)
+	}
+}
+
 func (ctx *GeneratorContext) generateInstr(instr Instr) {
 	switch instr := instr.(type) {
 	case *LabelInstr:
@@ -22,11 +32,12 @@ func (ctx *GeneratorContext) generateInstr(instr Instr) {
 
 	case *MoveInstr:
 		dst := "r0"
-		src := "r0"
-		ctx.pushCode(fmt.Sprintf("mov %v, %v", dst, src))
+		if expr, ok := instr.Src.(*IntConstExpr); ok {
+			ctx.pushCode(ctx.generateMovImm(expr.Value, dst))
+		}
 
 	case *ExitInstr:
-		ctx.pushCode(fmt.Sprintf("mov r0, #%v", instr.Expr.(*IntConstExpr).Value))
+		ctx.pushCode(ctx.generateMovImm(instr.Expr.(*IntConstExpr).Value, "r0"))
 		ctx.pushCode("bl exit")
 
 	default:
