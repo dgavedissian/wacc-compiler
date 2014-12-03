@@ -3,16 +3,27 @@ package backend
 import "fmt"
 
 type GeneratorContext struct {
-	scope int
+	out     string
+	inLabel bool
 }
 
-func (ctx GeneratorContext) generateInstr(instr Instr) string {
+func (ctx *GeneratorContext) pushCode(s string) {
+	if ctx.inLabel {
+		ctx.out += "  "
+	}
+	ctx.out += s + "\n"
+}
+
+func (ctx *GeneratorContext) generateInstr(instr Instr) {
 	switch instr := instr.(type) {
 	case *LabelInstr:
-		return instr.Label + ":\n"
+		ctx.pushCode(instr.Label + ":")
+		ctx.inLabel = true
 
-	case *NoOpInstr:
-		return ""
+	case *MoveInstr:
+		dst := "r0"
+		src := "r0"
+		ctx.pushCode(fmt.Sprintf("mov %v, %v", dst, src))
 
 	default:
 		panic(fmt.Sprintf("Unhandled instruction: %T", instr))
@@ -27,21 +38,19 @@ func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
 	}
 }
 
-func GenerateCode(iform *IFContext) string {
-	ctx := &GeneratorContext{0}
-	out := ""
+func GenerateCode(ifCtx *IFContext) string {
+	ctx := &GeneratorContext{"", false}
 
 	// Generate header
+	ctx.out += ".text\n"
 
-	// Perform a pass through the code to find global labels
-	VisitInstructions(iform, func(i Instr) {
-		fmt.Printf("Found %v\n", i.Repr())
-	})
+	// Add the label of each function to the global list
+	ctx.out += ".global main\n"
 
 	// Generate program code
-	VisitInstructions(iform, func(i Instr) {
-		out += ctx.generateInstr(i)
+	VisitInstructions(ifCtx, func(i Instr) {
+		ctx.generateInstr(i)
 	})
 
-	return out
+	return ctx.out
 }
