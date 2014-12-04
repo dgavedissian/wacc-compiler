@@ -40,6 +40,10 @@ type VarExpr struct {
 	Name string
 }
 
+type MemExpr struct {
+	Address Expr
+}
+
 type RegisterExpr struct {
 	Id int
 }
@@ -162,8 +166,8 @@ type PrintInstr struct {
 }
 
 type MoveInstr struct {
-	Src Expr
 	Dst Expr // LValueExpr
+	Src Expr
 }
 
 type TestInstr struct {
@@ -208,7 +212,7 @@ func (i PrintInstr) Repr() string {
 
 func (MoveInstr) instr() {}
 func (i MoveInstr) Repr() string {
-	return fmt.Sprintf("MOVE (%s) (%s)", i.Src.Repr(), i.Dst.Repr())
+	return fmt.Sprintf("MOVE (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
 }
 
 func (TestInstr) instr() {}
@@ -347,10 +351,27 @@ func (ctx *IFContext) generate(node frontend.Stmt) {
 		ctx.addInstr(&NoOpInstr{})
 
 	case *frontend.DeclStmt:
-		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &VarExpr{node.Ident.Name}})
+		ctx.addInstr(
+			&MoveInstr{
+				Dst: &VarExpr{node.Ident.Name},
+				Src: ctx.generateExpr(node.Right)})
 
 	case *frontend.AssignStmt:
-		ctx.addInstr(&MoveInstr{ctx.generateExpr(node.Right), &VarExpr{node.Left.(*frontend.IdentExpr).Name}})
+		var dst Expr
+		switch leftExpr := node.Left.(type) {
+		case *frontend.IdentExpr:
+			dst = &VarExpr{leftExpr.Name}
+		case *frontend.PairElemExpr:
+			panic("TODO: Pair locations")
+		case *frontend.ArrayElemExpr:
+			panic("TODO: Array locations")
+		default:
+			panic(fmt.Sprintf("Missing lhs %T", leftExpr))
+		}
+		ctx.addInstr(
+			&MoveInstr{
+				Dst: dst,
+				Src: ctx.generateExpr(node.Right)})
 
 	case *frontend.ReadStmt:
 		ctx.addInstr(&ReadInstr{ctx.generateExpr(node.Dst)})
