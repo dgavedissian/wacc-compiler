@@ -8,6 +8,28 @@ type GeneratorContext struct {
 	text          string
 }
 
+// Search for any string array literals and replace them with labels in the
+// data section
+func (ctx *GeneratorContext) handleString(expr Expr) Expr {
+	// Is the expr an array
+	if expr, ok := expr.(*ArrayExpr); ok {
+		// Is the source an array of ascii chars?
+		if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
+			if elem.Size == 1 {
+				// Build a string from the char array
+				str := ""
+				for _, e := range expr.Elems {
+					str += string(e.(*CharConstExpr).Value)
+				}
+
+				// Replace src with a label
+				return &LocationExpr{ctx.addStringLit(str)}
+			}
+		}
+	}
+	return expr
+}
+
 func (ctx *GeneratorContext) addStringLit(s string) string {
 	// Generate a label
 	label := fmt.Sprintf("stringlit%v", ctx.stringCounter)
@@ -60,6 +82,8 @@ func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	// save regs r0 and r1
 
+	i.Expr = ctx.handleString(i.Expr)
+
 	// Printf depending on type
 	switch obj := i.Expr.(type) {
 	case *IntConstExpr:
@@ -95,6 +119,7 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	dst := i.Dst.(*RegisterExpr).Repr()
+	i.Src = ctx.handleString(i.Src)
 	switch src := i.Src.(type) {
 	case *IntConstExpr:
 		ctx.pushCode("ldr %v, =%v", dst, src.Value)
@@ -152,37 +177,6 @@ func GenerateCode(ifCtx *IFContext) string {
 	ctx.data += "printf_fmt_int:\n\t.asciz \"%d\"\n"
 	ctx.data += "printf_fmt_char:\n\t.asciz \"%c\"\n"
 	ctx.data += "printf_fmt_str:\n\t.asciz \"%s\"\n"
-
-	// Search for any string array literals and replace them with labels in the
-	// data section
-	tryReplaceString := func(expr Expr) Expr {
-		// Is the source an array of ascii chars?
-		if expr, ok := expr.(*ArrayExpr); ok {
-			if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
-				if elem.Size == 1 {
-					// Build a string from the char array
-					str := ""
-					for _, e := range expr.Elems {
-						str += string(e.(*CharConstExpr).Value)
-					}
-
-					// Replace src with a label
-					return &LocationExpr{ctx.addStringLit(str)}
-				}
-			}
-		}
-		return expr
-	}
-
-	VisitInstructions(ifCtx, func(i Instr) {
-		switch instr := i.(type) {
-		case *MoveInstr:
-			instr.Src = tryReplaceString(instr.Src)
-
-		case *PrintInstr:
-			instr.Expr = tryReplaceString(instr.Expr)
-		}
-	})
 
 	// Add the label of each function to the global list
 	ctx.text += ".global main\n"
