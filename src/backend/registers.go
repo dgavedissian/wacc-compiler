@@ -35,6 +35,31 @@ func (e *BinOpExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
 	return e
 }
 
+func (e *NotExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	e.Operand = e.Operand.replaceVar(ctx)
+	return e
+}
+
+func (e *OrdExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	e.Operand = e.Operand.replaceVar(ctx)
+	return e
+}
+
+func (e *ChrExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	e.Operand = e.Operand.replaceVar(ctx)
+	return e
+}
+
+func (e *NegExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	e.Operand = e.Operand.replaceVar(ctx)
+	return e
+}
+
+func (e *LenExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	e.Operand = e.Operand.replaceVar(ctx)
+	return e
+}
+
 func (i *NoOpInstr) replaceVar(*RegisterAllocatorContext)  {}
 func (i *LabelInstr) replaceVar(*RegisterAllocatorContext) {}
 func (i *ReadInstr) replaceVar(*RegisterAllocatorContext)  {}

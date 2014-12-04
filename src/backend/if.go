@@ -49,6 +49,26 @@ type BinOpExpr struct {
 	Right IFExpr
 }
 
+type NotExpr struct {
+	Operand IFExpr
+}
+
+type OrdExpr struct {
+	Operand IFExpr
+}
+
+type ChrExpr struct {
+	Operand IFExpr
+}
+
+type NegExpr struct {
+	Operand IFExpr
+}
+
+type LenExpr struct {
+	Operand IFExpr
+}
+
 func (IntConstExpr) ifExpr()        {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
@@ -82,6 +102,27 @@ func (e ArrayExpr) Repr() string {
 func (BinOpExpr) ifExpr() {}
 func (e BinOpExpr) Repr() string {
 	return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr())
+}
+
+func (NotExpr) ifExpr() {}
+func (e NotExpr) Repr() string {
+	return fmt.Sprintf("NOT %v", e.Operand)
+}
+func (OrdExpr) ifExpr() {}
+func (e OrdExpr) Repr() string {
+	return fmt.Sprintf("Ord %v", e.Operand)
+}
+func (ChrExpr) ifExpr() {}
+func (e ChrExpr) Repr() string {
+	return fmt.Sprintf("Chr %v", e.Operand)
+}
+func (NegExpr) ifExpr() {}
+func (e NegExpr) Repr() string {
+	return fmt.Sprintf("Neg ^v", e.Operand)
+}
+func (LenExpr) ifExpr() {}
+func (e LenExpr) Repr() string {
+	return fmt.Sprintf("Len %v", e.Operand)
 }
 
 type InstrNode struct {
@@ -252,6 +293,42 @@ func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
 			a.Elems[i] = ctx.generateExpr(e)
 		}
 		return a
+
+	case *frontend.UnaryExpr:
+		op := expr.Operator
+		switch op {
+		case Not:
+			/*
+				Fold binaries in an optimisation step.
+			*/
+			return &NotExpr{ctx.generateExpr(expr.Operand)}
+		case Ord:
+			/* Fold chars in an optimisation step
+			if x, ok := expr.Operand.(*BasicLit); ok {
+				if x.Type.Equals(frontend.BasicType{frontend.CHAR}) {
+					r, size := utf8.DecodeRuneInString(x.Value)
+					return &IntConstExpr{r}
+				}
+			}*/
+			return &OrdExpr{ctx.generateExpr(expr.Operand)}
+		case Chr:
+			/* Fold ints in an optimisation step */
+			return &ChrExpr{ctx.generateExpr(expr.Operand)}
+		case Neg:
+			/* Fold negating ints in optimisation step
+			if x, ok := expr.Operand.(*BasicLit); ok {
+				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
+					n, _ := strconv.Atoi(x.Value)
+					return &IntConstExpr{-n}
+				}
+			}*/
+			return &NegExpr{ctx.generateExpr(expr.Operand)}
+		case Len:
+			/* Constant fold on strings and array literals */
+			return &LenExpr{ctx.generateExpr(expr.Operand)}
+		default:
+			panic(fmt.Sprintf("Unhandled unary operator %v", expr.Operator))
+		}
 
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))
