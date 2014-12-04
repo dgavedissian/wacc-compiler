@@ -18,8 +18,13 @@ func (ctx *RegisterAllocatorContext) getRegister(v *VarExpr) *RegisterExpr {
 
 func (e *IntConstExpr) replaceVar(*RegisterAllocatorContext) IFExpr  { return e }
 func (e *CharConstExpr) replaceVar(*RegisterAllocatorContext) IFExpr { return e }
-func (e *ArrayExpr) replaceVar(*RegisterAllocatorContext) IFExpr     { return e }
-func (e *LocationExpr) replaceVar(*RegisterAllocatorContext) IFExpr  { return e }
+func (e *ArrayExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+	for _, elem := range e.Elems {
+		elem = elem.replaceVar(ctx)
+	}
+	return e
+}
+func (e *LocationExpr) replaceVar(*RegisterAllocatorContext) IFExpr { return e }
 func (e *VarExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
 	return ctx.getRegister(e)
 }
