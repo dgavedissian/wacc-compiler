@@ -14,6 +14,7 @@ type IFExpr interface {
 	Repr() string
 
 	replaceVar(*RegisterAllocatorContext) IFExpr
+	generateCode(*GeneratorContext) int
 }
 
 type IntConstExpr struct {
@@ -86,6 +87,7 @@ type Instr interface {
 	Repr() string
 
 	replaceVar(*RegisterAllocatorContext)
+	generateCode(*GeneratorContext)
 }
 
 type NoOpInstr struct {

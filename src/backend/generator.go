@@ -14,11 +14,93 @@ func (ctx *GeneratorContext) pushCode(s string) {
 	ctx.out += s + "\n"
 }
 
+func (e *IntConstExpr) generateCode(*GeneratorContext) int  { return 0 }
+func (e *CharConstExpr) generateCode(*GeneratorContext) int { return 0 }
+func (e *ArrayExpr) generateCode(*GeneratorContext) int     { return 0 }
+func (e *LocationExpr) generateCode(*GeneratorContext) int  { return 0 }
+func (e *VarExpr) generateCode(*GeneratorContext) int {
+	panic("Trying to generate code for a variable")
+	return 0
+}
+func (e *RegisterExpr) generateCode(*GeneratorContext) int { return 0 }
+func (e *BinOpExpr) generateCode(*GeneratorContext) int    { return 0 }
+
+func (i *NoOpInstr) generateCode(*GeneratorContext) {}
+func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode(i.Label + ":")
+	ctx.inLabel = true
+}
+
+func (i *ReadInstr) generateCode(*GeneratorContext) {}
+func (i *FreeInstr) generateCode(*GeneratorContext) {}
+func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
+	exitCode := i.Expr.(*IntConstExpr).Value
+	ctx.pushCode(fmt.Sprintf("ldr r0, =%v", exitCode))
+	ctx.pushCode("bl exit")
+}
+
+func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
+	// save regs r0 and r1
+
+	// Printf depending on type
+	switch obj := i.Expr.(type) {
+	case *IntConstExpr:
+		value := i.Expr.(*IntConstExpr).Value
+		ctx.pushCode("ldr r0, =printf_fmt_int")
+		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+		ctx.pushCode("bl printf")
+
+	case *CharConstExpr:
+		value := int(i.Expr.(*CharConstExpr).Value)
+		ctx.pushCode("ldr r0, =printf_fmt_char")
+		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+		ctx.pushCode("bl printf")
+
+	case *LocationExpr:
+		ctx.pushCode("ldr r0, =printf_fmt_str")
+		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", obj.Label))
+		ctx.pushCode("bl printf")
+
+	default:
+		result := ctx.generateExpr(obj)
+		ctx.pushCode("ldr r0, =printf_fmt_int")
+		ctx.pushCode(fmt.Sprintf("mov r1, r%v", result))
+		ctx.pushCode("bl printf")
+	}
+
+	// Flush output stream
+	ctx.pushCode("mov r0, #0")
+	ctx.pushCode("bl fflush")
+
+	// load regs r0 and r1
+}
+
+func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
+	dst := i.Dst.(*RegisterExpr).Repr()
+	switch src := i.Src.(type) {
+	case *IntConstExpr:
+		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Value))
+
+	case *CharConstExpr:
+		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, int(src.Value)))
+
+	case *LocationExpr:
+		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Label))
+
+	default:
+		panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
+	}
+}
+
+func (i *TestInstr) generateCode(*GeneratorContext)    {}
+func (i *JmpInstr) generateCode(*GeneratorContext)     {}
+func (i *JmpZeroInstr) generateCode(*GeneratorContext) {}
+
 func (ctx *GeneratorContext) generateExpr(expr IFExpr) int {
 	switch expr := expr.(type) {
 	case *BinOpExpr:
-		left := ctx.generateExpr(expr.Left)
-		right := ctx.generateExpr(expr.Right)
+		left := expr.Left.generateCode(ctx)
+		right := expr.Right.generateCode(ctx)
 		result := 2
 		ctx.pushCode(fmt.Sprintf("add r%v, r%v, r%v", result, left, right))
 		return result
@@ -33,83 +115,6 @@ func (ctx *GeneratorContext) generateExpr(expr IFExpr) int {
 
 	default:
 		panic(fmt.Sprintf("Unhandled Expr: %T", expr))
-	}
-}
-
-func (ctx *GeneratorContext) generateInstr(instr Instr) {
-	switch instr := instr.(type) {
-	case *LabelInstr:
-		ctx.pushCode(instr.Label + ":")
-		ctx.inLabel = true
-
-		// Read
-
-		// Free
-
-	case *ExitInstr:
-		exitCode := instr.Expr.(*IntConstExpr).Value
-		ctx.pushCode(fmt.Sprintf("ldr r0, =%v", exitCode))
-		ctx.pushCode("bl exit")
-
-	case *PrintInstr:
-		// save regs r0 and r1
-
-		//
-		switch obj := instr.Expr.(type) {
-		case *IntConstExpr:
-			value := instr.Expr.(*IntConstExpr).Value
-			ctx.pushCode("ldr r0, =printf_fmt_int")
-			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
-			ctx.pushCode("bl printf")
-
-		case *CharConstExpr:
-			value := int(instr.Expr.(*CharConstExpr).Value)
-			ctx.pushCode("ldr r0, =printf_fmt_char")
-			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
-			ctx.pushCode("bl printf")
-
-		case *LocationExpr:
-			ctx.pushCode("ldr r0, =printf_fmt_str")
-			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", obj.Label))
-			ctx.pushCode("bl printf")
-
-		default:
-			result := ctx.generateExpr(obj)
-			ctx.pushCode("ldr r0, =printf_fmt_int")
-			ctx.pushCode(fmt.Sprintf("mov r1, r%v", result))
-			ctx.pushCode("bl printf")
-		}
-
-		// Flush output stream
-		ctx.pushCode("mov r0, #0")
-		ctx.pushCode("bl fflush")
-
-		// load regs r0 and r1
-
-	case *MoveInstr:
-		dst := instr.Dst.(*RegisterExpr).Repr()
-		switch src := instr.Src.(type) {
-		case *IntConstExpr:
-			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Value))
-
-		case *CharConstExpr:
-			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, int(src.Value)))
-
-		case *LocationExpr:
-			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Label))
-
-		default:
-			panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
-		}
-
-		// Test
-
-		// Jmp
-
-		// JmpZero
-
-	default:
-		panic(fmt.Sprintf("Unhandled instruction: %T", instr))
 	}
 }
 
@@ -181,10 +186,10 @@ func GenerateCode(ifCtx *IFContext) string {
 
 	// Generate program code
 	// TODO: For each function
-	ctx.generateInstr(ifCtx.first.Instr)
+	ifCtx.first.Instr.generateCode(ctx)
 	ctx.pushCode("push {lr}")
 	VisitInstructions(ifCtx, func(i Instr) {
-		ctx.generateInstr(i)
+		i.generateCode(ctx)
 	})
 	ctx.pushCode("pop {pc}")
 
