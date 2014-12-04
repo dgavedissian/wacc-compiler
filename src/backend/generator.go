@@ -84,25 +84,25 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	switch obj := i.Expr.(type) {
 	case *IntConstExpr:
 		value := i.Expr.(*IntConstExpr).Value
-		ctx.pushCode("ldr r0, =printf_fmt_int")
 		ctx.pushCode("ldr r1, =%v", value)
+		ctx.pushCode("ldr r0, =printf_fmt_int")
 		ctx.pushCode("bl printf")
 
 	case *CharConstExpr:
 		value := int(i.Expr.(*CharConstExpr).Value)
-		ctx.pushCode("ldr r0, =printf_fmt_char")
 		ctx.pushCode("ldr r1, =%v", value)
+		ctx.pushCode("ldr r0, =printf_fmt_char")
 		ctx.pushCode("bl printf")
 
 	case *LocationExpr:
-		ctx.pushCode("ldr r0, =printf_fmt_str")
 		ctx.pushCode("ldr r1, =%v", obj.Label)
+		ctx.pushCode("ldr r0, =printf_fmt_str")
 		ctx.pushCode("bl printf")
 
 	default:
 		result := ctx.generateExpr(obj)
-		ctx.pushCode("ldr r0, =printf_fmt_int")
 		ctx.pushCode("mov r1, r%v", result)
+		ctx.pushCode("ldr r0, =printf_fmt_addr")
 		ctx.pushCode("bl printf")
 	}
 
@@ -116,6 +116,8 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	dst := i.Dst.(*RegisterExpr).Repr()
 	i.Src = ctx.handleString(i.Src)
+
+	// Optimisation step: If we're moving from a constant, just load
 	switch src := i.Src.(type) {
 	case *IntConstExpr:
 		ctx.pushCode("ldr %v, =%v", dst, src.Value)
@@ -127,7 +129,9 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		ctx.pushCode("ldr %v, =%v", dst, src.Label)
 
 	default:
-		panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
+		// Otherwise just generate the expression code
+		srcReg := i.Src.generateCode(ctx)
+		ctx.pushCode("mov %v, r%v", dst, srcReg)
 	}
 }
 
@@ -173,6 +177,7 @@ func GenerateCode(ifCtx *IFContext) string {
 	ctx.data += "printf_fmt_int:\n\t.asciz \"%d\"\n"
 	ctx.data += "printf_fmt_char:\n\t.asciz \"%c\"\n"
 	ctx.data += "printf_fmt_str:\n\t.asciz \"%s\"\n"
+	ctx.data += "printf_fmt_addr:\n\t.asciz \"%p\"\n"
 
 	// Add the label of each function to the global list
 	ctx.text += ".global main\n"
