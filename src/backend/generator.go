@@ -22,24 +22,20 @@ func (ctx *GeneratorContext) handleString(expr Expr) Expr {
 					str += string(e.(*CharConstExpr).Value)
 				}
 
+				// Generate a label
+				label := fmt.Sprintf("stringlit%v", ctx.stringCounter)
+				ctx.stringCounter += 1
+
+				// Record the string in the data section
+				ctx.data += fmt.Sprintf("%v:\n", label)
+				ctx.data += fmt.Sprintf("\t.asciz \"%v\"\n", str)
+
 				// Replace src with a label
-				return &LocationExpr{ctx.addStringLit(str)}
+				return &LocationExpr{label}
 			}
 		}
 	}
 	return expr
-}
-
-func (ctx *GeneratorContext) addStringLit(s string) string {
-	// Generate a label
-	label := fmt.Sprintf("stringlit%v", ctx.stringCounter)
-	ctx.stringCounter += 1
-
-	// Record the string in the data section
-	ctx.data += fmt.Sprintf("%v:\n", label)
-	ctx.data += fmt.Sprintf("\t.asciz \"%v\"\n", s)
-
-	return label
 }
 
 func (ctx *GeneratorContext) pushLabel(label string) {
