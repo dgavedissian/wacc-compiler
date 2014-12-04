@@ -12,6 +12,8 @@ import (
 type IFExpr interface {
 	ifExpr()
 	Repr() string
+
+	replaceVar(*RegisterAllocatorContext) IFExpr
 }
 
 type IntConstExpr struct {
@@ -82,6 +84,8 @@ type InstrNode struct {
 type Instr interface {
 	instr()
 	Repr() string
+
+	replaceVar(*RegisterAllocatorContext)
 }
 
 type NoOpInstr struct {
