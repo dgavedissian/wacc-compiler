@@ -10,11 +10,11 @@ import (
 	"../frontend"
 )
 
-type IFExpr interface {
-	ifExpr()
+type Expr interface {
+	expr()
 	Repr() string
 
-	replaceVar(*RegisterAllocatorContext) IFExpr
+	replaceVar(*RegisterAllocatorContext) Expr
 	generateCode(*GeneratorContext) int
 }
 
@@ -29,7 +29,7 @@ type CharConstExpr struct {
 
 type ArrayExpr struct {
 	Type  frontend.BasicType
-	Elems []IFExpr
+	Elems []Expr
 }
 
 type LocationExpr struct {
@@ -45,34 +45,34 @@ type RegisterExpr struct {
 }
 
 type BinOpExpr struct {
-	Left  IFExpr
-	Right IFExpr
+	Left  Expr
+	Right Expr
 }
 
 type NotExpr struct {
-	Operand IFExpr
+	Operand Expr
 }
 
 type OrdExpr struct {
-	Operand IFExpr
+	Operand Expr
 }
 
 type ChrExpr struct {
-	Operand IFExpr
+	Operand Expr
 }
 
 type NegExpr struct {
-	Operand IFExpr
+	Operand Expr
 }
 
 type LenExpr struct {
-	Operand IFExpr
+	Operand Expr
 }
 
-func (IntConstExpr) ifExpr()        {}
+func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
-func (CharConstExpr) ifExpr() {}
+func (CharConstExpr) expr() {}
 func (e CharConstExpr) Repr() string {
 	if unicode.IsPrint(e.Value) {
 		return fmt.Sprintf("CHAR \"%v\"", string(e.Value))
@@ -81,16 +81,16 @@ func (e CharConstExpr) Repr() string {
 	}
 }
 
-func (LocationExpr) ifExpr()        {}
+func (LocationExpr) expr()          {}
 func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
 
-func (VarExpr) ifExpr()        {}
+func (VarExpr) expr()          {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
 
-func (RegisterExpr) ifExpr()        {}
+func (RegisterExpr) expr()          {}
 func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
 
-func (ArrayExpr) ifExpr() {}
+func (ArrayExpr) expr() {}
 func (e ArrayExpr) Repr() string {
 	rs := make([]string, len(e.Elems))
 	for i, v := range e.Elems {
@@ -99,28 +99,28 @@ func (e ArrayExpr) Repr() string {
 	return "ARRAYCONST [" + strings.Join(rs, ", ") + "]"
 }
 
-func (BinOpExpr) ifExpr() {}
+func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
 	return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr())
 }
 
-func (NotExpr) ifExpr() {}
+func (NotExpr) expr() {}
 func (e NotExpr) Repr() string {
 	return fmt.Sprintf("NOT %v", e.Operand)
 }
-func (OrdExpr) ifExpr() {}
+func (OrdExpr) expr() {}
 func (e OrdExpr) Repr() string {
 	return fmt.Sprintf("Ord %v", e.Operand)
 }
-func (ChrExpr) ifExpr() {}
+func (ChrExpr) expr() {}
 func (e ChrExpr) Repr() string {
 	return fmt.Sprintf("Chr %v", e.Operand)
 }
-func (NegExpr) ifExpr() {}
+func (NegExpr) expr() {}
 func (e NegExpr) Repr() string {
 	return fmt.Sprintf("Neg ^v", e.Operand)
 }
-func (LenExpr) ifExpr() {}
+func (LenExpr) expr() {}
 func (e LenExpr) Repr() string {
 	return fmt.Sprintf("Len %v", e.Operand)
 }
@@ -146,28 +146,28 @@ type LabelInstr struct {
 }
 
 type ReadInstr struct {
-	Dst IFExpr // LValueExpr
+	Dst Expr // LValueExpr
 }
 
 type FreeInstr struct {
-	Object IFExpr // LValueExpr
+	Object Expr // LValueExpr
 }
 
 type ExitInstr struct {
-	Expr IFExpr
+	Expr Expr
 }
 
 type PrintInstr struct {
-	Expr IFExpr
+	Expr Expr
 }
 
 type MoveInstr struct {
-	Src IFExpr
-	Dst IFExpr // LValueExpr
+	Src Expr
+	Dst Expr // LValueExpr
 }
 
 type TestInstr struct {
-	Cond IFExpr
+	Cond Expr
 }
 
 type JmpInstr struct {
@@ -253,7 +253,7 @@ func (ctx *IFContext) addInstr(i Instr) *InstrNode {
 	return newNode
 }
 
-func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
+func (ctx *IFContext) generateExpr(expr frontend.Expr) Expr {
 	switch expr := expr.(type) {
 	case *frontend.BasicLit:
 		if expr.Type.Equals(frontend.BasicType{frontend.INT}) {
@@ -288,7 +288,7 @@ func (ctx *IFContext) generateExpr(expr frontend.Expr) IFExpr {
 
 	case *frontend.ArrayLit:
 		a := &ArrayExpr{}
-		a.Elems = make([]IFExpr, len(expr.Values))
+		a.Elems = make([]Expr, len(expr.Values))
 		for i, e := range expr.Values {
 			a.Elems[i] = ctx.generateExpr(e)
 		}

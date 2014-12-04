@@ -114,7 +114,7 @@ func (i *TestInstr) generateCode(*GeneratorContext)    {}
 func (i *JmpInstr) generateCode(*GeneratorContext)     {}
 func (i *JmpZeroInstr) generateCode(*GeneratorContext) {}
 
-func (ctx *GeneratorContext) generateExpr(expr IFExpr) int {
+func (ctx *GeneratorContext) generateExpr(expr Expr) int {
 	switch expr := expr.(type) {
 	case *BinOpExpr:
 		left := expr.Left.generateCode(ctx)
@@ -155,7 +155,7 @@ func GenerateCode(ifCtx *IFContext) string {
 
 	// Search for any string array literals and replace them with labels in the
 	// data section
-	tryReplaceString := func(expr IFExpr) IFExpr {
+	tryReplaceString := func(expr Expr) Expr {
 		// Is the source an array of ascii chars?
 		if expr, ok := expr.(*ArrayExpr); ok {
 			if elem, ok := expr.Elems[0].(*CharConstExpr); ok {

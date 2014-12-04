@@ -16,46 +16,46 @@ func (ctx *RegisterAllocatorContext) getRegister(v *VarExpr) *RegisterExpr {
 	}
 }
 
-func (e *IntConstExpr) replaceVar(*RegisterAllocatorContext) IFExpr  { return e }
-func (e *CharConstExpr) replaceVar(*RegisterAllocatorContext) IFExpr { return e }
-func (e *ArrayExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *IntConstExpr) replaceVar(*RegisterAllocatorContext) Expr  { return e }
+func (e *CharConstExpr) replaceVar(*RegisterAllocatorContext) Expr { return e }
+func (e *ArrayExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	for _, elem := range e.Elems {
 		elem = elem.replaceVar(ctx)
 	}
 	return e
 }
-func (e *LocationExpr) replaceVar(*RegisterAllocatorContext) IFExpr { return e }
-func (e *VarExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *LocationExpr) replaceVar(*RegisterAllocatorContext) Expr { return e }
+func (e *VarExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	return ctx.getRegister(e)
 }
-func (e *RegisterExpr) replaceVar(*RegisterAllocatorContext) IFExpr { return e }
-func (e *BinOpExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *RegisterExpr) replaceVar(*RegisterAllocatorContext) Expr { return e }
+func (e *BinOpExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Left = e.Left.replaceVar(ctx)
 	e.Right = e.Right.replaceVar(ctx)
 	return e
 }
 
-func (e *NotExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *NotExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Operand = e.Operand.replaceVar(ctx)
 	return e
 }
 
-func (e *OrdExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *OrdExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Operand = e.Operand.replaceVar(ctx)
 	return e
 }
 
-func (e *ChrExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *ChrExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Operand = e.Operand.replaceVar(ctx)
 	return e
 }
 
-func (e *NegExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *NegExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Operand = e.Operand.replaceVar(ctx)
 	return e
 }
 
-func (e *LenExpr) replaceVar(ctx *RegisterAllocatorContext) IFExpr {
+func (e *LenExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	e.Operand = e.Operand.replaceVar(ctx)
 	return e
 }
