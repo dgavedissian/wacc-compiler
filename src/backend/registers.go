@@ -9,8 +9,8 @@ func (ctx *RegisterAllocatorContext) getRegister(v *VarExpr) *RegisterExpr {
 	if reg, ok := ctx.variableMap[v.Name]; ok {
 		return reg
 	} else {
-		ctx.index++
 		reg := &RegisterExpr{ctx.index}
+		ctx.index++
 		ctx.variableMap[v.Name] = reg
 		return reg
 	}
