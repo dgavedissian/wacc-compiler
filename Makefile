@@ -31,6 +31,7 @@ BACKEND_FILES := \
 	$(BACKEND_DIR)/generator.go \
 	$(BACKEND_DIR)/if.go \
 	$(BACKEND_DIR)/optimiser.go \
+	$(BACKEND_DIR)/translator.go \
 	$(BACKEND_DIR)/registers.go
 
 MAIN_FILES := \
