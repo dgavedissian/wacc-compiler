@@ -73,6 +73,11 @@ type LenExpr struct {
 	Operand Expr
 }
 
+type NewPairExpr struct {
+	Left  Expr
+	Right Expr
+}
+
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
@@ -127,6 +132,10 @@ func (e NegExpr) Repr() string {
 func (LenExpr) expr() {}
 func (e LenExpr) Repr() string {
 	return fmt.Sprintf("Len %v", e.Operand)
+}
+func (NewPairExpr) expr() {}
+func (e NewPairExpr) Repr() string {
+	return fmt.Sprintf("NEWPAIR %v %v", e.Left.Repr(), e.Right.Repr())
 }
 
 type InstrNode struct {
@@ -333,6 +342,11 @@ func (ctx *IFContext) generateExpr(expr frontend.Expr) Expr {
 		default:
 			panic(fmt.Sprintf("Unhandled unary operator %v", expr.Operator))
 		}
+
+	case *frontend.NewPairCmd:
+		return &NewPairExpr{
+			Left:  ctx.generateExpr(expr.Left),
+			Right: ctx.generateExpr(expr.Right)}
 
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))

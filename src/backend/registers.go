@@ -60,6 +60,12 @@ func (e *LenExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	return e
 }
 
+func (e *NewPairExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
+	e.Left = e.Left.replaceVar(ctx)
+	e.Right = e.Right.replaceVar(ctx)
+	return e
+}
+
 func (i *NoOpInstr) replaceVar(*RegisterAllocatorContext)  {}
 func (i *LabelInstr) replaceVar(*RegisterAllocatorContext) {}
 func (i *ReadInstr) replaceVar(*RegisterAllocatorContext)  {}
