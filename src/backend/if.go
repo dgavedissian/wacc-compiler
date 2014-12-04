@@ -79,8 +79,10 @@ func (e ArrayExpr) Repr() string {
 	return "ARRAYCONST [" + strings.Join(rs, ", ") + "]"
 }
 
-func (BinOpExpr) ifExpr()        {}
-func (e BinOpExpr) Repr() string { return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr()) }
+func (BinOpExpr) ifExpr() {}
+func (e BinOpExpr) Repr() string {
+	return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr())
+}
 
 type InstrNode struct {
 	Instr Instr
