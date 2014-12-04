@@ -5,28 +5,28 @@ type UnaryOp int
 type RelOp int
 
 const (
-	Sub BinOp = itoa
-	Add BinOp
-	Mul BinOp
-	Div BinOp
-	Mod BinOp
-	And BinOp
-	Or  BinOp
+	Sub BinOp = iota
+	Add
+	Mul
+	Div
+	Mod
+	And
+	Or
 )
 
 const (
-	Not UnaryOp = itoa
-	Ord UnaryOp
-	Chr UnaryOp
-	Neg UnaryOp
-	Len UnaryOp
+	Not UnaryOp = iota
+	Ord
+	Chr
+	Neg
+	Len
 )
 
 const (
-	LT RelOp = itoa
-	LE RelOp
-	GT RelOp
-	GE RelOp
-	EQ RelOp
-	NE RelOp
+	LT RelOp = iota
+	LE
+	GT
+	GE
+	EQ
+	NE
 )
