@@ -50,7 +50,7 @@ func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
 func (CharConstExpr) ifExpr() {}
 func (e CharConstExpr) Repr() string {
-	return fmt.Sprintf("CHAR %v", strconv.QuoteToASCII(string(e.Value)))
+	return fmt.Sprintf("CHAR \"%v\"", string(e.Value))
 }
 
 func (LocationExpr) ifExpr()        {}
@@ -274,7 +274,7 @@ func (ctx *IFContext) generate(node frontend.Stmt) {
 	case *frontend.PrintStmt:
 		ctx.addInstr(&PrintInstr{ctx.generateExpr(node.Right)})
 		if node.NewLine {
-			ctx.addInstr(&PrintInstr{CharConstExpr{'\n', 1}})
+			ctx.addInstr(&PrintInstr{&CharConstExpr{'\n', 1}})
 		}
 
 	// Return

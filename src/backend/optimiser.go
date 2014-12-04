@@ -1,21 +1,25 @@
 package backend
 
 func AllocateRegisters(ifCtx *IFContext) {
-	variableMap := make(map[*VarExpr]*RegisterExpr)
+	variableMap := make(map[string]*RegisterExpr)
 
 	index := 0
+	replaceWithReg := func(v *VarExpr) *RegisterExpr {
+		if reg, ok := variableMap[v.Name]; ok {
+			return reg
+		} else {
+			index++
+			reg := &RegisterExpr{index}
+			variableMap[v.Name] = reg
+			return reg
+		}
+	}
+
 	VisitInstructions(ifCtx, func(i Instr) {
 		switch instr := i.(type) {
 		case *MoveInstr:
 			if v, ok := instr.Dst.(*VarExpr); ok {
-				if reg, ok := variableMap[v]; ok {
-					instr.Dst = reg
-				} else {
-					reg := &RegisterExpr{index}
-					instr.Dst = reg
-					variableMap[v] = reg
-					index++
-				}
+				instr.Dst = replaceWithReg(v)
 			}
 		}
 	})

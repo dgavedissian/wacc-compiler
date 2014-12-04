@@ -1,9 +1,6 @@
 package backend
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
 type GeneratorContext struct {
 	out     string
@@ -17,13 +14,25 @@ func (ctx *GeneratorContext) pushCode(s string) {
 	ctx.out += s + "\n"
 }
 
-func (ctx *GeneratorContext) generateMovImm(value int, dst string) string {
-	// MOV only supports immediate values which are 1 byte. Constants which
-	// are larger require LDR (which is unfortunately slower)
-	if value > 255 {
-		return fmt.Sprintf("ldr %v, =%v", dst, value)
-	} else {
-		return fmt.Sprintf("mov %v, #%v", dst, value)
+func (ctx *GeneratorContext) generateExpr(expr IFExpr) int {
+	switch expr := expr.(type) {
+	case *BinOpExpr:
+		left := ctx.generateExpr(expr.Left)
+		right := ctx.generateExpr(expr.Right)
+		result := 2
+		ctx.pushCode(fmt.Sprintf("add r%v, r%v, r%v", result, left, right))
+		return result
+
+	case *IntConstExpr:
+		result := 2
+		ctx.pushCode(fmt.Sprintf("ldr r%v, =%v", result, expr.Value))
+		return result
+
+	case *RegisterExpr:
+		return expr.Id
+
+	default:
+		panic(fmt.Sprintf("Unhandled Expr: %T", expr))
 	}
 }
 
@@ -33,14 +42,58 @@ func (ctx *GeneratorContext) generateInstr(instr Instr) {
 		ctx.pushCode(instr.Label + ":")
 		ctx.inLabel = true
 
+		// Read
+
+		// Free
+
+	case *ExitInstr:
+		exitCode := instr.Expr.(*IntConstExpr).Value
+		ctx.pushCode(fmt.Sprintf("ldr r0, =%v", exitCode))
+		ctx.pushCode("bl exit")
+
+	case *PrintInstr:
+		// save regs r0 and r1
+
+		//
+		switch obj := instr.Expr.(type) {
+		case *IntConstExpr:
+			value := instr.Expr.(*IntConstExpr).Value
+			ctx.pushCode("ldr r0, =printf_fmt_int")
+			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+			ctx.pushCode("bl printf")
+
+		case *CharConstExpr:
+			value := int(instr.Expr.(*CharConstExpr).Value)
+			ctx.pushCode("ldr r0, =printf_fmt_char")
+			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+			ctx.pushCode("bl printf")
+
+		case *LocationExpr:
+			ctx.pushCode("ldr r0, =printf_fmt_str")
+			ctx.pushCode(fmt.Sprintf("ldr r1, =%v", obj.Label))
+			ctx.pushCode("bl printf")
+
+		default:
+			result := ctx.generateExpr(obj)
+			ctx.pushCode("ldr r0, =printf_fmt_int")
+			ctx.pushCode(fmt.Sprintf("mov r1, r%v", result))
+			ctx.pushCode("bl printf")
+		}
+
+		// Flush output stream
+		ctx.pushCode("mov r0, #0")
+		ctx.pushCode("bl fflush")
+
+		// load regs r0 and r1
+
 	case *MoveInstr:
 		dst := instr.Dst.(*RegisterExpr).Repr()
 		switch src := instr.Src.(type) {
 		case *IntConstExpr:
-			ctx.pushCode(ctx.generateMovImm(src.Value, dst))
+			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Value))
 
 		case *CharConstExpr:
-			ctx.pushCode(ctx.generateMovImm(int(src.Value), dst))
+			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, int(src.Value)))
 
 		case *LocationExpr:
 			ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Label))
@@ -49,9 +102,11 @@ func (ctx *GeneratorContext) generateInstr(instr Instr) {
 			panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
 		}
 
-	case *ExitInstr:
-		ctx.pushCode(ctx.generateMovImm(instr.Expr.(*IntConstExpr).Value, "r0"))
-		ctx.pushCode("bl exit")
+		// Test
+
+		// Jmp
+
+		// JmpZero
 
 	default:
 		panic(fmt.Sprintf("Unhandled instruction: %T", instr))
@@ -73,36 +128,48 @@ func GenerateCode(ifCtx *IFContext) string {
 	// Data section
 	ctx.out += ".data\n"
 
+	// Printf format strings
+	ctx.out += "printf_fmt_int:\n\t.asciz \"%d\"\n"
+	ctx.out += "printf_fmt_char:\n\t.asciz \"%c\"\n"
+	ctx.out += "printf_fmt_str:\n\t.asciz \"%s\"\n"
+
 	// Search for any string array literals and replace them with labels in the
 	// data section
 	stringCounter := 0
+	tryReplaceString := func(expr IFExpr) IFExpr {
+		// Is the source an array of ascii chars?
+		if expr, ok := expr.(*ArrayExpr); ok {
+			if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
+				if elem.Size == 1 {
+					// Build a string from the char array
+					str := ""
+					for _, e := range expr.Elems {
+						str += string(e.(*CharConstExpr).Value)
+					}
+
+					// Generate a label
+					label := fmt.Sprintf("stringlit%v", stringCounter)
+					stringCounter += 1
+
+					// Record the string in the data section
+					ctx.out += fmt.Sprintf("%v:\n", label)
+					ctx.out += fmt.Sprintf("\t.asciz \"%v\"\n", str)
+
+					// Replace src with a label
+					return &LocationExpr{label}
+				}
+			}
+		}
+		return expr
+	}
+
 	VisitInstructions(ifCtx, func(i Instr) {
 		switch instr := i.(type) {
 		case *MoveInstr:
-			// Is the source an array of ascii chars?
-			if expr, ok := instr.Src.(*ArrayExpr); ok {
-				if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
-					if elem.Size == 1 {
-						// Build a string from the char array
-						str := ""
-						for _, e := range expr.Elems {
-							str += string(e.(*CharConstExpr).Value)
-						}
+			instr.Src = tryReplaceString(instr.Src)
 
-						// Generate a label
-						label := fmt.Sprintf("stringlit%v", stringCounter)
-						stringCounter += 1
-
-						// Record the string in the data section
-						ctx.out += fmt.Sprintf("%v:\n", label)
-						ctx.out += fmt.Sprintf("\t.word %v\n", len(str))
-						ctx.out += fmt.Sprintf("\t.ascii %v\n", strconv.QuoteToASCII(str))
-
-						// Replace src with a label
-						instr.Src = &LocationExpr{label}
-					}
-				}
-			}
+		case *PrintInstr:
+			instr.Expr = tryReplaceString(instr.Expr)
 		}
 	})
 
