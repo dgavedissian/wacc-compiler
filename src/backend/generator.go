@@ -3,15 +3,29 @@ package backend
 import "fmt"
 
 type GeneratorContext struct {
-	out     string
-	inLabel bool
+	stringCounter int
+	data          string
+	text          string
 }
 
-func (ctx *GeneratorContext) pushCode(s string) {
-	if ctx.inLabel {
-		ctx.out += "\t"
-	}
-	ctx.out += s + "\n"
+func (ctx *GeneratorContext) addStringLit(s string) string {
+	// Generate a label
+	label := fmt.Sprintf("stringlit%v", ctx.stringCounter)
+	ctx.stringCounter += 1
+
+	// Record the string in the data section
+	ctx.data += fmt.Sprintf("%v:\n", label)
+	ctx.data += fmt.Sprintf("\t.asciz \"%v\"\n", s)
+
+	return label
+}
+
+func (ctx *GeneratorContext) pushLabel(label string) {
+	ctx.text += fmt.Sprintf("%v:\n", label)
+}
+
+func (ctx *GeneratorContext) pushCode(s string, a ...interface{}) {
+	ctx.text += "\t" + fmt.Sprintf(s, a...) + "\n"
 }
 
 func (e *IntConstExpr) generateCode(*GeneratorContext) int  { return 0 }
@@ -32,15 +46,14 @@ func (e *LenExpr) generateCode(*GeneratorContext) int      { return 0 }
 
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode(i.Label + ":")
-	ctx.inLabel = true
+	ctx.pushLabel(i.Label)
 }
 
 func (i *ReadInstr) generateCode(*GeneratorContext) {}
 func (i *FreeInstr) generateCode(*GeneratorContext) {}
 func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 	exitCode := i.Expr.(*IntConstExpr).Value
-	ctx.pushCode(fmt.Sprintf("ldr r0, =%v", exitCode))
+	ctx.pushCode("ldr r0, =%v", exitCode)
 	ctx.pushCode("bl exit")
 }
 
@@ -52,24 +65,24 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	case *IntConstExpr:
 		value := i.Expr.(*IntConstExpr).Value
 		ctx.pushCode("ldr r0, =printf_fmt_int")
-		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+		ctx.pushCode("ldr r1, =%v", value)
 		ctx.pushCode("bl printf")
 
 	case *CharConstExpr:
 		value := int(i.Expr.(*CharConstExpr).Value)
 		ctx.pushCode("ldr r0, =printf_fmt_char")
-		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", value))
+		ctx.pushCode("ldr r1, =%v", value)
 		ctx.pushCode("bl printf")
 
 	case *LocationExpr:
 		ctx.pushCode("ldr r0, =printf_fmt_str")
-		ctx.pushCode(fmt.Sprintf("ldr r1, =%v", obj.Label))
+		ctx.pushCode("ldr r1, =%v", obj.Label)
 		ctx.pushCode("bl printf")
 
 	default:
 		result := ctx.generateExpr(obj)
 		ctx.pushCode("ldr r0, =printf_fmt_int")
-		ctx.pushCode(fmt.Sprintf("mov r1, r%v", result))
+		ctx.pushCode("mov r1, r%v", result)
 		ctx.pushCode("bl printf")
 	}
 
@@ -84,13 +97,13 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	dst := i.Dst.(*RegisterExpr).Repr()
 	switch src := i.Src.(type) {
 	case *IntConstExpr:
-		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Value))
+		ctx.pushCode("ldr %v, =%v", dst, src.Value)
 
 	case *CharConstExpr:
-		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, int(src.Value)))
+		ctx.pushCode("ldr %v, =%v", dst, int(src.Value))
 
 	case *LocationExpr:
-		ctx.pushCode(fmt.Sprintf("ldr %v, =%v", dst, src.Label))
+		ctx.pushCode("ldr %v, =%v", dst, src.Label)
 
 	default:
 		panic(fmt.Sprintf("Unimplemented MoveInstr for src %T", src))
@@ -107,12 +120,12 @@ func (ctx *GeneratorContext) generateExpr(expr IFExpr) int {
 		left := expr.Left.generateCode(ctx)
 		right := expr.Right.generateCode(ctx)
 		result := 2
-		ctx.pushCode(fmt.Sprintf("add r%v, r%v, r%v", result, left, right))
+		ctx.pushCode("add r%v, r%v, r%v", result, left, right)
 		return result
 
 	case *IntConstExpr:
 		result := 2
-		ctx.pushCode(fmt.Sprintf("ldr r%v, =%v", result, expr.Value))
+		ctx.pushCode("ldr r%v, =%v", result, expr.Value)
 		return result
 
 	case *RegisterExpr:
@@ -133,19 +146,15 @@ func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
 }
 
 func GenerateCode(ifCtx *IFContext) string {
-	ctx := &GeneratorContext{"", false}
-
-	// Data section
-	ctx.out += ".data\n"
+	ctx := new(GeneratorContext)
 
 	// Printf format strings
-	ctx.out += "printf_fmt_int:\n\t.asciz \"%d\"\n"
-	ctx.out += "printf_fmt_char:\n\t.asciz \"%c\"\n"
-	ctx.out += "printf_fmt_str:\n\t.asciz \"%s\"\n"
+	ctx.data += "printf_fmt_int:\n\t.asciz \"%d\"\n"
+	ctx.data += "printf_fmt_char:\n\t.asciz \"%c\"\n"
+	ctx.data += "printf_fmt_str:\n\t.asciz \"%s\"\n"
 
 	// Search for any string array literals and replace them with labels in the
 	// data section
-	stringCounter := 0
 	tryReplaceString := func(expr IFExpr) IFExpr {
 		// Is the source an array of ascii chars?
 		if expr, ok := expr.(*ArrayExpr); ok {
@@ -157,16 +166,8 @@ func GenerateCode(ifCtx *IFContext) string {
 						str += string(e.(*CharConstExpr).Value)
 					}
 
-					// Generate a label
-					label := fmt.Sprintf("stringlit%v", stringCounter)
-					stringCounter += 1
-
-					// Record the string in the data section
-					ctx.out += fmt.Sprintf("%v:\n", label)
-					ctx.out += fmt.Sprintf("\t.asciz \"%v\"\n", str)
-
 					// Replace src with a label
-					return &LocationExpr{label}
+					return &LocationExpr{ctx.addStringLit(str)}
 				}
 			}
 		}
@@ -183,11 +184,8 @@ func GenerateCode(ifCtx *IFContext) string {
 		}
 	})
 
-	// Program code section
-	ctx.out += ".text\n"
-
 	// Add the label of each function to the global list
-	ctx.out += ".global main\n"
+	ctx.text += ".global main\n"
 
 	// Generate program code
 	// TODO: For each function
@@ -198,5 +196,6 @@ func GenerateCode(ifCtx *IFContext) string {
 	})
 	ctx.pushCode("pop {pc}")
 
-	return ctx.out
+	// Combine data and text sections
+	return ".data\n" + ctx.data + ".text\n" + ctx.text
 }
