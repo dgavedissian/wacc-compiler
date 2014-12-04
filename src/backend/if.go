@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"../frontend"
@@ -53,7 +54,11 @@ func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
 func (CharConstExpr) ifExpr() {}
 func (e CharConstExpr) Repr() string {
-	return fmt.Sprintf("CHAR \"%v\"", string(e.Value))
+	if unicode.IsPrint(e.Value) {
+		return fmt.Sprintf("CHAR \"%v\"", string(e.Value))
+	} else {
+		return fmt.Sprintf("CHAR %v", e.Value)
+	}
 }
 
 func (LocationExpr) ifExpr()        {}
