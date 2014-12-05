@@ -66,6 +66,14 @@ func (e *NewPairExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
 	return e
 }
 
+func (e *CallExpr) replaceVar(ctx *RegisterAllocatorContext) Expr {
+	e.Ident = e.Ident.replaceVar(ctx)
+	for i, arg := range e.Args {
+		e.Args[i] = arg.replaceVar(ctx)
+	}
+	return e
+}
+
 func (i *NoOpInstr) replaceVar(*RegisterAllocatorContext)  {}
 func (i *LabelInstr) replaceVar(*RegisterAllocatorContext) {}
 func (i *ReadInstr) replaceVar(*RegisterAllocatorContext)  {}

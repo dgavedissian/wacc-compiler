@@ -62,6 +62,7 @@ func (e *ChrExpr) generateCode(*GeneratorContext) int      { return 0 }
 func (e *NegExpr) generateCode(*GeneratorContext) int      { return 0 }
 func (e *LenExpr) generateCode(*GeneratorContext) int      { return 0 }
 func (e *NewPairExpr) generateCode(*GeneratorContext) int  { return 0 }
+func (e *CallExpr) generateCode(*GeneratorContext) int     { return 0 }
 
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {

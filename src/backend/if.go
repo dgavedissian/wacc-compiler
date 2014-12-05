@@ -76,6 +76,11 @@ type NewPairExpr struct {
 	Right Expr
 }
 
+type CallExpr struct {
+	Ident Expr
+	Args  []Expr
+}
+
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
@@ -134,6 +139,15 @@ func (e LenExpr) Repr() string {
 func (NewPairExpr) expr() {}
 func (e NewPairExpr) Repr() string {
 	return fmt.Sprintf("NEWPAIR %v %v", e.Left.Repr(), e.Right.Repr())
+}
+
+func (CallExpr) expr() {}
+func (e CallExpr) Repr() string {
+	args := make([]string, len(e.Args))
+	for i, arg := range e.Args {
+		args[i] = arg.Repr()
+	}
+	return fmt.Sprintf("CALL %v (%s)", e.Ident.Repr(), args)
 }
 
 type InstrNode struct {

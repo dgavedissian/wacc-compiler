@@ -116,6 +116,13 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			Left:  ctx.translateExpr(expr.Left),
 			Right: ctx.translateExpr(expr.Right)}
 
+	case *frontend.CallCmd:
+		translatedArgs := make([]Expr, len(expr.Args))
+		for i, arg := range expr.Args {
+			translatedArgs[i] = ctx.translateExpr(arg)
+		}
+		return &CallExpr{Ident: ctx.translateExpr(expr.Ident), Args: translatedArgs}
+
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))
 	}
