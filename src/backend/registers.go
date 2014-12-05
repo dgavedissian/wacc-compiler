@@ -1,5 +1,7 @@
 package backend
 
+import "fmt"
+
 type VariableScope struct {
 	variableMap map[string]*RegisterExpr
 	start       int
@@ -36,6 +38,9 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 	ctx.prevNode = ctx.prevNode.Next
 }
 
+//
+// Expressions
+//
 func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
@@ -53,10 +58,22 @@ func (e *RegisterExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Left.allocateRegisters(ctx, r)
 	e.Right.allocateRegisters(ctx, r+1)
-	ctx.pushInstr(&AddInstr{
-		Dst: &RegisterExpr{r},
-		Op1: &RegisterExpr{r},
-		Op2: &RegisterExpr{r + 1}})
+	dst := &RegisterExpr{r}
+	op1 := dst
+	op2 := &RegisterExpr{r + 1}
+
+	switch e.Operator {
+	case Add:
+		ctx.pushInstr(&AddInstr{Dst: dst, Op1: op1, Op2: op2})
+	case Sub:
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op2})
+	case Mul:
+		ctx.pushInstr(&MulInstr{Dst: dst, Op1: op1, Op2: op2})
+	case Div:
+		ctx.pushInstr(&DivInstr{Dst: dst, Op1: op1, Op2: op2})
+	default:
+		panic(fmt.Sprintf("Unknown operator %v", e.Operator))
+	}
 }
 func (e *NotExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *OrdExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
@@ -64,6 +81,7 @@ func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	// save registers
 
@@ -80,41 +98,53 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	// restore registers
 }
 
+//
+// Instructions
+//
 func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
+
 func (i *ReturnInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.scope[0].start
 	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = &RegisterExpr{r}
 }
+
 func (i *ExitInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.scope[0].start
 	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = &RegisterExpr{r}
 }
+
 func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	if v, ok := i.Expr.(*VarExpr); ok {
-		i.Expr = ctx.lookupVariable(v)
-	}
+	r := ctx.scope[0].start
+	i.Expr.allocateRegisters(ctx, r)
+	i.Expr = &RegisterExpr{r}
 }
+
 func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.scope[0].start
 	i.Src.allocateRegisters(ctx, r)
 	i.Src = &RegisterExpr{r}
 	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
 }
+
 func (i *TestInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	if v, ok := i.Cond.(*VarExpr); ok {
 		i.Cond = ctx.lookupVariable(v)
 	}
 }
+
 func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)      {}
 func (i *JmpEqualInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 // Second stage IF instructions should never do anything
 func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
+func (*SubInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
+func (*MulInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
+func (*DivInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (*CallInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {

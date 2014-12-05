@@ -139,7 +139,30 @@ func (i *JmpEqualInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *AddInstr) generateCode(ctx *GeneratorContext) {
+	/*
+		say we had: add r32, r32, r3
+
+		ldr r4, [r32pos]
+		ldr r5, [r33pos]
+		add r4, r4, r5
+		str r4, [r32pos]
+	*/
 	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (i *SubInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("sub %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (i *MulInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mul %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (i *DivInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r0, %v", i.Op1.Repr())
+	ctx.pushCode("mov r1, %v", i.Op2.Repr())
+	ctx.pushCode("bl __aeabi_idiv")
+	ctx.pushCode("mov %v, r0", i.Dst.Repr())
 }
 
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {

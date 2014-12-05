@@ -46,8 +46,9 @@ type RegisterExpr struct {
 }
 
 type BinOpExpr struct {
-	Left  Expr
-	Right Expr
+	Operator string
+	Left     Expr
+	Right    Expr
 }
 
 type NotExpr struct {
@@ -112,7 +113,7 @@ func (e ArrayExpr) Repr() string {
 
 func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
-	return fmt.Sprintf("BINOP %s %s", e.Left.Repr(), e.Right.Repr())
+	return fmt.Sprintf("BINOP %v (%v) (%v)", e.Operator, e.Left.Repr(), e.Right.Repr())
 }
 
 func (NotExpr) expr() {}
@@ -207,7 +208,26 @@ type JmpEqualInstr struct {
 }
 
 // Second stage instructions
+// Binary operations
 type AddInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
+}
+
+type SubInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
+}
+
+type MulInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
+}
+
+type DivInstr struct {
 	Dst *RegisterExpr
 	Op1 *RegisterExpr
 	Op2 *RegisterExpr
@@ -273,6 +293,21 @@ func (i JmpEqualInstr) Repr() string {
 func (*AddInstr) instr() {}
 func (i *AddInstr) Repr() string {
 	return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (*SubInstr) instr() {}
+func (i *SubInstr) Repr() string {
+	return fmt.Sprintf("SUB %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (*MulInstr) instr() {}
+func (i *MulInstr) Repr() string {
+	return fmt.Sprintf("MUL %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (*DivInstr) instr() {}
+func (i *DivInstr) Repr() string {
+	return fmt.Sprintf("DIV %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
 func (*CallInstr) instr() {}

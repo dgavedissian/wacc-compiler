@@ -71,7 +71,10 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 		return &VarExpr{expr.Name}
 
 	case *frontend.BinaryExpr:
-		return &BinOpExpr{ctx.translateExpr(expr.Left), ctx.translateExpr(expr.Right)}
+		return &BinOpExpr{
+			Operator: expr.Operator,
+			Left:     ctx.translateExpr(expr.Left),
+			Right:    ctx.translateExpr(expr.Right)}
 
 	case *frontend.ArrayLit:
 		a := &ArrayExpr{}
