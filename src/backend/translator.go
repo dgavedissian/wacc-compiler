@@ -127,7 +127,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 		for i, arg := range expr.Args {
 			translatedArgs[i] = ctx.translateExpr(arg)
 		}
-		return &CallExpr{Ident: ctx.translateExpr(expr.Ident), Args: translatedArgs}
+		return &CallExpr{Ident: expr.Ident.Name, Args: translatedArgs}
 
 	default:
 		panic(fmt.Sprintf("Unhandled expression %T", expr))

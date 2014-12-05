@@ -64,7 +64,21 @@ func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
-func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)    {}
+func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	// save registers
+
+	// Move arguments into r0-r4
+
+	// Call function
+	ctx.pushInstr(&CallInstr{Ident: e.Ident})
+
+	// Copy result into r
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: &RegisterExpr{0}})
+
+	// restore registers
+}
 
 func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
@@ -100,7 +114,8 @@ func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)      {}
 func (i *JmpEqualInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 // Second stage IF instructions should never do anything
-func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
+func (*CallInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
 	ctx.currentNode = n

@@ -76,7 +76,7 @@ type NewPairExpr struct {
 }
 
 type CallExpr struct {
-	Ident Expr
+	Ident string
 	Args  []Expr
 }
 
@@ -146,7 +146,7 @@ func (e CallExpr) Repr() string {
 	for i, arg := range e.Args {
 		args[i] = arg.Repr()
 	}
-	return fmt.Sprintf("CALL %v (%s)", e.Ident.Repr(), args)
+	return fmt.Sprintf("CALL %v (%s)", e.Ident, args)
 }
 
 type InstrNode struct {
@@ -213,6 +213,10 @@ type AddInstr struct {
 	Op2 *RegisterExpr
 }
 
+type CallInstr struct {
+	Ident string
+}
+
 func (NoOpInstr) instr()       {}
 func (NoOpInstr) Repr() string { return "NOOP" }
 
@@ -269,6 +273,11 @@ func (i JmpEqualInstr) Repr() string {
 func (*AddInstr) instr() {}
 func (i *AddInstr) Repr() string {
 	return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (*CallInstr) instr() {}
+func (i *CallInstr) Repr() string {
+	return fmt.Sprintf("CALL %v", i.Ident)
 }
 
 type IFContext struct {

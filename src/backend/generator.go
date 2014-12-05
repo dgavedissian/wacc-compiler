@@ -142,6 +142,10 @@ func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
+func (i *CallInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("bl %v", i.Ident)
+}
+
 func GenerateCode(ifCtx *IFContext) string {
 	ctx := new(GeneratorContext)
 
