@@ -146,7 +146,7 @@ func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {}
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext)  {}
 
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("bl %v", i.Ident)
+	ctx.pushCode("bl %v", i.Label.Label)
 }
 
 func GenerateCode(ifCtx *IFContext) string {
