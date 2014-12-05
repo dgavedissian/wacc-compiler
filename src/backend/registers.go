@@ -89,6 +89,8 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 func (i *TestInstr) allocateRegisters(ctx *RegisterAllocatorContext)    {}
 func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)     {}
 func (i *JmpZeroInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 
 // Second stage IF instructions should never do anything
 func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}

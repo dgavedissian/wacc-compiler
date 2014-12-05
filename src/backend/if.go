@@ -203,6 +203,22 @@ type JmpZeroInstr struct {
 	Dst *InstrNode
 }
 
+type PushScopeInstr struct {
+}
+
+type PopScopeInstr struct {
+}
+
+func (PushScopeInstr) instr() {}
+func (e PushScopeInstr) Repr() string {
+	return fmt.Sprintf("PUSH SCOPE")
+}
+
+func (PopScopeInstr) instr() {}
+func (e PopScopeInstr) Repr() string {
+	return fmt.Sprintf("POP SCOPE")
+}
+
 // Second stage instructions
 type AddInstr struct {
 	Dst *RegisterExpr

@@ -147,6 +147,9 @@ func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
+func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {}
+func (i *PopScopeInstr) generateCode(ctx *GeneratorContext)  {}
+
 func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
 	// Start at the first node after the label
 	node := ifCtx.first.Next
