@@ -10,6 +10,7 @@ import (
 
 func TranslateToIF(program *frontend.ProgStmt) *IFContext {
 	ctx := new(IFContext)
+	ctx.functions = make(map[string]*InstrNode)
 	ctx.translate(program)
 	return ctx
 }
@@ -18,14 +19,19 @@ func (ctx *IFContext) makeNode(i Instr) *InstrNode {
 	return &InstrNode{i, nil}
 }
 
+func (ctx *IFContext) beginFunction(name string) {
+	ctx.functions[name] = ctx.makeNode(&LabelInstr{name})
+	ctx.current = ctx.functions[name]
+}
+
+func (ctx *IFContext) beginMain() {
+	ctx.main = ctx.makeNode(&LabelInstr{"main"})
+	ctx.current = ctx.main
+}
+
 func (ctx *IFContext) appendNode(n *InstrNode) {
-	if ctx.first == nil {
-		ctx.first = n
-		ctx.current = ctx.first
-	} else {
-		ctx.current.Next = n
-		ctx.current = ctx.current.Next
-	}
+	ctx.current.Next = n
+	ctx.current = ctx.current.Next
 }
 
 func (ctx *IFContext) addInstr(i Instr) *InstrNode {
@@ -131,7 +137,16 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 func (ctx *IFContext) translate(node frontend.Stmt) {
 	switch node := node.(type) {
 	case *frontend.ProgStmt:
-		ctx.addInstr(&LabelInstr{"main"})
+		// Functions
+		for _, f := range node.Funcs {
+			ctx.beginFunction(f.Ident.Name)
+			for _, n := range f.Body {
+				ctx.translate(n)
+			}
+		}
+
+		// Main
+		ctx.beginMain()
 		for _, n := range node.Body {
 			ctx.translate(n)
 		}
@@ -167,6 +182,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 	case *frontend.FreeStmt:
 		ctx.addInstr(&FreeInstr{ctx.translateExpr(node.Object)})
+
+	case *frontend.ReturnStmt:
+		ctx.addInstr(&ReturnInstr{Expr: ctx.translateExpr(node.Result)})
 
 	case *frontend.ExitStmt:
 		ctx.addInstr(&ExitInstr{ctx.translateExpr(node.Result)})

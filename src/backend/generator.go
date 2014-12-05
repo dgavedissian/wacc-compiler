@@ -53,6 +53,11 @@ func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *ReadInstr) generateCode(*GeneratorContext) {}
 func (i *FreeInstr) generateCode(*GeneratorContext) {}
+
+func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r0, %v", i.Expr.Repr())
+}
+
 func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
 	ctx.pushCode("bl exit")
@@ -137,15 +142,6 @@ func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
-func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
-	// Start at the first node after the label
-	node := ifCtx.first.Next
-	for node != nil {
-		f(node.Instr)
-		node = node.Next
-	}
-}
-
 func GenerateCode(ifCtx *IFContext) string {
 	ctx := new(GeneratorContext)
 
@@ -156,15 +152,32 @@ func GenerateCode(ifCtx *IFContext) string {
 	ctx.data += "printf_fmt_addr:\n\t.asciz \"%p\"\n"
 
 	// Add the label of each function to the global list
+	for _, f := range ifCtx.functions {
+		ctx.text += fmt.Sprintf(".global %v\n", f.Instr.(*LabelInstr).Label)
+	}
 	ctx.text += ".global main\n"
 
+	// Generate function code
+	for _, f := range ifCtx.functions {
+		f.Instr.generateCode(ctx)
+		ctx.pushCode("push {lr}")
+		node := f.Next
+		for node != nil {
+			node.Instr.generateCode(ctx)
+			node = node.Next
+		}
+		ctx.pushCode("pop {pc}")
+	}
+
 	// Generate program code
-	// TODO: For each function
-	ifCtx.first.Instr.generateCode(ctx)
+	ifCtx.main.Instr.generateCode(ctx)
 	ctx.pushCode("push {lr}")
-	VisitInstructions(ifCtx, func(i Instr) {
-		i.generateCode(ctx)
-	})
+	node := ifCtx.main.Next
+	for node != nil {
+		node.Instr.generateCode(ctx)
+		node = node.Next
+	}
+	ctx.pushCode("ldr r0, =0") // default exit code
 	ctx.pushCode("pop {pc}")
 
 	// Combine data and text sections

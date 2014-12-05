@@ -177,6 +177,10 @@ type FreeInstr struct {
 	Object Expr // LValueExpr
 }
 
+type ReturnInstr struct {
+	Expr Expr
+}
+
 type ExitInstr struct {
 	Expr Expr
 }
@@ -227,6 +231,11 @@ func (i FreeInstr) Repr() string {
 	return fmt.Sprintf("FREE %s", i.Object.Repr())
 }
 
+func (ReturnInstr) instr() {}
+func (i ReturnInstr) Repr() string {
+	return fmt.Sprintf("RETURN %s", i.Expr.Repr())
+}
+
 func (ExitInstr) instr() {}
 func (i ExitInstr) Repr() string {
 	return fmt.Sprintf("EXIT %s", i.Expr.Repr())
@@ -263,44 +272,55 @@ func (i *AddInstr) Repr() string {
 }
 
 type IFContext struct {
-	labels   map[string]Instr
-	first    *InstrNode
-	current  *InstrNode
-	nextTemp int
+	labels    map[string]Instr
+	main      *InstrNode
+	functions map[string]*InstrNode
+	current   *InstrNode
+	nextTemp  int
 }
 
+/*
+		Toothless defends this code
+
+	                         ^\    ^
+	                        / \\  / \
+	                       /.  \\/   \      |\___/|
+	    *----*           / / |  \\    \  __/  O  O\
+	    |   /          /  /  |   \\    \_\/  \     \
+	   / /\/         /   /   |    \\   _\/    '@___@
+	  /  /         /    /    |     \\ _\/       |U
+	  |  |       /     /     |      \\\/        |
+	  \  |     /_     /      |       \\  )   \ _|_
+	  \   \       ~-./_ _    |    .- ; (  \_ _ _,\'
+	  ~    ~.           .-~-.|.-*      _        {-,
+	   \      ~-. _ .-~                 \      /\'
+	    \                   }            {   .*
+	     ~.                 '-/        /.-~----.
+	       ~- _             /        >..----.\\\
+	           ~ - - - - ^}_ _ _ _ _ _ _.-\\\
+
+		To whoever reads from here onwards, I'm sorry...
+*/
 func DrawIFGraph(iform *IFContext) {
 	// Transform into a list
-	node := iform.first
 	var list []Instr
+
+	// Functions
+	for _, f := range iform.functions {
+		node := f
+		for node != nil {
+			list = append(list, node.Instr)
+			node = node.Next
+		}
+	}
+
+	// Main
+	node := iform.main
 	for node != nil {
 		list = append(list, node.Instr)
 		node = node.Next
 	}
 	instrCount := len(list)
-
-	/*
-			Toothless defends this code
-
-		                         ^\    ^
-		                        / \\  / \
-		                       /.  \\/   \      |\___/|
-		    *----*           / / |  \\    \  __/  O  O\
-		    |   /          /  /  |   \\    \_\/  \     \
-		   / /\/         /   /   |    \\   _\/    '@___@
-		  /  /         /    /    |     \\ _\/       |U
-		  |  |       /     /     |      \\\/        |
-		  \  |     /_     /      |       \\  )   \ _|_
-		  \   \       ~-./_ _    |    .- ; (  \_ _ _,\'
-		  ~    ~.           .-~-.|.-*      _        {-,
-		   \      ~-. _ .-~                 \      /\'
-		    \                   }            {   .*
-		     ~.                 '-/        /.-~----.
-		       ~- _             /        >..----.\\\
-		           ~ - - - - ^}_ _ _ _ _ _ _.-\\\
-
-			To whoever reads from here onwards, I'm sorry...
-	*/
 
 	// Referrals
 	var referredBy Instr
