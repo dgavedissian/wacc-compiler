@@ -147,7 +147,7 @@ func (e CallExpr) Repr() string {
 	for i, arg := range e.Args {
 		args[i] = arg.Repr()
 	}
-	return fmt.Sprintf("CALL %v (%s)", e.Ident.Repr(), args)
+	return fmt.Sprintf("CALL %v (%s)", e.Ident.Repr(), strings.Join(args, ", "))
 }
 
 type InstrNode struct {
