@@ -70,8 +70,16 @@ func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (i *ExitInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *ExitInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	if v, ok := i.Expr.(*VarExpr); ok {
+		i.Expr = ctx.lookupVariable(v)
+	}
+}
+func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	if v, ok := i.Expr.(*VarExpr); ok {
+		i.Expr = ctx.lookupVariable(v)
+	}
+}
 func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.scope[0].start
 	i.Src.allocateRegisters(ctx, r)
@@ -84,12 +92,11 @@ func (i *JmpZeroInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 // Second stage IF instructions should never do anything
 func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
-func (*AddInstr) generateCode(*GeneratorContext)                  {}
 
 func AllocateRegisters(ifCtx *IFContext) {
 	ctx := new(RegisterAllocatorContext)
 	ctx.scope = make([]VariableScope, 1)
-	ctx.scope[0] = VariableScope{variableMap: make(map[string]*RegisterExpr), start: 0}
+	ctx.scope[0] = VariableScope{variableMap: make(map[string]*RegisterExpr), start: 4}
 	ctx.currentNode = ifCtx.first
 
 	// Iterate through nodes in the IF

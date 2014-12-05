@@ -72,8 +72,7 @@ func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 func (i *ReadInstr) generateCode(*GeneratorContext) {}
 func (i *FreeInstr) generateCode(*GeneratorContext) {}
 func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
-	exitCode := i.Expr.(*IntConstExpr).Value
-	ctx.pushCode("ldr r0, =%v", exitCode)
+	ctx.pushCode("mov r0, %v", i.Expr.Repr())
 	ctx.pushCode("bl exit")
 }
 
@@ -101,11 +100,13 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 		ctx.pushCode("ldr r0, =printf_fmt_str")
 		ctx.pushCode("bl printf")
 
-	default:
-		result := ctx.generateExpr(obj)
-		ctx.pushCode("mov r1, r%v", result)
-		ctx.pushCode("ldr r0, =printf_fmt_addr")
+	case *RegisterExpr:
+		ctx.pushCode("mov r1, %v", obj.Repr())
+		ctx.pushCode("ldr r0, =printf_fmt_int")
 		ctx.pushCode("bl printf")
+
+	default:
+		panic(fmt.Sprintf("Cannot print an object of type %T", obj))
 	}
 
 	// Flush output stream
@@ -130,10 +131,11 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	case *LocationExpr:
 		ctx.pushCode("ldr %v, =%v", dst, src.Label)
 
+	case *RegisterExpr:
+		ctx.pushCode("mov %v, %v", dst, src.Repr())
+
 	default:
-		// Otherwise just generate the expression code
-		srcReg := i.Src.generateCode(ctx)
-		ctx.pushCode("mov %v, r%v", dst, srcReg)
+		panic(fmt.Sprintf("Unhandled src type of mov %T", src))
 	}
 }
 
@@ -141,26 +143,8 @@ func (i *TestInstr) generateCode(*GeneratorContext)    {}
 func (i *JmpInstr) generateCode(*GeneratorContext)     {}
 func (i *JmpZeroInstr) generateCode(*GeneratorContext) {}
 
-func (ctx *GeneratorContext) generateExpr(expr Expr) int {
-	switch expr := expr.(type) {
-	case *BinOpExpr:
-		left := expr.Left.generateCode(ctx)
-		right := expr.Right.generateCode(ctx)
-		result := 2
-		ctx.pushCode("add r%v, r%v, r%v", result, left, right)
-		return result
-
-	case *IntConstExpr:
-		result := 2
-		ctx.pushCode("ldr r%v, =%v", result, expr.Value)
-		return result
-
-	case *RegisterExpr:
-		return expr.Id
-
-	default:
-		panic(fmt.Sprintf("Unhandled Expr: %T", expr))
-	}
+func (i *AddInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
 func VisitInstructions(ifCtx *IFContext, f func(Instr)) {
