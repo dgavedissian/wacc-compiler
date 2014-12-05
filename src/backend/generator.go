@@ -165,6 +165,9 @@ func (i *DivInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov %v, r0", i.Dst.Repr())
 }
 
+func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {}
+func (i *PopScopeInstr) generateCode(ctx *GeneratorContext)  {}
+
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl %v", i.Label.Label)
 }

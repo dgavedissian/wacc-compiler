@@ -242,6 +242,12 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.appendNode(endWhile)
 
 	// Scope
+	case *frontend.ScopeStmt:
+		ctx.addInstr(&PushScopeInstr{})
+		for _, stmt := range node.Body {
+			ctx.translate(stmt)
+		}
+		ctx.addInstr(&PopScopeInstr{})
 
 	default:
 		panic(fmt.Sprintf("Unhandled statement %T", node))

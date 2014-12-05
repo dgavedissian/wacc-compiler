@@ -147,7 +147,7 @@ func (e CallExpr) Repr() string {
 	for i, arg := range e.Args {
 		args[i] = arg.Repr()
 	}
-	return fmt.Sprintf("CALL %v (%s)", e.Label.Label, args)
+	return fmt.Sprintf("CALL %v (%s)", e.Label.Label, strings.Join(args, ", "))
 }
 
 type InstrNode struct {
@@ -205,6 +205,22 @@ type JmpInstr struct {
 
 type JmpEqualInstr struct {
 	Dst *InstrNode
+}
+
+type PushScopeInstr struct {
+}
+
+type PopScopeInstr struct {
+}
+
+func (PushScopeInstr) instr() {}
+func (e PushScopeInstr) Repr() string {
+	return fmt.Sprintf("PUSH SCOPE")
+}
+
+func (PopScopeInstr) instr() {}
+func (e PopScopeInstr) Repr() string {
+	return fmt.Sprintf("POP SCOPE")
 }
 
 // Second stage instructions
