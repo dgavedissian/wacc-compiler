@@ -184,7 +184,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		endIfElse := ctx.makeNode(&LabelInstr{"ifelse_end"})
 
 		ctx.addInstr(&TestInstr{ctx.translateExpr(node.Cond)})
-		ctx.addInstr(&JmpZeroInstr{startElse})
+		ctx.addInstr(&JmpEqualInstr{startElse})
 
 		// Build main branch
 		for _, n := range node.Body {
@@ -209,7 +209,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		// Build condition
 		ctx.appendNode(beginWhile)
 		ctx.addInstr(&TestInstr{ctx.translateExpr(node.Cond)})
-		ctx.addInstr(&JmpZeroInstr{endWhile})
+		ctx.addInstr(&JmpEqualInstr{endWhile})
 
 		// Build body
 		for _, n := range node.Body {

@@ -13,7 +13,6 @@ type Expr interface {
 	Repr() string
 
 	allocateRegisters(*RegisterAllocatorContext, int)
-	generateCode(*GeneratorContext) int
 }
 
 type IntConstExpr struct {
@@ -199,7 +198,7 @@ type JmpInstr struct {
 	Dst *InstrNode
 }
 
-type JmpZeroInstr struct {
+type JmpEqualInstr struct {
 	Dst *InstrNode
 }
 
@@ -253,9 +252,9 @@ func (i JmpInstr) Repr() string {
 	return fmt.Sprintf("JMP (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
 
-func (JmpZeroInstr) instr() {}
-func (i JmpZeroInstr) Repr() string {
-	return fmt.Sprintf("JZ (%s)", i.Dst.Instr.(*LabelInstr).Repr())
+func (JmpEqualInstr) instr() {}
+func (i JmpEqualInstr) Repr() string {
+	return fmt.Sprintf("JEQ (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
 
 func (*AddInstr) instr() {}

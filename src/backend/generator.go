@@ -46,24 +46,6 @@ func (ctx *GeneratorContext) pushCode(s string, a ...interface{}) {
 	ctx.text += "\t" + fmt.Sprintf(s, a...) + "\n"
 }
 
-func (e *IntConstExpr) generateCode(*GeneratorContext) int  { return 0 }
-func (e *CharConstExpr) generateCode(*GeneratorContext) int { return 0 }
-func (e *ArrayExpr) generateCode(*GeneratorContext) int     { return 0 }
-func (e *LocationExpr) generateCode(*GeneratorContext) int  { return 0 }
-func (e *VarExpr) generateCode(*GeneratorContext) int {
-	panic("Trying to generate code for a variable")
-	return 0
-}
-func (e *RegisterExpr) generateCode(*GeneratorContext) int { return 0 }
-func (e *BinOpExpr) generateCode(*GeneratorContext) int    { return 0 }
-func (e *NotExpr) generateCode(*GeneratorContext) int      { return 0 }
-func (e *OrdExpr) generateCode(*GeneratorContext) int      { return 0 }
-func (e *ChrExpr) generateCode(*GeneratorContext) int      { return 0 }
-func (e *NegExpr) generateCode(*GeneratorContext) int      { return 0 }
-func (e *LenExpr) generateCode(*GeneratorContext) int      { return 0 }
-func (e *NewPairExpr) generateCode(*GeneratorContext) int  { return 0 }
-func (e *CallExpr) generateCode(*GeneratorContext) int     { return 0 }
-
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushLabel(i.Label)
@@ -139,9 +121,17 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	}
 }
 
-func (i *TestInstr) generateCode(*GeneratorContext)    {}
-func (i *JmpInstr) generateCode(*GeneratorContext)     {}
-func (i *JmpZeroInstr) generateCode(*GeneratorContext) {}
+func (i *TestInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("cmp %v, #0", i.Cond.Repr())
+}
+
+func (i *JmpInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("b %v", i.Dst.Instr.(*LabelInstr).Label)
+}
+
+func (i *JmpEqualInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("beq %v", i.Dst.Instr.(*LabelInstr).Label)
+}
 
 func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())

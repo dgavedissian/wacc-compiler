@@ -86,9 +86,13 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Src = &RegisterExpr{r}
 	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
 }
-func (i *TestInstr) allocateRegisters(ctx *RegisterAllocatorContext)    {}
-func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)     {}
-func (i *JmpZeroInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *TestInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	if v, ok := i.Cond.(*VarExpr); ok {
+		i.Cond = ctx.lookupVariable(v)
+	}
+}
+func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)      {}
+func (i *JmpEqualInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 // Second stage IF instructions should never do anything
 func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
