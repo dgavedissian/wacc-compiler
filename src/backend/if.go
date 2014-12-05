@@ -12,7 +12,7 @@ type Expr interface {
 	expr()
 	Repr() string
 
-	replaceVar(*RegisterAllocatorContext) Expr
+	allocateRegisters(*RegisterAllocatorContext, int)
 	generateCode(*GeneratorContext) int
 }
 
@@ -159,7 +159,7 @@ type Instr interface {
 	instr()
 	Repr() string
 
-	replaceVar(*RegisterAllocatorContext)
+	allocateRegisters(*RegisterAllocatorContext)
 	generateCode(*GeneratorContext)
 }
 
@@ -201,6 +201,13 @@ type JmpInstr struct {
 
 type JmpZeroInstr struct {
 	Dst *InstrNode
+}
+
+// Second stage instructions
+type AddInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
 }
 
 func (NoOpInstr) instr()       {}
@@ -249,6 +256,11 @@ func (i JmpInstr) Repr() string {
 func (JmpZeroInstr) instr() {}
 func (i JmpZeroInstr) Repr() string {
 	return fmt.Sprintf("JZ (%s)", i.Dst.Instr.(*LabelInstr).Repr())
+}
+
+func (*AddInstr) instr() {}
+func (i *AddInstr) Repr() string {
+	return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
 type IFContext struct {
