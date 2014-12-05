@@ -70,7 +70,7 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	// Move arguments into r0-r4
 
 	// Call function
-	ctx.pushInstr(&CallInstr{Ident: e.Ident})
+	ctx.pushInstr(&CallInstr{Label: e.Label})
 
 	// Copy result into r
 	ctx.pushInstr(&MoveInstr{
