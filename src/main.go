@@ -41,7 +41,6 @@ func main() {
 	if asterr {
 		os.Exit(frontend.ExitCode())
 	}
-	ast = frontend.AddWaccStandardLibrary(ast)
 	if *enableVerbose {
 		fmt.Println("Abstract Syntax Tree:")
 		fmt.Println(ast.Repr())

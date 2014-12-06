@@ -16,7 +16,7 @@ func TranslateToIF(program *frontend.ProgStmt) *IFContext {
 }
 
 func (ctx *IFContext) makeNode(i Instr) *InstrNode {
-	return &InstrNode{i, nil}
+	return &InstrNode{i, 0, nil}
 }
 
 func (ctx *IFContext) beginFunction(name string) {

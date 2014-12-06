@@ -49,6 +49,10 @@ type RegisterExpr struct {
 	Id int
 }
 
+type StackLocationExpr struct {
+	Id int
+}
+
 type BinOpExpr struct {
 	Operator string
 	Left     Expr
@@ -108,6 +112,9 @@ func (e VarExpr) Repr() string { return "VAR " + e.Name }
 
 func (RegisterExpr) expr()          {}
 func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
+
+func (StackLocationExpr) expr()          {}
+func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
 
 func (ArrayExpr) expr() {}
 func (e ArrayExpr) Repr() string {
@@ -176,8 +183,9 @@ func (e CallExpr) Repr() string {
 }
 
 type InstrNode struct {
-	Instr Instr
-	Next  *InstrNode
+	Instr      Instr
+	stackSpace int
+	Next       *InstrNode
 }
 
 type Instr interface {

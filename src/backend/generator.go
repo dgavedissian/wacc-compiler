@@ -114,7 +114,12 @@ func getPrintfTypeForExpr(ctx *GeneratorContext, expr Expr) string {
 
 func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	// save regs r0 and r1
-	ctx.pushCode("push {r0,r1}")
+	//ctx.pushCode("push {r0,r1}")
+
+	if v, ok := i.Expr.(*CharConstExpr); ok && v.Value == '\n' {
+		ctx.pushCode("bl _wacc_print_nl")
+		return
+	}
 
 	// Printf depending on type
 	switch obj := i.Expr.(type) {
@@ -142,8 +147,14 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 
 	printfType := getPrintfTypeForExpr(ctx, i.Expr)
 	if printfType == "__BOOL__" {
-		ctx.pushCode("mov r0, r1")
-		ctx.pushCode("bl _wacc_printBool")
+		ctx.pushCode("bl _wacc_print_bool")
+		return
+	} else if printfType == "printf_fmt_int" {
+		ctx.pushCode("bl _wacc_print_int")
+		return
+	} else if printfType == "printf_fmt_char" {
+		ctx.pushCode("bl _wacc_print_char")
+		return
 	} else {
 		ctx.pushCode("ldr r0, =%s", printfType)
 		ctx.pushCode("bl printf")
@@ -154,10 +165,24 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl fflush")
 
 	// load regs r0 and r1
-	ctx.pushCode("pop {r0,r1}")
+	//ctx.pushCode("pop {r0,r1}")
 }
 
 func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
+	// check if this is a register load/store
+	_, ok1 := i.Dst.(*RegisterExpr)
+	_, ok2 := i.Src.(*StackLocationExpr)
+	if ok1 && ok2 {
+		ctx.pushCode("ldr %v, [sp, #%v]", i.Dst.(*RegisterExpr).Repr(), i.Src.(*StackLocationExpr).Id*4)
+		return
+	}
+	_, ok1 = i.Src.(*RegisterExpr)
+	_, ok2 = i.Dst.(*StackLocationExpr)
+	if ok1 && ok2 {
+		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*4)
+		return
+	}
+
 	dst := i.Dst.(*RegisterExpr).Repr()
 
 	// Optimisation step: If we're moving from a constant, just load
@@ -267,14 +292,14 @@ func (i *OrInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("push {r4-r12}")
+	ctx.pushCode("push {r4-r11}")
 	ctx.registerContents = append([]map[string]Expr{make(map[string]Expr)}, ctx.registerContents...)
 	for k, v := range ctx.registerContents[1] {
 		ctx.registerContents[0][k] = v
 	}
 }
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("pop {r4-r12}")
+	ctx.pushCode("pop {r4-r11}")
 	ctx.registerContents = ctx.registerContents[1:]
 }
 func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
@@ -298,16 +323,61 @@ func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	}
 }
 
+func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
+	ctx.funcStack = append([]string{x.Instr.(*LabelInstr).Label}, ctx.funcStack...)
+	x.Instr.generateCode(ctx)
+	ctx.pushCode("push {r4-r11,lr}")
+
+	stackSpace := x.stackSpace * 4
+	for stackSpace > 0 {
+		thisTime := stackSpace
+		if thisTime > 1024 {
+			thisTime = 1024
+		}
+		ctx.pushCode("sub sp, sp, #%d", thisTime)
+		stackSpace -= thisTime
+	}
+
+	node := x.Next
+	for node != nil {
+		node.Instr.generateCode(ctx)
+		node = node.Next
+	}
+
+	ctx.pushLabel("_" + ctx.funcStack[0] + "_end")
+	stackSpace = x.stackSpace * 4
+	for stackSpace > 0 {
+		thisTime := stackSpace
+		if thisTime > 1024 {
+			thisTime = 1024
+		}
+		ctx.pushCode("add sp, sp, #%d", thisTime)
+		stackSpace -= thisTime
+	}
+	ctx.pushCode("pop {r4-r11,pc}")
+	ctx.funcStack = ctx.funcStack[1:]
+}
+
 func GenerateCode(ifCtx *IFContext) string {
 	ctx := new(GeneratorContext)
 	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
 	ctx.dataContents = ifCtx.dataStore
 
 	// Printf format strings
-	ctx.data += "printf_fmt_int:\n\t.asciz \"%d\"\n"
-	ctx.data += "printf_fmt_char:\n\t.asciz \"%c\"\n"
-	ctx.data += "printf_fmt_str:\n\t.asciz \"%s\"\n"
-	ctx.data += "printf_fmt_addr:\n\t.asciz \"%p\"\n"
+	ctx.data += `
+printf_fmt_int:
+	.asciz "%d"
+printf_fmt_char:
+	.asciz "%c"
+printf_fmt_str:
+	.asciz "%s"
+printf_fmt_addr:
+	.asciz "%p"
+printf_true:
+	.asciz "true"
+printf_false:
+	.asciz "false"
+`
 	ctx.generateData(ifCtx)
 
 	// Add the label of each function to the global list
@@ -318,30 +388,59 @@ func GenerateCode(ifCtx *IFContext) string {
 
 	// Generate function code
 	for _, f := range ifCtx.functions {
-		ctx.funcStack = append([]string{f.Instr.(*LabelInstr).Label}, ctx.funcStack...)
-		f.Instr.generateCode(ctx)
-		ctx.pushCode("push {r4-r12,lr}")
-		node := f.Next
-		for node != nil {
-			node.Instr.generateCode(ctx)
-			node = node.Next
-		}
-		ctx.pushLabel("_" + ctx.funcStack[0] + "_end")
-		ctx.pushCode("pop {r4-r12,pc}")
-		ctx.funcStack = ctx.funcStack[1:]
+		ctx.generateFunction(f)
 	}
 
 	// Generate program code
-	ifCtx.main.Instr.generateCode(ctx)
-	ctx.pushCode("push {lr}")
-	node := ifCtx.main.Next
-	for node != nil {
-		node.Instr.generateCode(ctx)
-		node = node.Next
-	}
-	ctx.pushCode("ldr r0, =0") // default exit code
-	ctx.pushCode("pop {pc}")
+	ctx.generateFunction(ifCtx.main)
 
 	// Combine data and text sections
-	return ".data\n" + ctx.data + ".text\n" + ctx.text
+	return ".data\n" + ctx.data + ".text\n" + ctx.text + `
+_wacc_print_bool:
+	push {lr}
+	cmp r1, #0
+	beq _wacc_print_bool_false
+	ldr r0, =printf_true
+	b _wacc_print_bool_done
+_wacc_print_bool_false:
+	ldr r0, =printf_false
+_wacc_print_bool_done:
+	bl printf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_int:
+	push {lr}
+	ldr r0, =printf_fmt_int
+	bl printf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_char:
+	push {lr}
+	ldr r0, =printf_fmt_char
+	bl printf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_str:
+	push {lr}
+	ldr r0, =printf_fmt_str
+	bl printf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_addr:
+	push {lr}
+	ldr r0, =printf_fmt_addr
+	bl printf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_nl:
+	push {lr}
+	mov r0, #'\n'
+	bl putchar
+	pop {pc}
+`
 }
