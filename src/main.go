@@ -17,7 +17,7 @@ func main() {
 	enableVerbose := flag.Bool("v", true, "Enable verbose logging")
 	stopAtAST := flag.Bool("ast", false, "Stop the compile process once the AST has been generated")
 	stopAtIF := flag.Bool("if", true, "Stop the compile process once the IF representation has been generated")
-	asmOutput := flag.Bool("s", true, "Write assembly output to file")
+	outFile := flag.String("o", "out.s", "File to write asm to")
 	flag.Parse()
 
 	// Open file specified in the remaining argument
@@ -80,22 +80,17 @@ func main() {
 		fmt.Println(code)
 	}
 
-	if *asmOutput {
-		outFile := "out"
-		if useStdin == false {
-			// Extract source code name from file
-			basename := path.Base(filename)
-			outFile = basename[:len(basename)-len(path.Ext(filename))]
-		}
-
-		// Generate final assembly file
-		f, err := os.Create(outFile + ".s")
-		if err != nil {
-			panic("Unable to open output file")
-		}
-		f.WriteString(code)
-		f.Close()
-	} else {
-		fmt.Println(code)
+	if useStdin == false && *outFile == "out.s" {
+		// Extract source code name from file
+		basename := path.Base(filename)
+		*outFile = basename[:len(basename)-len(path.Ext(filename))] + ".s"
 	}
+
+	// Generate final assembly file
+	f, err := os.Create(*outFile)
+	if err != nil {
+		panic("Unable to open output file")
+	}
+	f.WriteString(code)
+	f.Close()
 }
