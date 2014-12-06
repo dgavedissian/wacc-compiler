@@ -167,7 +167,7 @@ type ArrayElemExpr struct {
 type PairElemExpr struct {
 	SelectorPos  *Position
 	SelectorType int
-	Operand      Expr
+	Operand      *IdentExpr
 	EndPos       *Position
 }
 

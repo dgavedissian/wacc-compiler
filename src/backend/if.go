@@ -64,7 +64,7 @@ type ArrayElemExpr struct {
 
 type PairElemExpr struct {
 	Fst     bool
-	Operand Expr
+	Operand *VarExpr
 }
 
 type BinOpExpr struct {

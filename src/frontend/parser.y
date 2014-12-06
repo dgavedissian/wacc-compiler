@@ -164,8 +164,8 @@ pair_elem_type
     ;
 
 pair_elem
-    : FST expression { $$.Expr = &PairElemExpr{$1.Position, FST, $2.Expr, $2.Position} }
-    | SND expression { $$.Expr = &PairElemExpr{$1.Position, SND, $2.Expr, $2.Position} }
+    : FST expression { $$.Expr = &PairElemExpr{$1.Position, FST, $2.Expr.(*IdentExpr), $2.Position} }
+    | SND expression { $$.Expr = &PairElemExpr{$1.Position, SND, $2.Expr.(*IdentExpr), $2.Position} }
 
 array_liter
     : array_contents

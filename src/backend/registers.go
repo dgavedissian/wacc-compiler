@@ -180,7 +180,7 @@ func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
-		Src: &MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), offset}})
+		Src: &MemExpr{ctx.lookupVariable(e.Operand), offset}})
 }
 
 func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
