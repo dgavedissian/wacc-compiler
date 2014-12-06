@@ -103,7 +103,7 @@ func getPrintfTypeForExpr(ctx *GeneratorContext, expr Expr) string {
 	case *BoolConstExpr:
 		return "__BOOL__"
 	case *RegisterExpr:
-		log.Println("REG", obj.Repr())
+		//TODO: log.Println("REG", obj.Repr())
 		return getPrintfTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
 	case *LocationExpr:
 		return getPrintfTypeForExpr(ctx, ctx.dataContents[obj.Label])
