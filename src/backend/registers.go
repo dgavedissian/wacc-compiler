@@ -220,6 +220,27 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 	})
 }
 
+func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	e.Array.allocateRegisters(ctx, r+1)
+	e.Index.allocateRegisters(ctx, r+2)
+	ctx.pushInstr(&AddInstr{
+		Dst:      &RegisterExpr{r + 1},
+		Op1:      &RegisterExpr{r + 1},
+		Op2:      &IntConstExpr{4},
+		Op2Shift: nil})
+	ctx.pushInstr(&AddInstr{
+		Dst:      &RegisterExpr{r + 1},
+		Op1:      &RegisterExpr{r + 1},
+		Op2:      &RegisterExpr{r + 2},
+		Op2Shift: &LSL{2}})
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: &MemExpr{&RegisterExpr{r + 1}, 0}})
+	ctx.pushInstr(&DeclareTypeInstr{
+		&RegisterExpr{r},
+		&IntConstExpr{}})
+}
+
 func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	var offset int
 	if e.Fst {
@@ -320,9 +341,13 @@ func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, 2 * regWidth})
 	e.Left.allocateRegisters(ctx, r+1)
-	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, 0}, &RegisterExpr{r + 1}})
+	ctx.pushInstr(&MoveInstr{
+		&MemExpr{&RegisterExpr{r}, 0},
+		&RegisterExpr{r + 1}})
 	e.Right.allocateRegisters(ctx, r+1)
-	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, regWidth}, &RegisterExpr{r + 1}})
+	ctx.pushInstr(&MoveInstr{
+		&MemExpr{&RegisterExpr{r}, regWidth},
+		&RegisterExpr{r + 1}})
 }
 
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {

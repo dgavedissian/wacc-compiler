@@ -278,20 +278,32 @@ func (i *JmpCondInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *AddInstr) generateCode(ctx *GeneratorContext) {
-	/*
-		say we had: add r32, r32, r3
+	shift := ""
+	if i.Op2Shift != nil {
+		shift = ", " + i.Op2Shift.Repr()
+	}
 
-		ldr r4, [r32pos]
-		ldr r5, [r33pos]
-		add r4, r4, r5
-		str r4, [r32pos]
-	*/
-	ctx.pushCode("adds %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	// ADD can have either an immediate or register as the 2nd operand
+	if imm, ok := i.Op2.(*IntConstExpr); ok {
+		ctx.pushCode("adds %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+	} else {
+		ctx.pushCode("adds %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+	}
 	ctx.pushCode("blvs _wacc_throw_overflow_error")
 }
 
 func (i *SubInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("subs %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	shift := ""
+	if i.Op2Shift != nil {
+		shift = ", " + i.Op2Shift.Repr()
+	}
+
+	// SUB can have either an immediate or register as the 2nd operand
+	if imm, ok := i.Op2.(*IntConstExpr); ok {
+		ctx.pushCode("subs %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+	} else {
+		ctx.pushCode("subs %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+	}
 	ctx.pushCode("blvs _wacc_throw_overflow_error")
 }
 

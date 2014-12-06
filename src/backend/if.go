@@ -60,6 +60,8 @@ type StackLocationExpr struct {
 }
 
 type ArrayElemExpr struct {
+	Array Expr
+	Index Expr
 }
 
 type PairElemExpr struct {
@@ -155,9 +157,11 @@ func (StackLocationExpr) expr()          {}
 func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
 func (StackLocationExpr) Weight() int    { return 1 }
 
-func (ArrayElemExpr) expr()          {}
-func (e ArrayElemExpr) Repr() string { return "ARRAY ELEM" }
-func (ArrayElemExpr) Weight() int    { return 1 }
+func (ArrayElemExpr) expr() {}
+func (e ArrayElemExpr) Repr() string {
+	return fmt.Sprintf("ARRAY ELEM %v IN %v", e.Index.Repr(), e.Array.Repr())
+}
+func (ArrayElemExpr) Weight() int { return 1 }
 
 func (PairElemExpr) expr() {}
 func (e PairElemExpr) Repr() string {
@@ -316,17 +320,34 @@ func (e DeclareTypeInstr) Repr() string {
 }
 
 // Second stage instructions
+
+// Shift
+type Shift interface {
+	shift()
+	Repr() string
+}
+
+type LSL struct {
+	Value int
+}
+
+func (*LSL) expr()          {}
+func (*LSL) shift()         {}
+func (s *LSL) Repr() string { return fmt.Sprintf("lsl #%v", s.Value) }
+
 // Binary operations
 type AddInstr struct {
-	Dst *RegisterExpr
-	Op1 *RegisterExpr
-	Op2 *RegisterExpr
+	Dst      *RegisterExpr
+	Op1      *RegisterExpr
+	Op2      Expr
+	Op2Shift Shift
 }
 
 type SubInstr struct {
-	Dst *RegisterExpr
-	Op1 *RegisterExpr
-	Op2 *RegisterExpr
+	Dst      *RegisterExpr
+	Op1      *RegisterExpr
+	Op2      Expr
+	Op2Shift Shift
 }
 
 type MulInstr struct {
@@ -422,12 +443,20 @@ func (i JmpCondInstr) Repr() string {
 
 func (*AddInstr) instr() {}
 func (i *AddInstr) Repr() string {
-	return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	if i.Op2Shift != nil {
+		return fmt.Sprintf("ADD %v %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
+	} else {
+		return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	}
 }
 
 func (*SubInstr) instr() {}
 func (i *SubInstr) Repr() string {
-	return fmt.Sprintf("SUB %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	if i.Op2Shift != nil {
+		return fmt.Sprintf("SUB %v %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
+	} else {
+		return fmt.Sprintf("SUB %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	}
 }
 
 func (*MulInstr) instr() {}
