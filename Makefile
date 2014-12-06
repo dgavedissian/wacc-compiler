@@ -41,7 +41,8 @@ MAIN_FILES := \
 
 SOURCE_FILES := \
 	$(BACKEND_FILES) \
-	$(FRONTEND_FILES)
+	$(FRONTEND_FILES) \
+	$(MAIN_FILES)
 
 GO_INSTALLED   := .goinstalled
 DEPS_INSTALLED := .depsinstalled
