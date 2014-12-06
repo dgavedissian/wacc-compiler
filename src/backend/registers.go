@@ -169,12 +169,13 @@ func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r in
 }
 
 func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	if _, ok := e.Elems[0].(*CharConstExpr); ok {
-		ctx.pushInstr(&MoveInstr{
-			Dst: &RegisterExpr{r},
-			Src: &LocationExpr{ctx.pushDataStore(e)},
-		})
-	} else {
+	useHeap := len(e.Elems) == 0
+	if !useHeap {
+		_, ok := e.Elems[0].(*CharConstExpr)
+		useHeap = !ok
+	}
+
+	if useHeap {
 		// Allocate space on the heap
 		length := len(e.Elems)
 		ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})
@@ -192,6 +193,11 @@ func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)
 				Dst: &MemExpr{&RegisterExpr{r}, (i + 1) * regWidth},
 				Src: &RegisterExpr{r + 1}})
 		}
+	} else {
+		ctx.pushInstr(&MoveInstr{
+			Dst: &RegisterExpr{r},
+			Src: &LocationExpr{ctx.pushDataStore(e)},
+		})
 	}
 }
 
