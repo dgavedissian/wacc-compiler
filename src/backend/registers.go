@@ -169,6 +169,20 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 		Src: e,
 	})
 }
+
+func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	var offset int
+	if e.Fst {
+		offset = 0
+	} else {
+		offset = 4
+	}
+
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: &MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), offset}})
+}
+
 func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	var op1, op2, r2 *RegisterExpr
 	dst := &RegisterExpr{r}

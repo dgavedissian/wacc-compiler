@@ -59,6 +59,14 @@ type StackLocationExpr struct {
 	Id int
 }
 
+type ArrayElemExpr struct {
+}
+
+type PairElemExpr struct {
+	Fst     bool
+	Operand Expr
+}
+
 type BinOpExpr struct {
 	Operator string
 	Left     Expr
@@ -136,6 +144,20 @@ func (RegisterExpr) Weight() int    { return 1 }
 func (StackLocationExpr) expr()          {}
 func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
 func (StackLocationExpr) Weight() int    { return 1 }
+
+func (ArrayElemExpr) expr()          {}
+func (e ArrayElemExpr) Repr() string { return "ARRAY ELEM" }
+func (ArrayElemExpr) Weight() int    { return 1 }
+
+func (PairElemExpr) expr() {}
+func (e PairElemExpr) Repr() string {
+	if e.Fst {
+		return fmt.Sprintf("FST %v", e.Operand.Repr())
+	} else {
+		return fmt.Sprintf("SND %v", e.Operand.Repr())
+	}
+}
+func (PairElemExpr) Weight() int { return 1 }
 
 func (ArrayExpr) expr() {}
 func (e ArrayExpr) Repr() string {

@@ -221,6 +221,13 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		case *StackLocationExpr:
 			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), src.Id*4)
 
+		case *MemExpr:
+			if src.Offset == 0 {
+				ctx.pushCode("ldr %v, [%v]", dst.Repr(), src.Address.Repr())
+			} else {
+				ctx.pushCode("ldr %v, [%v, #%v]", dst.Repr(), src.Address.Repr(), src.Offset)
+			}
+
 		default:
 			panic(fmt.Sprintf("Unhandled src type of mov %T", src))
 		}

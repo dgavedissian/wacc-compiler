@@ -70,6 +70,11 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 	case *frontend.IdentExpr:
 		return &VarExpr{expr.Name}
 
+	case *frontend.PairElemExpr:
+		return &PairElemExpr{
+			expr.SelectorType == frontend.FST,
+			ctx.translateExpr(expr.Operand)}
+
 	case *frontend.BinaryExpr:
 		return &BinOpExpr{
 			Operator: expr.Operator,
