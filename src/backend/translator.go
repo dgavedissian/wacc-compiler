@@ -200,20 +200,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.generateTypeDeclaration(node.Ident.Name, node.Type)
 
 	case *frontend.AssignStmt:
-		var dst Expr
-		switch leftExpr := node.Left.(type) {
-		case *frontend.IdentExpr:
-			dst = &VarExpr{leftExpr.Name}
-		case *frontend.PairElemExpr:
-			panic("TODO: Pair locations")
-		case *frontend.ArrayElemExpr:
-			panic("TODO: Array locations")
-		default:
-			panic(fmt.Sprintf("Missing lhs %T", leftExpr))
-		}
 		ctx.addInstr(
 			&MoveInstr{
-				Dst: dst,
+				Dst: ctx.translateExpr(node.Left),
 				Src: ctx.translateExpr(node.Right)})
 
 	case *frontend.ReadStmt:

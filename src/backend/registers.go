@@ -37,6 +37,7 @@ func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool)
 	ctx.scope[0].registerUseMap[*r] = true
 	return r, true
 }
+
 func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 	r, ok := ctx.tryAllocateRegister()
 	if !ok {
@@ -44,6 +45,7 @@ func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 	}
 	return r
 }
+
 func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
 	if !ctx.scope[0].registerUseMap[*r] {
 		panic("Freeing register not in use?!?")
@@ -83,6 +85,25 @@ func (ctx *RegisterAllocatorContext) lookupOrCreateVariable(v *VarExpr) *Registe
 		reg := ctx.allocateRegister()
 		ctx.scope[0].variableMap[v.Name] = reg
 		return reg
+	}
+}
+
+func (ctx *RegisterAllocatorContext) translateLValue(e Expr) Expr {
+	switch expr := e.(type) {
+	case *VarExpr:
+		return ctx.lookupOrCreateVariable(expr)
+
+	case *PairElemExpr:
+		var offset int
+		if expr.Fst {
+			offset = 0
+		} else {
+			offset = 4
+		}
+		return &MemExpr{ctx.lookupVariable(expr.Operand), offset}
+
+	default:
+		panic(fmt.Sprintf("Unhandled lvalue %T", expr))
 	}
 }
 
@@ -324,7 +345,7 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Src.allocateRegisters(ctx, r.Id)
 	i.Src = r
-	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
+	i.Dst = ctx.translateLValue(i.Dst)
 	ctx.freeRegister(r)
 }
 
@@ -332,7 +353,7 @@ func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Src.allocateRegisters(ctx, r.Id)
 	i.Src = r
-	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
+	i.Dst = ctx.translateLValue(i.Dst)
 	ctx.freeRegister(r)
 }
 
