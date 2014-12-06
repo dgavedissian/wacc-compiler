@@ -37,3 +37,7 @@ parser.go
 lexer.go
 compile
 build
+
+# Proof we've installed Go
+.goinstalled
+.depsinstalled
