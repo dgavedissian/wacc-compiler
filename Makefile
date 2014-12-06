@@ -29,7 +29,8 @@ BACKEND_FILES := \
 	$(BACKEND_DIR)/if.go \
 	$(BACKEND_DIR)/optimiser.go \
 	$(BACKEND_DIR)/translator.go \
-	$(BACKEND_DIR)/registers.go
+	$(BACKEND_DIR)/registers.go \
+	$(BACKEND_DIR)/enums.go
 
 GENERATED_FILES := \
 	$(FRONTEND_DIR)/parser.go \
@@ -37,6 +38,10 @@ GENERATED_FILES := \
 
 MAIN_FILES := \
 	$(SOURCE_DIR)/main.go
+
+SOURCE_FILES := \
+	$(BACKEND_FILES) \
+	$(FRONTEND_FILES)
 
 GO_INSTALLED   := .goinstalled
 DEPS_INSTALLED := .depsinstalled
