@@ -19,7 +19,7 @@ type RegisterAllocatorContext struct {
 	dataStoreAllocator map[string]int
 }
 
-func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
+func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool) {
 	var r *RegisterExpr
 	for reg, inUse := range ctx.scope[0].registerUseMap {
 		if !inUse {
@@ -29,10 +29,19 @@ func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 	}
 
 	if r == nil {
-		ctx.stashLiveVariables()
-		return ctx.allocateRegister()
+		if !ctx.stashLiveVariables() {
+			return nil, false
+		}
+		return ctx.allocateRegister(), true
 	}
 	ctx.scope[0].registerUseMap[*r] = true
+	return r, true
+}
+func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
+	r, ok := ctx.tryAllocateRegister()
+	if !ok {
+		panic("unable to relieve memory pressure by moving variables to stack")
+	}
 	return r
 }
 func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
@@ -52,6 +61,7 @@ func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*RegisterE
 			Src: &StackLocationExpr{stash},
 			Dst: x,
 		})
+		// we need to emit typing instructions, too
 		return x, true
 	} else {
 		return nil, false
@@ -76,7 +86,11 @@ func (ctx *RegisterAllocatorContext) lookupOrCreateVariable(v *VarExpr) *Registe
 	}
 }
 
-func (ctx *RegisterAllocatorContext) stashLiveVariables() {
+func (ctx *RegisterAllocatorContext) stashLiveVariables() bool {
+	if len(ctx.scope[0].variableMap) == 0 {
+		return false
+	}
+
 	for vname, expr := range ctx.scope[0].variableMap {
 		var n int
 		if previousN, ok := ctx.scope[0].stashedVariableMap[vname]; ok {
@@ -89,12 +103,12 @@ func (ctx *RegisterAllocatorContext) stashLiveVariables() {
 			Dst: &StackLocationExpr{n},
 			Src: expr,
 		})
+		// we need to emit typing instructions, too
 		ctx.scope[0].stashedVariableMap[vname] = n
 		ctx.freeRegister(expr)
 	}
-	fmt.Printf("%#v\n", ctx.scope[0].variableMap)
-	fmt.Printf("%#v\n", ctx.scope[0].stashedVariableMap)
 	ctx.scope[0].variableMap = make(map[string]*RegisterExpr)
+	return true
 }
 
 func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
@@ -146,12 +160,23 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 	})
 }
 func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	r2 := ctx.allocateRegister()
-	e.Left.allocateRegisters(ctx, r)
-	e.Right.allocateRegisters(ctx, r2.Id)
+	var op1, op2, r2 *RegisterExpr
 	dst := &RegisterExpr{r}
-	op1 := dst
-	op2 := r2
+	if e.Left.Weight() > e.Right.Weight() {
+		e.Left.allocateRegisters(ctx, r)
+		r2 = ctx.allocateRegister()
+		e.Right.allocateRegisters(ctx, r2.Id)
+
+		op1 = dst
+		op2 = r2
+	} else {
+		e.Right.allocateRegisters(ctx, r)
+		r2 = ctx.allocateRegister()
+		e.Left.allocateRegisters(ctx, r2.Id)
+
+		op1 = r2
+		op2 = dst
+	}
 
 	switch e.Operator {
 	case Add:
@@ -351,7 +376,7 @@ func (ctx *RegisterAllocatorContext) dataStorePrefix(e Expr) string {
 
 func makeStartRegisterMap() map[RegisterExpr]bool {
 	x := make(map[RegisterExpr]bool)
-	for n := 5; n < 12; n++ {
+	for n := 4; n <= 12; n++ {
 		x[RegisterExpr{n}] = false
 	}
 	return x

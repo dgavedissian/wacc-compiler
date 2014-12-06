@@ -11,6 +11,7 @@ import (
 type Expr interface {
 	expr()
 	Repr() string
+	Weight() int
 
 	allocateRegisters(*RegisterAllocatorContext, int)
 }
@@ -91,9 +92,11 @@ type CallExpr struct {
 
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
+func (IntConstExpr) Weight() int    { return 1 }
 
 func (BoolConstExpr) expr()          {}
 func (e BoolConstExpr) Repr() string { return fmt.Sprintf("BOOL %v", e.Value) }
+func (BoolConstExpr) Weight() int    { return 1 }
 
 func (CharConstExpr) expr() {}
 func (e CharConstExpr) Repr() string {
@@ -103,18 +106,23 @@ func (e CharConstExpr) Repr() string {
 		return fmt.Sprintf("CHAR %v", e.Value)
 	}
 }
+func (CharConstExpr) Weight() int { return 1 }
 
 func (LocationExpr) expr()          {}
 func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
+func (LocationExpr) Weight() int    { return 1 }
 
 func (VarExpr) expr()          {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
+func (VarExpr) Weight() int    { return 1 }
 
 func (RegisterExpr) expr()          {}
 func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
+func (RegisterExpr) Weight() int    { return 1 }
 
 func (StackLocationExpr) expr()          {}
 func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
+func (StackLocationExpr) Weight() int    { return 1 }
 
 func (ArrayExpr) expr() {}
 func (e ArrayExpr) Repr() string {
@@ -124,54 +132,44 @@ func (e ArrayExpr) Repr() string {
 	}
 	return "ARRAYCONST [" + strings.Join(rs, ", ") + "]"
 }
+func (e ArrayExpr) Weight() int { return len(e.Elems) }
 
 func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
 	return fmt.Sprintf("BINOP %v (%v) (%v)", e.Operator, e.Left.Repr(), e.Right.Repr())
 }
-func (e BinOpExpr) InvertOperator() string {
-	switch e.Operator {
-	case LT:
-		return GE
-	case GE:
-		return LT
-	case LE:
-		return GT
-	case GT:
-		return LE
-	case NE:
-		return EQ
-	case EQ:
-		return NE
-	default:
-		panic(fmt.Sprintf("Unknown operator %s", e.Operator))
-	}
-}
+func (e BinOpExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
 
 func (NotExpr) expr() {}
 func (e NotExpr) Repr() string {
 	return fmt.Sprintf("NOT %v", e.Operand)
 }
-func (OrdExpr) expr() {}
+func (e NotExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (OrdExpr) expr()         {}
 func (e OrdExpr) Repr() string {
 	return fmt.Sprintf("Ord %v", e.Operand)
 }
-func (ChrExpr) expr() {}
+func (e OrdExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (ChrExpr) expr()         {}
 func (e ChrExpr) Repr() string {
 	return fmt.Sprintf("Chr %v", e.Operand)
 }
-func (NegExpr) expr() {}
+func (e ChrExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (NegExpr) expr()         {}
 func (e NegExpr) Repr() string {
-	return fmt.Sprintf("Neg ^v", e.Operand)
+	return fmt.Sprintf("Neg %v", e.Operand)
 }
-func (LenExpr) expr() {}
+func (e NegExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (LenExpr) expr()         {}
 func (e LenExpr) Repr() string {
 	return fmt.Sprintf("Len %v", e.Operand)
 }
-func (NewPairExpr) expr() {}
+func (e LenExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (NewPairExpr) expr()     {}
 func (e NewPairExpr) Repr() string {
 	return fmt.Sprintf("NEWPAIR %v %v", e.Left.Repr(), e.Right.Repr())
 }
+func (e NewPairExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
 
 func (CallExpr) expr() {}
 func (e CallExpr) Repr() string {
@@ -180,6 +178,13 @@ func (e CallExpr) Repr() string {
 		args[i] = arg.Repr()
 	}
 	return fmt.Sprintf("CALL %v (%s)", e.Label.Label, strings.Join(args, ", "))
+}
+func (e CallExpr) Weight() int {
+	x := 1
+	for _, arg := range e.Args {
+		x += arg.Weight()
+	}
+	return x
 }
 
 type InstrNode struct {
