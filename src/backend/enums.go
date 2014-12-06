@@ -1,5 +1,7 @@
 package backend
 
+var regWidth = 4
+
 const (
 	Sub string = "-"
 	Add string = "+"

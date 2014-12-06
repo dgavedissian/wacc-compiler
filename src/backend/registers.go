@@ -98,7 +98,7 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr) Expr {
 		if expr.Fst {
 			offset = 0
 		} else {
-			offset = 4
+			offset = regWidth
 		}
 		return &MemExpr{ctx.lookupVariable(expr.Operand), offset}
 
@@ -170,6 +170,24 @@ func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)
 			Dst: &RegisterExpr{r},
 			Src: &LocationExpr{ctx.pushDataStore(e)},
 		})
+	} else {
+		// Allocate space on the heap
+		length := len(e.Elems)
+		ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})
+		ctx.pushInstr(&MoveInstr{
+			&RegisterExpr{r + 1},
+			&IntConstExpr{length}})
+		ctx.pushInstr(&MoveInstr{
+			Dst: &MemExpr{&RegisterExpr{r}, 0},
+			Src: &RegisterExpr{r + 1}})
+
+		// Copy each element into the array
+		for i, e := range e.Elems {
+			e.allocateRegisters(ctx, r+1)
+			ctx.pushInstr(&MoveInstr{
+				Dst: &MemExpr{&RegisterExpr{r}, (i + 1) * regWidth},
+				Src: &RegisterExpr{r + 1}})
+		}
 	}
 }
 
@@ -207,7 +225,7 @@ func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	if e.Fst {
 		offset = 0
 	} else {
-		offset = 4
+		offset = regWidth
 	}
 
 	ctx.pushInstr(&MoveInstr{
@@ -292,14 +310,19 @@ func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
 
-func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	ctx.pushInstr(&MoveInstr{
+		&RegisterExpr{r},
+		&MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), 0}})
+	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &IntConstExpr{}})
+}
 
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, 8})
+	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, 2 * regWidth})
 	e.Left.allocateRegisters(ctx, r+1)
 	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, 0}, &RegisterExpr{r + 1}})
 	e.Right.allocateRegisters(ctx, r+1)
-	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, 4}, &RegisterExpr{r + 1}})
+	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, regWidth}, &RegisterExpr{r + 1}})
 }
 
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {

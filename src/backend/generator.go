@@ -179,9 +179,9 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	switch dst := i.Dst.(type) {
 	case *MemExpr:
 		if dst.Offset == 0 {
-			ctx.pushCode("str %v, [%v]", i.Src.Repr(), dst.Address.Repr())
+			ctx.pushCode("str %v, [%v]", i.Src.(*RegisterExpr).Repr(), dst.Address.Repr())
 		} else {
-			ctx.pushCode("str %v, [%v, #%v]", i.Src.Repr(), dst.Address.Repr(), dst.Offset)
+			ctx.pushCode("str %v, [%v, #%v]", i.Src.(*RegisterExpr).Repr(), dst.Address.Repr(), dst.Offset)
 		}
 
 	case *StackLocationExpr:
