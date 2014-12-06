@@ -19,6 +19,10 @@ type IntConstExpr struct {
 	Value int
 }
 
+type BoolConstExpr struct {
+	Value bool
+}
+
 type CharConstExpr struct {
 	Value rune
 	Size  int
@@ -84,6 +88,9 @@ type CallExpr struct {
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 
+func (BoolConstExpr) expr()          {}
+func (e BoolConstExpr) Repr() string { return fmt.Sprintf("BOOL %v", e.Value) }
+
 func (CharConstExpr) expr() {}
 func (e CharConstExpr) Repr() string {
 	if unicode.IsPrint(e.Value) {
@@ -114,6 +121,24 @@ func (e ArrayExpr) Repr() string {
 func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
 	return fmt.Sprintf("BINOP %v (%v) (%v)", e.Operator, e.Left.Repr(), e.Right.Repr())
+}
+func (e BinOpExpr) InvertOperator() string {
+	switch e.Operator {
+	case LT:
+		return GE
+	case GE:
+		return LT
+	case LE:
+		return GT
+	case GT:
+		return LE
+	case NE:
+		return EQ
+	case EQ:
+		return NE
+	default:
+		panic(fmt.Sprintf("Unknown operator %s", e.Operator))
+	}
 }
 
 func (NotExpr) expr() {}
@@ -199,18 +224,29 @@ type TestInstr struct {
 	Cond Expr
 }
 
+type CmpInstr struct {
+	Left  Expr
+	Right Expr
+}
+
 type JmpInstr struct {
 	Dst *InstrNode
 }
 
-type JmpEqualInstr struct {
-	Dst *InstrNode
+type JmpCondInstr struct {
+	Dst  *InstrNode
+	Cond string
 }
 
 type PushScopeInstr struct {
 }
 
 type PopScopeInstr struct {
+}
+
+type DeclareTypeInstr struct {
+	Dst  Expr
+	Type Expr
 }
 
 func (PushScopeInstr) instr() {}
@@ -221,6 +257,11 @@ func (e PushScopeInstr) Repr() string {
 func (PopScopeInstr) instr() {}
 func (e PopScopeInstr) Repr() string {
 	return fmt.Sprintf("POP SCOPE")
+}
+
+func (DeclareTypeInstr) instr() {}
+func (e DeclareTypeInstr) Repr() string {
+	return fmt.Sprintf("TYPE OF '%#v' is '%#v'", e.Dst, e.Type)
 }
 
 // Second stage instructions
@@ -244,6 +285,18 @@ type MulInstr struct {
 }
 
 type DivInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
+}
+
+type AndInstr struct {
+	Dst *RegisterExpr
+	Op1 *RegisterExpr
+	Op2 *RegisterExpr
+}
+
+type OrInstr struct {
 	Dst *RegisterExpr
 	Op1 *RegisterExpr
 	Op2 *RegisterExpr
@@ -296,14 +349,19 @@ func (i TestInstr) Repr() string {
 	return fmt.Sprintf("TEST (%s)", i.Cond.Repr())
 }
 
+func (CmpInstr) instr() {}
+func (i CmpInstr) Repr() string {
+	return fmt.Sprintf("CMP (%s) (%s)", i.Left.Repr(), i.Right.Repr())
+}
+
 func (JmpInstr) instr() {}
 func (i JmpInstr) Repr() string {
 	return fmt.Sprintf("JMP (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
 
-func (JmpEqualInstr) instr() {}
-func (i JmpEqualInstr) Repr() string {
-	return fmt.Sprintf("JEQ (%s)", i.Dst.Instr.(*LabelInstr).Repr())
+func (JmpCondInstr) instr() {}
+func (i JmpCondInstr) Repr() string {
+	return fmt.Sprintf("J%s (%s)", i.Cond, i.Dst.Instr.(*LabelInstr).Repr())
 }
 
 func (*AddInstr) instr() {}
@@ -326,17 +384,29 @@ func (i *DivInstr) Repr() string {
 	return fmt.Sprintf("DIV %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
+func (*AndInstr) instr() {}
+func (i *AndInstr) Repr() string {
+	return fmt.Sprintf("AND %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
+func (*OrInstr) instr() {}
+func (i *OrInstr) Repr() string {
+	return fmt.Sprintf("OR %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+
 func (*CallInstr) instr() {}
 func (i *CallInstr) Repr() string {
 	return fmt.Sprintf("CALL %v", i.Label.Label)
 }
 
 type IFContext struct {
-	labels    map[string]Instr
-	main      *InstrNode
-	functions map[string]*InstrNode
-	current   *InstrNode
-	nextTemp  int
+	labels         map[string]Instr
+	main           *InstrNode
+	functions      map[string]*InstrNode
+	current        *InstrNode
+	nextTemp       int
+	dataStore      map[string]Expr
+	currentCounter int
 }
 
 /*

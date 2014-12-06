@@ -50,9 +50,9 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 
 		if expr.Type.Equals(frontend.BasicType{frontend.BOOL}) {
 			if expr.Value == "true" {
-				return &IntConstExpr{1}
+				return &BoolConstExpr{true}
 			}
-			return &IntConstExpr{0}
+			return &BoolConstExpr{false}
 		}
 
 		if expr.Type.Equals(frontend.BasicType{frontend.CHAR}) {
@@ -137,12 +137,42 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 	}
 }
 
+func (ctx *IFContext) generateTypeDeclaration(varName string, node frontend.Type) {
+	var t Expr
+	if node.Equals(frontend.BasicType{frontend.INT}) {
+		t = &IntConstExpr{}
+	} else if node.Equals(frontend.BasicType{frontend.BOOL}) {
+		t = &BoolConstExpr{}
+	} else if node.Equals(frontend.BasicType{frontend.CHAR}) {
+		t = &CharConstExpr{}
+	} else if node.Equals(frontend.BasicType{frontend.PAIR}) {
+		t = &IntConstExpr{0}
+	}
+
+	ctx.addInstr(&DeclareTypeInstr{
+		Dst:  &VarExpr{varName},
+		Type: t,
+	})
+}
+
 func (ctx *IFContext) translate(node frontend.Stmt) {
 	switch node := node.(type) {
 	case *frontend.ProgStmt:
 		// Functions
 		for _, f := range node.Funcs {
 			ctx.beginFunction(f.Ident.Name)
+
+			if len(f.Params) > 4 {
+				panic("Unimplemented!")
+			}
+			for regNum, p := range f.Params {
+				ctx.addInstr(&MoveInstr{
+					Dst: &VarExpr{p.Ident.Name},
+					Src: &RegisterExpr{regNum},
+				})
+				ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
+			}
+
 			for _, n := range f.Body {
 				ctx.translate(n)
 			}
@@ -162,6 +192,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 			&MoveInstr{
 				Dst: &VarExpr{node.Ident.Name},
 				Src: ctx.translateExpr(node.Right)})
+		ctx.generateTypeDeclaration(node.Ident.Name, node.Type)
 
 	case *frontend.AssignStmt:
 		var dst Expr
@@ -201,11 +232,19 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 	// Return
 
 	case *frontend.IfStmt:
-		startElse := ctx.makeNode(&LabelInstr{"else_begin"})
-		endIfElse := ctx.makeNode(&LabelInstr{"ifelse_end"})
+		n := ctx.currentCounter
+		startElse := ctx.makeNode(&LabelInstr{fmt.Sprintf("_else_begin%d", n)})
+		endIfElse := ctx.makeNode(&LabelInstr{fmt.Sprintf("_ifelse_end%d", n)})
+		ctx.currentCounter += 1
 
-		ctx.addInstr(&TestInstr{ctx.translateExpr(node.Cond)})
-		ctx.addInstr(&JmpEqualInstr{startElse})
+		trexpr := ctx.translateExpr(node.Cond)
+		if v, ok := trexpr.(*BinOpExpr); ok && v.Operator != "&&" && v.Operator != "||" {
+			ctx.addInstr(&CmpInstr{v.Left, v.Right})
+			ctx.addInstr(&JmpCondInstr{startElse, v.InvertOperator()})
+		} else {
+			ctx.addInstr(&TestInstr{trexpr})
+			ctx.addInstr(&JmpCondInstr{startElse, EQ})
+		}
 
 		// Build main branch
 		for _, n := range node.Body {
@@ -224,13 +263,22 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.appendNode(endIfElse)
 
 	case *frontend.WhileStmt:
-		beginWhile := ctx.makeNode(&LabelInstr{"while_begin"})
-		endWhile := ctx.makeNode(&LabelInstr{"while_end"})
+		n := ctx.currentCounter
+		beginWhile := ctx.makeNode(&LabelInstr{fmt.Sprintf("_while_begin%d", n)})
+		endWhile := ctx.makeNode(&LabelInstr{fmt.Sprintf("_while_end%d", n)})
+		ctx.currentCounter += 1
 
 		// Build condition
 		ctx.appendNode(beginWhile)
-		ctx.addInstr(&TestInstr{ctx.translateExpr(node.Cond)})
-		ctx.addInstr(&JmpEqualInstr{endWhile})
+
+		trexpr := ctx.translateExpr(node.Cond)
+		if v, ok := trexpr.(*BinOpExpr); ok && v.Operator != "&&" && v.Operator != "||" {
+			ctx.addInstr(&CmpInstr{v.Left, v.Right})
+			ctx.addInstr(&JmpCondInstr{endWhile, v.InvertOperator()})
+		} else {
+			ctx.addInstr(&TestInstr{trexpr})
+			ctx.addInstr(&JmpCondInstr{endWhile, EQ})
+		}
 
 		// Build body
 		for _, n := range node.Body {
