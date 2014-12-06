@@ -265,20 +265,25 @@ func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 		add r4, r4, r5
 		str r4, [r32pos]
 	*/
-	ctx.pushCode("add %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("adds %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("blvs _wacc_throw_overflow_error")
 }
 
 func (i *SubInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("sub %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("subs %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("blvs _wacc_throw_overflow_error")
 }
 
 func (i *MulInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("mul %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op1.Repr())
+	ctx.pushCode("CMP %v, %v, ASR #31", i.Op1.Repr(), i.Dst.Repr())
+	ctx.pushCode("BLNE _wacc_throw_overflow_error")
 }
 
 func (i *DivInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Op1.Repr())
 	ctx.pushCode("mov r1, %v", i.Op2.Repr())
+	ctx.pushCode("bl _wacc_check_divide_by_zero")
 	ctx.pushCode("bl __aeabi_idiv")
 	ctx.pushCode("mov %v, r0", i.Dst.Repr())
 }
@@ -377,6 +382,10 @@ printf_true:
 	.asciz "true"
 printf_false:
 	.asciz "false"
+_wacc_overflow_error_msg:
+	.asciz	"OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
+_wacc_divide_by_zero_msg:
+	.asciz "DivideByZeroError: divide or modulo by zero\n"
 `
 	ctx.generateData(ifCtx)
 
@@ -396,6 +405,19 @@ printf_false:
 
 	// Combine data and text sections
 	return ".data\n" + ctx.data + ".text\n" + ctx.text + `
+_wacc_check_divide_by_zero:
+	PUSH {lr}
+	CMP r1, #0
+	LDREQ r1, =_wacc_divide_by_zero_msg
+	BLEQ _wacc_throw_runtime_error
+	POP {pc}
+_wacc_throw_overflow_error:
+	ldr r1, =_wacc_overflow_error_msg
+	bl _wacc_throw_runtime_error
+_wacc_throw_runtime_error:
+	bl _wacc_print_str
+	mov r0, #-1
+	bl exit
 _wacc_print_bool:
 	push {lr}
 	cmp r1, #0
