@@ -161,10 +161,12 @@ func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r in
 		Src: e})
 }
 func (e *ArrayExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: &LocationExpr{ctx.pushDataStore(e)},
-	})
+	if _, ok := e.Elems[0].(*CharConstExpr); ok {
+		ctx.pushInstr(&MoveInstr{
+			Dst: &RegisterExpr{r},
+			Src: &LocationExpr{ctx.pushDataStore(e)},
+		})
+	}
 }
 func (e *LocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
 func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
