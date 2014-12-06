@@ -238,13 +238,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.currentCounter += 1
 
 		trexpr := ctx.translateExpr(node.Cond)
-		if v, ok := trexpr.(*BinOpExpr); ok && v.Operator != "&&" && v.Operator != "||" {
-			ctx.addInstr(&CmpInstr{v.Left, v.Right})
-			ctx.addInstr(&JmpCondInstr{startElse, v.InvertOperator()})
-		} else {
-			ctx.addInstr(&TestInstr{trexpr})
-			ctx.addInstr(&JmpCondInstr{startElse, EQ})
-		}
+		ctx.addInstr(&JmpCondInstr{startElse, &NotExpr{trexpr}})
 
 		// Build main branch
 		for _, n := range node.Body {
@@ -272,13 +266,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.appendNode(beginWhile)
 
 		trexpr := ctx.translateExpr(node.Cond)
-		if v, ok := trexpr.(*BinOpExpr); ok && v.Operator != "&&" && v.Operator != "||" {
-			ctx.addInstr(&CmpInstr{v.Left, v.Right})
-			ctx.addInstr(&JmpCondInstr{endWhile, v.InvertOperator()})
-		} else {
-			ctx.addInstr(&TestInstr{trexpr})
-			ctx.addInstr(&JmpCondInstr{endWhile, EQ})
-		}
+		ctx.addInstr(&JmpCondInstr{endWhile, &NotExpr{trexpr}})
 
 		// Build body
 		for _, n := range node.Body {

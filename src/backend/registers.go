@@ -102,11 +102,26 @@ func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		ctx.pushInstr(&AndInstr{Dst: dst, Op1: op1, Op2: op2})
 	case Or:
 		ctx.pushInstr(&OrInstr{Dst: dst, Op1: op1, Op2: op2})
+	case Mod:
+		op3 := &RegisterExpr{r + 2}
+		ctx.pushInstr(&DivInstr{Dst: op3, Op1: op1, Op2: op2})
+		ctx.pushInstr(&MulInstr{Dst: op3, Op1: op3, Op2: op2})
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op3})
+	case LT, GT, LE, GE, EQ, NE:
+		ctx.pushInstr(&CmpInstr{Dst: dst, Left: op1, Right: op2, Operator: e.Operator})
+		ctx.pushInstr(&DeclareTypeInstr{dst, &BoolConstExpr{}})
 	default:
 		panic(fmt.Sprintf("Unknown operator %v", e.Operator))
 	}
 }
-func (e *NotExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *NotExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	e.Operand.allocateRegisters(ctx, r)
+	dst := &RegisterExpr{r}
+	dst2 := &RegisterExpr{r + 1}
+	ctx.pushInstr(&NotInstr{dst, dst})
+	ctx.pushInstr(&MoveInstr{dst2, &IntConstExpr{1}})
+	ctx.pushInstr(&AndInstr{Dst: dst, Op1: dst, Op2: dst2})
+}
 func (e *OrdExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Operand.allocateRegisters(ctx, r)
 	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &IntConstExpr{}})
@@ -178,15 +193,13 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
 }
 
-func (i *TestInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	if v, ok := i.Cond.(*VarExpr); ok {
-		i.Cond = ctx.lookupVariable(v)
-	} else {
-		r := ctx.scope[0].start
-		i.Cond.allocateRegisters(ctx, r)
-		i.Cond = &RegisterExpr{r}
-	}
+func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	r := ctx.scope[0].start
+	i.Src.allocateRegisters(ctx, r)
+	i.Src = &RegisterExpr{r}
+	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
 }
+
 func (i *CmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.scope[0].start
 	i.Left.allocateRegisters(ctx, r)
@@ -195,8 +208,12 @@ func (i *CmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Right = &RegisterExpr{r + 1}
 }
 
-func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext)     {}
-func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	r := ctx.scope[0].start
+	i.Cond.allocateRegisters(ctx, r)
+	i.Cond = &RegisterExpr{r}
+}
 func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {

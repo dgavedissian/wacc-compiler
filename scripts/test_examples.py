@@ -27,7 +27,7 @@ invalid_semantic_path = os.path.join(invalid_path, 'semanticErr')
 categories = [
     'Valid',
     'Invalid Syntax',
-    'Invalid Semantic'
+    'Invalid Semantic',
 ]
 
 paths = dict(zip(categories, [valid_path,

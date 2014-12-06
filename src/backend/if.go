@@ -220,13 +220,16 @@ type MoveInstr struct {
 	Src Expr
 }
 
-type TestInstr struct {
-	Cond Expr
+type NotInstr struct {
+	Dst Expr // LValueExpr
+	Src Expr
 }
 
 type CmpInstr struct {
-	Left  Expr
-	Right Expr
+	Left     Expr
+	Right    Expr
+	Dst      Expr
+	Operator string
 }
 
 type JmpInstr struct {
@@ -235,7 +238,7 @@ type JmpInstr struct {
 
 type JmpCondInstr struct {
 	Dst  *InstrNode
-	Cond string
+	Cond Expr
 }
 
 type PushScopeInstr struct {
@@ -344,9 +347,9 @@ func (i MoveInstr) Repr() string {
 	return fmt.Sprintf("MOVE (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
 }
 
-func (TestInstr) instr() {}
-func (i TestInstr) Repr() string {
-	return fmt.Sprintf("TEST (%s)", i.Cond.Repr())
+func (NotInstr) instr() {}
+func (i NotInstr) Repr() string {
+	return fmt.Sprintf("NOT (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
 }
 
 func (CmpInstr) instr() {}

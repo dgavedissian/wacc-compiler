@@ -191,11 +191,32 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	}
 }
 
-func (i *TestInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("cmp %v, #0", i.Cond.Repr())
+func (i *NotInstr) generateCode(ctx *GeneratorContext) {
+	dst := i.Dst.(*RegisterExpr).Repr()
+	src := i.Src.(*RegisterExpr).Repr()
+
+	ctx.pushCode("mvn %v, %v", dst, src)
 }
+
 func (i *CmpInstr) generateCode(ctx *GeneratorContext) {
+	cc := "al"
+	switch i.Operator {
+	case EQ:
+		cc = "eq"
+	case NE:
+		cc = "ne"
+	case LT:
+		cc = "lt"
+	case GT:
+		cc = "gt"
+	case LE:
+		cc = "le"
+	case GE:
+		cc = "ge"
+	}
 	ctx.pushCode("cmp %v, %v", i.Left.Repr(), i.Right.Repr())
+	ctx.pushCode("mov %v, #0", i.Dst.Repr())
+	ctx.pushCode("mov%s %v, #1", cc, i.Dst.Repr())
 }
 
 func (i *JmpInstr) generateCode(ctx *GeneratorContext) {
@@ -203,22 +224,11 @@ func (i *JmpInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *JmpCondInstr) generateCode(ctx *GeneratorContext) {
-	cc := "al"
-	switch i.Cond {
-	case EQ:
-		cc = "eq"
-	case LT:
-		cc = "lt"
-	case LE:
-		cc = "le"
-	case GT:
-		cc = "gt"
-	case GE:
-		cc = "ge"
-	case NE:
-		cc = "ne"
+	if _, ok := i.Cond.(*RegisterExpr); !ok {
+		panic("condition is not a register, abort")
 	}
-	ctx.pushCode("b%s %v", cc, i.Dst.Instr.(*LabelInstr).Label)
+	ctx.pushCode("cmp %v, #0", i.Cond.Repr())
+	ctx.pushCode("bne %v", i.Dst.Instr.(*LabelInstr).Label)
 }
 
 func (i *AddInstr) generateCode(ctx *GeneratorContext) {
