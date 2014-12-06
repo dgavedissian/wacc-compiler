@@ -176,20 +176,6 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
-	// check if this is a register load/store
-	_, ok1 := i.Dst.(*RegisterExpr)
-	_, ok2 := i.Src.(*StackLocationExpr)
-	if ok1 && ok2 {
-		ctx.pushCode("ldr %v, [sp, #%v]", i.Dst.(*RegisterExpr).Repr(), i.Src.(*StackLocationExpr).Id*4)
-		return
-	}
-	_, ok1 = i.Src.(*RegisterExpr)
-	_, ok2 = i.Dst.(*StackLocationExpr)
-	if ok1 && ok2 {
-		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*4)
-		return
-	}
-
 	switch dst := i.Dst.(type) {
 	case *MemExpr:
 		if dst.Offset == 0 {
@@ -197,43 +183,50 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		} else {
 			ctx.pushCode("str %v, [%v, #%v]", i.Src.Repr(), dst.Address.Repr(), dst.Offset)
 		}
-		return
-	}
 
-	dst := i.Dst.(*RegisterExpr).Repr()
-
-	// Optimisation step: If we're moving from a constant, just load
-	switch src := i.Src.(type) {
-	case *IntConstExpr:
-		ctx.pushCode("ldr %v, =%v", dst, src.Value)
-		ctx.registerContents[0][dst] = src
-
-	case *BoolConstExpr:
-		n := 0
-		if src.Value {
-			n = 1
-		}
-		ctx.pushCode("ldr %v, =%v", dst, n)
-		ctx.registerContents[0][dst] = src
-
-	case *CharConstExpr:
-		ctx.pushCode("ldr %v, =%v", dst, int(src.Value))
-		ctx.registerContents[0][dst] = src
-
-	case *PointerConstExpr:
-		ctx.pushCode("ldr %v, =%v", dst, src.Value)
-		ctx.registerContents[0][dst] = src
-
-	case *LocationExpr:
-		ctx.pushCode("ldr %v, =%v", dst, src.Label)
-		ctx.registerContents[0][dst] = ctx.dataContents[src.Label]
+	case *StackLocationExpr:
+		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*4)
 
 	case *RegisterExpr:
-		ctx.pushCode("mov %v, %v", dst, src.Repr())
-		ctx.registerContents[0][dst] = ctx.registerContents[0][src.Repr()]
+		// Optimisation step: If we're moving from a constant, just load
+		switch src := i.Src.(type) {
+		case *IntConstExpr:
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Value)
+			ctx.registerContents[0][dst.Repr()] = src
+
+		case *BoolConstExpr:
+			n := 0
+			if src.Value {
+				n = 1
+			}
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), n)
+			ctx.registerContents[0][dst.Repr()] = src
+
+		case *CharConstExpr:
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), int(src.Value))
+			ctx.registerContents[0][dst.Repr()] = src
+
+		case *PointerConstExpr:
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Value)
+			ctx.registerContents[0][dst.Repr()] = src
+
+		case *LocationExpr:
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Label)
+			ctx.registerContents[0][dst.Repr()] = ctx.dataContents[src.Label]
+
+		case *RegisterExpr:
+			ctx.pushCode("mov %v, %v", dst.Repr(), src.Repr())
+			ctx.registerContents[0][dst.Repr()] = ctx.registerContents[0][src.Repr()]
+
+		case *StackLocationExpr:
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), src.Id*4)
+
+		default:
+			panic(fmt.Sprintf("Unhandled src type of mov %T", src))
+		}
 
 	default:
-		panic(fmt.Sprintf("Unhandled src type of mov %T", src))
+		panic(fmt.Sprintf("Unhandled dst type of mov %T", dst))
 	}
 }
 
