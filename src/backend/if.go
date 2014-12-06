@@ -33,7 +33,7 @@ type PointerConstExpr struct {
 	Value int
 }
 
-type ArrayExpr struct {
+type ArrayConstExpr struct {
 	Type  frontend.BasicType
 	Elems []Expr
 }
@@ -125,9 +125,19 @@ func (PointerConstExpr) expr()          {}
 func (e PointerConstExpr) Repr() string { return fmt.Sprintf("PTR 0x%x", e.Value) }
 func (PointerConstExpr) Weight() int    { return 1 }
 
-func (LocationExpr) expr()          {}
-func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
-func (LocationExpr) Weight() int    { return 1 }
+func (ArrayConstExpr) expr() {}
+func (e ArrayConstExpr) Repr() string {
+	rs := make([]string, len(e.Elems))
+	for i, v := range e.Elems {
+		rs[i] = v.Repr()
+	}
+	return "ARRAY [" + strings.Join(rs, ", ") + "]"
+}
+
+func (e ArrayConstExpr) Weight() int { return len(e.Elems) }
+func (LocationExpr) expr()           {}
+func (e LocationExpr) Repr() string  { return "LABEL " + e.Label }
+func (LocationExpr) Weight() int     { return 1 }
 
 func (VarExpr) expr()          {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
@@ -158,16 +168,6 @@ func (e PairElemExpr) Repr() string {
 	}
 }
 func (PairElemExpr) Weight() int { return 1 }
-
-func (ArrayExpr) expr() {}
-func (e ArrayExpr) Repr() string {
-	rs := make([]string, len(e.Elems))
-	for i, v := range e.Elems {
-		rs[i] = v.Repr()
-	}
-	return "ARRAYCONST [" + strings.Join(rs, ", ") + "]"
-}
-func (e ArrayExpr) Weight() int { return len(e.Elems) }
 
 func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
@@ -312,7 +312,7 @@ func (e PopScopeInstr) Repr() string {
 
 func (DeclareTypeInstr) instr() {}
 func (e DeclareTypeInstr) Repr() string {
-	return fmt.Sprintf("TYPE OF %#v IS %#v", e.Dst.Repr(), e.Type.Repr())
+	return fmt.Sprintf("TYPE OF %#v IS %T", e.Dst.Repr(), e.Type)
 }
 
 // Second stage instructions

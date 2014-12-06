@@ -82,7 +82,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			Right:    ctx.translateExpr(expr.Right)}
 
 	case *frontend.ArrayLit:
-		a := &ArrayExpr{}
+		a := &ArrayConstExpr{}
 		a.Elems = make([]Expr, len(expr.Values))
 		for i, e := range expr.Values {
 			a.Elems[i] = ctx.translateExpr(e)
@@ -151,7 +151,11 @@ func (ctx *IFContext) generateTypeDeclaration(varName string, node frontend.Type
 	} else if node.Equals(frontend.BasicType{frontend.CHAR}) {
 		t = &CharConstExpr{}
 	} else if node.Equals(frontend.BasicType{frontend.PAIR}) {
-		t = &PointerConstExpr{0}
+		t = &PointerConstExpr{}
+	} else if node.Equals(frontend.ArrayType{frontend.AnyType{}}) {
+		t = &PointerConstExpr{}
+	} else {
+		panic(fmt.Sprintf("Unhandled node when generating type declaration %T", node))
 	}
 
 	ctx.addInstr(&DeclareTypeInstr{
@@ -222,8 +226,6 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{&CharConstExpr{'\n', 1}})
 		}
-
-	// Return
 
 	case *frontend.IfStmt:
 		n := ctx.currentCounter

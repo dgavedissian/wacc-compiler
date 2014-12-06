@@ -18,7 +18,7 @@ type GeneratorContext struct {
 // data section
 func (ctx *GeneratorContext) handleString(expr Expr) Expr {
 	// Is the expr an array
-	if expr, ok := expr.(*ArrayExpr); ok {
+	if expr, ok := expr.(*ArrayConstExpr); ok {
 		// Is the source an array of ascii chars?
 		if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
 			if elem.Size == 1 {
@@ -100,7 +100,7 @@ func getPrintfTypeForExpr(ctx *GeneratorContext, expr Expr) string {
 		return "printf_fmt_int"
 	case *CharConstExpr:
 		return "printf_fmt_char"
-	case *ArrayExpr:
+	case *ArrayConstExpr:
 		return "printf_fmt_str"
 	case *BoolConstExpr:
 		return "__BOOL__"
@@ -347,7 +347,7 @@ func (i *HeapAllocInstr) generateCode(ctx *GeneratorContext) {
 
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	for k, v := range ifCtx.dataStore {
-		av := v.(*ArrayExpr)
+		av := v.(*ArrayConstExpr)
 		// Build a string from the char array
 		str := ""
 		for _, e := range av.Elems {
