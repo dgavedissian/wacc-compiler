@@ -62,7 +62,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 
 		// Null
 		if expr.Type.Equals(frontend.BasicType{frontend.PAIR}) {
-			return &IntConstExpr{0}
+			return &PointerConstExpr{0}
 		}
 
 		panic(fmt.Sprintf("Unhandled BasicLit %s", expr.Type.Repr()))
@@ -146,7 +146,7 @@ func (ctx *IFContext) generateTypeDeclaration(varName string, node frontend.Type
 	} else if node.Equals(frontend.BasicType{frontend.CHAR}) {
 		t = &CharConstExpr{}
 	} else if node.Equals(frontend.BasicType{frontend.PAIR}) {
-		t = &IntConstExpr{0}
+		t = &PointerConstExpr{0}
 	}
 
 	ctx.addInstr(&DeclareTypeInstr{

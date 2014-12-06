@@ -203,6 +203,10 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		ctx.pushCode("ldr %v, =%v", dst, int(src.Value))
 		ctx.registerContents[0][dst] = src
 
+	case *PointerConstExpr:
+		ctx.pushCode("ldr %v, =%v", dst, src.Value)
+		ctx.registerContents[0][dst] = src
+
 	case *LocationExpr:
 		ctx.pushCode("ldr %v, =%v", dst, src.Label)
 		ctx.registerContents[0][dst] = ctx.dataContents[src.Label]

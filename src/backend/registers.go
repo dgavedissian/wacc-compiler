@@ -132,8 +132,12 @@ func (e *BoolConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) 
 func (e *CharConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
-		Src: e,
-	})
+		Src: e})
+}
+func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: e})
 }
 func (e *ArrayExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{

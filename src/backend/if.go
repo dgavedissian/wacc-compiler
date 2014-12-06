@@ -29,6 +29,10 @@ type CharConstExpr struct {
 	Size  int
 }
 
+type PointerConstExpr struct {
+	Value int
+}
+
 type ArrayExpr struct {
 	Type  frontend.BasicType
 	Elems []Expr
@@ -107,6 +111,10 @@ func (e CharConstExpr) Repr() string {
 	}
 }
 func (CharConstExpr) Weight() int { return 1 }
+
+func (PointerConstExpr) expr()          {}
+func (e PointerConstExpr) Repr() string { return fmt.Sprintf("PTR 0x%x", e.Value) }
+func (PointerConstExpr) Weight() int    { return 1 }
 
 func (LocationExpr) expr()          {}
 func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
@@ -277,7 +285,7 @@ func (e PopScopeInstr) Repr() string {
 
 func (DeclareTypeInstr) instr() {}
 func (e DeclareTypeInstr) Repr() string {
-	return fmt.Sprintf("TYPE OF '%#v' is '%#v'", e.Dst, e.Type)
+	return fmt.Sprintf("TYPE OF %#v IS %#v", e.Dst.Repr(), e.Type.Repr())
 }
 
 // Second stage instructions
