@@ -2,6 +2,8 @@ package backend
 
 import (
 	"fmt"
+
+	"../frontend"
 )
 
 type VariableScope struct {
@@ -140,6 +142,8 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 //
 // Expressions
 //
+func (e *TypeExpr) allocateRegisters(*RegisterAllocatorContext, int) {}
+
 func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
@@ -238,7 +242,7 @@ func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) 
 		Src: &MemExpr{&RegisterExpr{r + 1}, 0}})
 	ctx.pushInstr(&DeclareTypeInstr{
 		&RegisterExpr{r},
-		&IntConstExpr{}})
+		&TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
 func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
@@ -301,7 +305,7 @@ func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 	case LT, GT, LE, GE, EQ, NE:
 		ctx.pushInstr(&CmpInstr{Dst: dst, Left: op1, Right: op2, Operator: e.Operator})
-		ctx.pushInstr(&DeclareTypeInstr{dst, &BoolConstExpr{}})
+		ctx.pushInstr(&DeclareTypeInstr{dst, &TypeExpr{frontend.BasicType{frontend.BOOL}}})
 
 	default:
 		panic(fmt.Sprintf("Unknown operator %v", e.Operator))
@@ -321,12 +325,12 @@ func (e *NotExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 func (e *OrdExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Operand.allocateRegisters(ctx, r)
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &IntConstExpr{}})
+	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
 func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Operand.allocateRegisters(ctx, r)
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &CharConstExpr{}})
+	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
 func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
@@ -335,7 +339,9 @@ func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		&RegisterExpr{r},
 		&MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), 0}})
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &IntConstExpr{}})
+	ctx.pushInstr(&DeclareTypeInstr{
+		&RegisterExpr{r},
+		&TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {

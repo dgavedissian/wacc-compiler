@@ -3,6 +3,8 @@ package backend
 import (
 	"fmt"
 	"log"
+
+	"../frontend"
 )
 
 type GeneratorContext struct {
@@ -66,14 +68,10 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 
 	ctx.pushCode("add r1, sp, #0")
 
-	// Printf depending on type
-	printfType := getPrintfTypeForExpr(ctx, i.Dst)
-	if printfType == "__BOOL__" {
-		panic("???")
-	} else {
-		ctx.pushCode("ldr r0, =%s", printfType)
-		ctx.pushCode("bl scanf")
-	}
+	// Get scanf format string depending on type
+	fmtString := getFormatStringFromType(getTypeForExpr(ctx, i.Dst))
+	ctx.pushCode("ldr r0, =%s", fmtString)
+	ctx.pushCode("bl scanf")
 
 	// Move output to destination
 	ctx.pushCode("ldr %s, [sp]", i.Dst.Repr())
@@ -94,25 +92,50 @@ func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl exit")
 }
 
-func getPrintfTypeForExpr(ctx *GeneratorContext, expr Expr) string {
+func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
 	switch obj := expr.(type) {
+	case *TypeExpr:
+		return obj
+
 	case *IntConstExpr:
-		return "printf_fmt_int"
+		return &TypeExpr{frontend.BasicType{frontend.INT}}
+
 	case *CharConstExpr:
-		return "printf_fmt_char"
+		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
+
 	case *ArrayConstExpr:
-		return "printf_fmt_str"
+		return &TypeExpr{frontend.ArrayType{frontend.AnyType{}}}
+
 	case *BoolConstExpr:
-		return "__BOOL__"
+		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
+
 	case *PointerConstExpr:
-		return "printf_fmt_addr"
+		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
+
 	case *RegisterExpr:
 		//TODO: log.Println("REG", obj.Repr())
-		return getPrintfTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
+		return getTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
+
 	case *LocationExpr:
-		return getPrintfTypeForExpr(ctx, ctx.dataContents[obj.Label])
+		return getTypeForExpr(ctx, ctx.dataContents[obj.Label])
+
 	default:
 		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %#v", expr))
+	}
+}
+
+func getFormatStringFromType(t *TypeExpr) string {
+	internalType := t.Type
+	if internalType.Equals(frontend.BasicType{frontend.BOOL}) {
+		return "printf_fmt_int"
+	} else if internalType.Equals(frontend.BasicType{frontend.INT}) {
+		return "printf_fmt_int"
+	} else if internalType.Equals(frontend.BasicType{frontend.CHAR}) {
+		return "printf_fmt_char"
+	} else if internalType.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
+		return "printf_fmt_str"
+	} else {
+		return "printf_fmt_addr"
 	}
 }
 
@@ -133,7 +156,7 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 
 	case *BoolConstExpr:
 		value := i.Expr.(*BoolConstExpr).Value
-		ctx.pushCode("ldr r1, =%d", value)
+		ctx.pushCode("ldr r1, =%v", value)
 
 	case *CharConstExpr:
 		value := int(i.Expr.(*CharConstExpr).Value)
@@ -149,27 +172,21 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 		panic(fmt.Sprintf("Cannot print an object of type %T", obj))
 	}
 
-	printfType := getPrintfTypeForExpr(ctx, i.Expr)
-	if printfType == "__BOOL__" {
+	derivedType := getTypeForExpr(ctx, i.Expr).Type
+	if derivedType.Equals(frontend.BasicType{frontend.BOOL}) {
 		ctx.pushCode("bl _wacc_print_bool")
-		return
-	} else if printfType == "printf_fmt_int" {
+	} else if derivedType.Equals(frontend.BasicType{frontend.INT}) {
 		ctx.pushCode("bl _wacc_print_int")
-		return
-	} else if printfType == "printf_fmt_char" {
+	} else if derivedType.Equals(frontend.BasicType{frontend.CHAR}) {
 		ctx.pushCode("bl _wacc_print_char")
-		return
-	} else if printfType == "printf_fmt_addr" {
-		ctx.pushCode("bl _wacc_print_addr")
-		return
-	} else {
-		ctx.pushCode("ldr r0, =%s", printfType)
+	} else if derivedType.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
+		ctx.pushCode("ldr r0, =printf_fmt_str")
 		ctx.pushCode("bl printf")
+		ctx.pushCode("mov r0, #0")
+		ctx.pushCode("bl fflush")
+	} else {
+		ctx.pushCode("bl _wacc_print_addr")
 	}
-
-	// Flush output stream
-	ctx.pushCode("mov r0, #0")
-	ctx.pushCode("bl fflush")
 
 	// load regs r0 and r1
 	//ctx.pushCode("pop {r0,r1}")

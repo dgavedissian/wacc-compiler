@@ -145,26 +145,10 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 	}
 }
 
-func (ctx *IFContext) generateTypeDeclaration(varName string, node frontend.Type) {
-	var t Expr
-	if node.Equals(frontend.BasicType{frontend.INT}) {
-		t = &IntConstExpr{}
-	} else if node.Equals(frontend.BasicType{frontend.BOOL}) {
-		t = &BoolConstExpr{}
-	} else if node.Equals(frontend.BasicType{frontend.CHAR}) {
-		t = &CharConstExpr{}
-	} else if node.Equals(frontend.BasicType{frontend.PAIR}) {
-		t = &PointerConstExpr{}
-	} else if node.Equals(frontend.ArrayType{frontend.AnyType{}}) {
-		t = &PointerConstExpr{}
-	} else {
-		panic(fmt.Sprintf("Unhandled node when generating type declaration %T", node))
-	}
-
+func (ctx *IFContext) generateTypeDeclaration(varName string, t frontend.Type) {
 	ctx.addInstr(&DeclareTypeInstr{
 		Dst:  &VarExpr{varName},
-		Type: t,
-	})
+		Type: &TypeExpr{t}})
 }
 
 func (ctx *IFContext) translate(node frontend.Stmt) {

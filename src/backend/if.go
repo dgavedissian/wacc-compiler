@@ -16,6 +16,11 @@ type Expr interface {
 	allocateRegisters(*RegisterAllocatorContext, int)
 }
 
+// Type annotation pseudo-expression
+type TypeExpr struct {
+	Type frontend.Type
+}
+
 type IntConstExpr struct {
 	Value int
 }
@@ -104,6 +109,10 @@ type CallExpr struct {
 	Label *LocationExpr
 	Args  []Expr
 }
+
+func (TypeExpr) expr()          {}
+func (e TypeExpr) Repr() string { return "TYPE" }
+func (TypeExpr) Weight() int    { return 0 }
 
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
@@ -301,7 +310,7 @@ type PopScopeInstr struct {
 
 type DeclareTypeInstr struct {
 	Dst  Expr
-	Type Expr
+	Type *TypeExpr
 }
 
 func (PushScopeInstr) instr() {}
@@ -316,7 +325,7 @@ func (e PopScopeInstr) Repr() string {
 
 func (DeclareTypeInstr) instr() {}
 func (e DeclareTypeInstr) Repr() string {
-	return fmt.Sprintf("TYPE OF %#v IS %T", e.Dst.Repr(), e.Type)
+	return fmt.Sprintf("TYPE OF %v IS %v", e.Dst.Repr(), e.Type.Type.Repr())
 }
 
 // Second stage instructions
