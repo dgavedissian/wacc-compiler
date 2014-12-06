@@ -53,6 +53,7 @@ func (ctx *GeneratorContext) pushCode(s string, a ...interface{}) {
 }
 
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
+
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushLabel(i.Label)
 }
@@ -80,6 +81,7 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	// load regs r0 and r1
 	ctx.pushCode("pop {r0,r1}")
 }
+
 func (i *FreeInstr) generateCode(*GeneratorContext) {}
 
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
@@ -102,6 +104,8 @@ func getPrintfTypeForExpr(ctx *GeneratorContext, expr Expr) string {
 		return "printf_fmt_str"
 	case *BoolConstExpr:
 		return "__BOOL__"
+	case *PointerConstExpr:
+		return "printf_fmt_addr"
 	case *RegisterExpr:
 		//TODO: log.Println("REG", obj.Repr())
 		return getPrintfTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
@@ -155,6 +159,9 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	} else if printfType == "printf_fmt_char" {
 		ctx.pushCode("bl _wacc_print_char")
 		return
+	} else if printfType == "printf_fmt_addr" {
+		ctx.pushCode("bl _wacc_print_addr")
+		return
 	} else {
 		ctx.pushCode("ldr r0, =%s", printfType)
 		ctx.pushCode("bl printf")
@@ -180,6 +187,16 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 	_, ok2 = i.Dst.(*StackLocationExpr)
 	if ok1 && ok2 {
 		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*4)
+		return
+	}
+
+	switch dst := i.Dst.(type) {
+	case *MemExpr:
+		if dst.Offset == 0 {
+			ctx.pushCode("str %v, [%v]", i.Src.Repr(), dst.Address.Repr())
+		} else {
+			ctx.pushCode("str %v, [%v, #%v]", i.Src.Repr(), dst.Address.Repr(), dst.Offset)
+		}
 		return
 	}
 
@@ -307,10 +324,12 @@ func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {
 		ctx.registerContents[0][k] = v
 	}
 }
+
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("pop {r4-r11}")
 	ctx.registerContents = ctx.registerContents[1:]
 }
+
 func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
 	dst := i.Dst.Repr()
 	ctx.registerContents[0][dst] = i.Type
@@ -318,6 +337,12 @@ func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl %v", i.Label.Label)
+}
+
+func (i *HeapAllocInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("ldr r0, =%v", i.Size)
+	ctx.pushCode("bl malloc")
+	ctx.pushCode("mov %v, r0", i.Dst.Repr())
 }
 
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {

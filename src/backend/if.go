@@ -47,7 +47,8 @@ type VarExpr struct {
 }
 
 type MemExpr struct {
-	Address Expr
+	Address *RegisterExpr
+	Offset  int
 }
 
 type RegisterExpr struct {
@@ -123,6 +124,10 @@ func (LocationExpr) Weight() int    { return 1 }
 func (VarExpr) expr()          {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
 func (VarExpr) Weight() int    { return 1 }
+
+func (MemExpr) expr()          {}
+func (e MemExpr) Repr() string { return fmt.Sprintf("MEM %v +%v", e.Address.Repr(), e.Offset) }
+func (MemExpr) Weight() int    { return 1 }
 
 func (RegisterExpr) expr()          {}
 func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
@@ -330,6 +335,11 @@ type CallInstr struct {
 	Label *LocationExpr
 }
 
+type HeapAllocInstr struct {
+	Dst  *RegisterExpr
+	Size int
+}
+
 func (NoOpInstr) instr()       {}
 func (NoOpInstr) Repr() string { return "NOOP" }
 
@@ -421,6 +431,11 @@ func (i *OrInstr) Repr() string {
 func (*CallInstr) instr() {}
 func (i *CallInstr) Repr() string {
 	return fmt.Sprintf("CALL %v", i.Label.Label)
+}
+
+func (*HeapAllocInstr) instr() {}
+func (i *HeapAllocInstr) Repr() string {
+	return fmt.Sprintf("ALLOC %v SIZE %v", i.Dst.Repr(), i.Size)
 }
 
 type IFContext struct {

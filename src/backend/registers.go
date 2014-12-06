@@ -151,6 +151,12 @@ func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		Dst: &RegisterExpr{r},
 		Src: ctx.lookupVariable(e)})
 }
+func (e *MemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	/*e.Expr.allocateRegisters(ctx, r)
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: e})*/
+}
 func (e *RegisterExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
@@ -226,9 +232,15 @@ func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Operand.allocateRegisters(ctx, r)
 	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &CharConstExpr{}})
 }
-func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
-func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)     {}
-func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, 8})
+	e.Left.allocateRegisters(ctx, r+1)
+	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, 0}, &RegisterExpr{r + 1}})
+	e.Right.allocateRegisters(ctx, r+1)
+	ctx.pushInstr(&MoveInstr{&MemExpr{&RegisterExpr{r}, 4}, &RegisterExpr{r + 1}})
+}
 
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	// save registers
@@ -335,13 +347,14 @@ func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 }
 
 // Second stage IF instructions should never do anything
-func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (*SubInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (*MulInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (*DivInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (*AndInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-func (*OrInstr) allocateRegisters(ctx *RegisterAllocatorContext)   {}
-func (*CallInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
+func (*SubInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
+func (*MulInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
+func (*DivInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
+func (*AndInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
+func (*OrInstr) allocateRegisters(ctx *RegisterAllocatorContext)        {}
+func (*CallInstr) allocateRegisters(ctx *RegisterAllocatorContext)      {}
+func (*HeapAllocInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
 	ctx.currentNode = n
