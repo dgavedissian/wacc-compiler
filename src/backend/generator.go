@@ -426,7 +426,7 @@ printf_fmt_str:
 printf_fmt_wstr:
 	.ascii "%\000\000\000.\000\000\000*\000\000\000l\000\000\000s\000\000\000\000\000\000\000"
 printf_fmt_addr:
-	.ascii "%\000\000\000p\000\000\000\000\000\000"
+	.ascii "%\000\000\000p\000\000\000\000\000\000\000"
 printf_true:
 	.asciz "true"
 printf_false:
