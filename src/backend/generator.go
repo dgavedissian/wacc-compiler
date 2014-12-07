@@ -40,9 +40,15 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add r1, sp, #0")
 
 	// Get scanf format string depending on type
-	fmtString := getFormatStringFromType(getTypeForExpr(ctx, i.Dst))
+	t := getTypeForExpr(ctx, i.Dst).Type
+	var fmtString string
+	if t.Equals(frontend.BasicType{frontend.INT}) {
+		fmtString = "scanf_fmt_int"
+	} else if t.Equals(frontend.BasicType{frontend.CHAR}) {
+		fmtString = "scanf_fmt_char"
+	}
 	ctx.pushCode("ldr r0, =%s", fmtString)
-	ctx.pushCode("bl scanf")
+	ctx.pushCode("bl wscanf")
 
 	// Move output to destination
 	ctx.pushCode("ldr %s, [sp]", i.Dst.Repr())
@@ -419,8 +425,12 @@ func GenerateCode(ifCtx *IFContext) string {
 	ctx.data += `
 printf_fmt_int:
 	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
+scanf_fmt_int:
+	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
 printf_fmt_char:
 	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
+scanf_fmt_char:
+	.ascii " \000\000\000%\000\000\000c\000\000\000\000\000\000\000"
 printf_fmt_str:
 	.ascii "%\000\000\000s\000\000\000\000\000\000\000"
 printf_fmt_wstr:
