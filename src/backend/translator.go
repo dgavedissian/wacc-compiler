@@ -104,6 +104,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 				Fold binaries in an optimisation step.
 			*/
 			return &NotExpr{ctx.translateExpr(expr.Operand)}
+
 		case Ord:
 			/* Fold chars in an optimisation step
 			if x, ok := expr.Operand.(*BasicLit); ok {
@@ -113,9 +114,11 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 				}
 			}*/
 			return &OrdExpr{ctx.translateExpr(expr.Operand)}
+
 		case Chr:
 			/* Fold ints in an optimisation step */
 			return &ChrExpr{ctx.translateExpr(expr.Operand)}
+
 		case Neg:
 			/* Fold negating ints */
 			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
@@ -125,9 +128,11 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 				}
 			}
 			return &NegExpr{ctx.translateExpr(expr.Operand)}
+
 		case Len:
 			/* Constant fold on strings and array literals */
 			return &LenExpr{ctx.translateExpr(expr.Operand)}
+
 		default:
 			panic(fmt.Sprintf("Unhandled unary operator %v", expr.Operator))
 		}
