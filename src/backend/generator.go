@@ -51,7 +51,10 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("pop {r0,r1}")
 }
 
-func (i *FreeInstr) generateCode(*GeneratorContext) {}
+func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r0, %v", i.Object.(*RegisterExpr).Repr())
+	ctx.pushCode("bl free")
+}
 
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
