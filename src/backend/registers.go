@@ -287,14 +287,6 @@ func (ctx *RegisterAllocatorContext) getTypeForExpr(expr Expr) *TypeExpr {
 
 	case *RegisterExpr:
 		log.Println("REG", obj.Repr())
-		if _, ok := ctx.registerContents[0][obj.Repr()]; !ok {
-			log.Printf("Object %v doesn't exist\n", obj.Repr())
-			return &TypeExpr{frontend.ArrayType{frontend.BasicType{frontend.INT}}}
-		}
-		if obj.Repr() == ctx.registerContents[0][obj.Repr()].Repr() {
-			log.Println("LOOP")
-			return &TypeExpr{frontend.ArrayType{frontend.BasicType{frontend.INT}}}
-		}
 		return ctx.getTypeForExpr(ctx.registerContents[0][obj.Repr()])
 
 	default:
@@ -312,7 +304,10 @@ func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) 
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
 		Src: ctx.translateLValue(e, r)})
-	arrayType := ctx.getTypeForExpr(&RegisterExpr{r + 1}).Type.(frontend.ArrayType)
+	arrayType, ok := ctx.getTypeForExpr(&RegisterExpr{r + 1}).Type.(frontend.ArrayType)
+	if !ok {
+		arrayType = frontend.ArrayType{frontend.BasicType{frontend.CHAR}}
+	}
 	ctx.setType(r, &TypeExpr{arrayType.BaseType})
 }
 
