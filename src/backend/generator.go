@@ -364,7 +364,6 @@ func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 				wideString += fmt.Sprintf("\\%03o", b)
 			}
 		}
-		wideString += "\\000\\000\\000\\000"
 		ctx.data += fmt.Sprintf("%s:\n\t.word %v\n\t.ascii \"%s\"\n", k, len(v.Value), wideString)
 	}
 }
@@ -412,14 +411,13 @@ func GenerateCode(ifCtx *IFContext) string {
 	// Printf format strings
 	ctx.data += `
 printf_fmt_int:
-	.asciz "%d"
+	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
 printf_fmt_char:
-	.asciz "%c"
+	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
 printf_fmt_str:
 	.ascii "%\000\000\000.\000\000\000*\000\000\000l\000\000\000s\000\000\000\000\000\000\000"
-	.align 2
 printf_fmt_addr:
-	.asciz "%p"
+	.ascii "%\000\000\000p\000\000\000\000\000\000"
 printf_true:
 	.asciz "true"
 printf_false:
@@ -490,14 +488,14 @@ _wacc_print_bool_done:
 _wacc_print_int:
 	push {lr}
 	ldr r0, =printf_fmt_int
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
 _wacc_print_char:
 	push {lr}
 	ldr r0, =printf_fmt_char
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
@@ -513,7 +511,7 @@ _wacc_print_str:
 _wacc_print_addr:
 	push {lr}
 	ldr r0, =printf_fmt_addr
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}

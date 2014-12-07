@@ -454,7 +454,7 @@ func (i NegInstr) Repr() string {
 
 func (CmpInstr) instr() {}
 func (i CmpInstr) Repr() string {
-	return fmt.Sprintf("CMP (%s) (%s)", i.Left.Repr(), i.Right.Repr())
+	return fmt.Sprintf("CMP %v (%v) (%v) (%v)", i.Operator, i.Dst.Repr(), i.Left.Repr(), i.Right.Repr())
 }
 
 func (JmpInstr) instr() {}
