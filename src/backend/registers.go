@@ -333,7 +333,11 @@ func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
-func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	e.Operand.allocateRegisters(ctx, r)
+	dst := &RegisterExpr{r}
+	ctx.pushInstr(&NegInstr{dst})
+}
 
 func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
@@ -436,6 +440,13 @@ func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Src.allocateRegisters(ctx, r.Id)
 	i.Src = r
 	i.Dst = ctx.translateLValue(i.Dst)
+	ctx.freeRegister(r)
+}
+
+func (i *NegInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	r := ctx.allocateRegister()
+	i.Expr.allocateRegisters(ctx, r.Id)
+	i.Expr = r
 	ctx.freeRegister(r)
 }
 
