@@ -16,7 +16,8 @@ func main() {
 	enableDebug := flag.Bool("d", false, "Enable debug mode")
 	enableVerbose := flag.Bool("v", true, "Enable verbose logging")
 	stopAtAST := flag.Bool("ast", false, "Stop the compile process once the AST has been generated")
-	stopAtIF := flag.Bool("if", true, "Stop the compile process once the IF representation has been generated")
+	stopAtIF := flag.Bool("if", false, "Stop the compile process once the IF representation has been generated")
+	stopAtFlatten := flag.Bool("flatten", false, "Stop the compile process once the IF has been flattened")
 	outFile := flag.String("o", "out.s", "File to write asm to")
 	disableSemantic := flag.Bool("i-know-what-im-doing", false, "Disable semantic checking")
 	flag.Parse()
@@ -61,6 +62,10 @@ func main() {
 		fmt.Println()
 	}
 
+	if *stopAtIF {
+		return
+	}
+
 	// Optimise the intermediate form
 	backend.AllocateRegisters(iform)
 	backend.OptimiseIF(iform)
@@ -70,7 +75,7 @@ func main() {
 		fmt.Println()
 	}
 
-	if *stopAtIF {
+	if *stopAtFlatten {
 		return
 	}
 

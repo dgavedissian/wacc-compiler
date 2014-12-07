@@ -6,7 +6,7 @@ COMPILE=$(readlink -f ./compile)
 BASENAME=${FILENAME##*/}
 pushd /tmp >/dev/null 2>&1
 cat $FULLFN
-$COMPILE -if=false $FULLFN &&
+$COMPILE $FULLFN &&
 arm-linux-gnueabi-gcc -o $BASENAME -mcpu=arm1176jzf-s -mtune=arm1176jzf-s $BASENAME.s &&
 qemu-arm -L /usr/arm-linux-gnueabi $BASENAME
 EXIT=$?
