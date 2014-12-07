@@ -539,11 +539,16 @@ func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Expr.allocateRegisters(ctx, r.Id)
 	i.Expr = r
-	if v, ok := i.Expr.(*VarExpr); ok {
-		i.Type = ctx.lookupType(v)
-	} else {
-		i.Type = ctx.getTypeForExpr(i.Expr).Type
+
+	// Fallback
+	if i.Type == nil {
+		if v, ok := i.Expr.(*VarExpr); ok {
+			i.Type = ctx.lookupType(v)
+		} else {
+			i.Type = ctx.getTypeForExpr(i.Expr).Type
+		}
 	}
+
 	ctx.freeRegister(r)
 }
 

@@ -170,7 +170,6 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 	case *UnaryExpr:
 		t := ctx.DeriveType(expr.Operand)
-
 		switch expr.Operator {
 		case "!":
 			expected := BasicType{BOOL}
@@ -178,7 +177,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
-			return BasicType{BOOL}
+			expr.Type = BasicType{BOOL}
+			return expr.Type
 
 		case "-":
 			expected := BasicType{INT}
@@ -186,7 +186,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
-			return BasicType{INT}
+			expr.Type = BasicType{INT}
+			return expr.Type
 
 		case "len":
 			expected := ArrayType{AnyType{}}
@@ -194,7 +195,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
-			return BasicType{INT}
+			expr.Type = BasicType{INT}
+			return expr.Type
 
 		case "ord":
 			expected := BasicType{CHAR}
@@ -202,7 +204,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
-			return BasicType{INT}
+			expr.Type = BasicType{INT}
+			return expr.Type
 
 		case "chr":
 			expected := BasicType{INT}
@@ -210,7 +213,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
-			return BasicType{CHAR}
+			expr.Type = BasicType{CHAR}
+			return expr.Type
 
 		default:
 			SemanticError(expr.Pos(), "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)
@@ -230,7 +234,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- invalid type on right of operator '%s' (expected: INT, actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
-			return BasicType{INT}
+			expr.Type = BasicType{INT}
+			return expr.Type
 
 		case ">", ">=", "<", "<=":
 			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
@@ -245,14 +250,16 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
 				return ErrorType{}
 			}
-			return BasicType{BOOL}
+			expr.Type = BasicType{BOOL}
+			return expr.Type
 
 		case "==", "!=":
 			if !t1.Equals(t2) {
 				SemanticError(expr.Pos(), "semantic error -- types of the operands of the binary operator '%s' do not match (%s != %s)", expr.Operator, t1.Repr(), t2.Repr())
 				return ErrorType{}
 			}
-			return BasicType{BOOL}
+			expr.Type = BasicType{BOOL}
+			return expr.Type
 
 		case "&&", "||":
 			if !t1.Equals(BasicType{BOOL}) {
@@ -263,7 +270,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 				SemanticError(expr.Pos(), "semantic error -- invalid type on right of operator '%s' (expected: BOOL, actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
-			return BasicType{BOOL}
+			expr.Type = BasicType{BOOL}
+			return expr.Type
 
 		default:
 			SemanticError(expr.Pos(), "IMPLEMENT_ME - operator '%s' unhandled", expr.Operator)

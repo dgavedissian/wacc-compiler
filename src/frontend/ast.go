@@ -191,6 +191,7 @@ type UnaryExpr struct {
 	OperatorPos *Position
 	Operator    string
 	Operand     Expr
+	Type        Type
 }
 
 type BinaryExpr struct {
@@ -198,6 +199,7 @@ type BinaryExpr struct {
 	OperatorPos *Position
 	Operator    string
 	Right       Expr
+	Type        Type
 }
 
 //
@@ -585,10 +587,11 @@ func (UnaryExpr) exprNode()        {}
 func (x UnaryExpr) Pos() *Position { return x.OperatorPos }
 func (x UnaryExpr) End() *Position { return x.Operand.End() }
 func (x UnaryExpr) Repr() string {
-	if x.Operand == nil {
-		return "Unary(" + x.Operator + ", <missing operand>)"
+	var t string
+	if x.Type != nil {
+		t = x.Type.Repr()
 	}
-	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
+	return fmt.Sprintf("Unary(%v, %v, %v)", x.Operator, x.Operand.Repr(), t)
 }
 
 // Binary Expression
@@ -596,11 +599,11 @@ func (BinaryExpr) exprNode()        {}
 func (x BinaryExpr) Pos() *Position { return x.Left.Pos() }
 func (x BinaryExpr) End() *Position { return x.Right.End() }
 func (x BinaryExpr) Repr() string {
-	if x.Left == nil || x.Right == nil {
-		return "Binary(" + x.Operator + ", , )"
+	var t string
+	if x.Type != nil {
+		t = x.Type.Repr()
 	}
-	return "Binary(" + x.Operator + ", " +
-		x.Left.Repr() + ", " + x.Right.Repr() + ")"
+	return fmt.Sprintf("Binary(%v, %v, %v, %v)", x.Operator, x.Left.Repr(), x.Right.Repr(), t)
 }
 
 //

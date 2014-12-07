@@ -40,6 +40,15 @@ func (ctx *IFContext) addInstr(i Instr) *InstrNode {
 	return newNode
 }
 
+func (ctx *IFContext) getType(expr Expr) frontend.Type {
+	switch expr := expr.(type) {
+	case *BinOpExpr:
+		return expr.Type
+	default:
+		return nil
+	}
+}
+
 func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 	switch expr := expr.(type) {
 	case *frontend.BasicLit:
@@ -86,7 +95,8 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 		return &BinOpExpr{
 			Operator: expr.Operator,
 			Left:     ctx.translateExpr(expr.Left),
-			Right:    ctx.translateExpr(expr.Right)}
+			Right:    ctx.translateExpr(expr.Right),
+			Type:     expr.Type}
 
 	case *frontend.ArrayLit:
 		a := &ArrayConstExpr{Type: expr.Type}
@@ -219,7 +229,10 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.addInstr(&ExitInstr{ctx.translateExpr(node.Result)})
 
 	case *frontend.PrintStmt:
-		ctx.addInstr(&PrintInstr{Expr: ctx.translateExpr(node.Right)})
+		right := ctx.translateExpr(node.Right)
+		ctx.addInstr(&PrintInstr{
+			Expr: right,
+			Type: ctx.getType(right)})
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{
 				Expr: &CharConstExpr{'\n', 1},

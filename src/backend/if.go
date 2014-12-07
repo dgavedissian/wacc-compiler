@@ -82,6 +82,7 @@ type BinOpExpr struct {
 	Operator string
 	Left     Expr
 	Right    Expr
+	Type     frontend.Type
 }
 
 type NotExpr struct {
@@ -192,7 +193,7 @@ func (PairElemExpr) Weight() int { return 1 }
 
 func (BinOpExpr) expr() {}
 func (e BinOpExpr) Repr() string {
-	return fmt.Sprintf("BINOP %v (%v) (%v)", e.Operator, e.Left.Repr(), e.Right.Repr())
+	return fmt.Sprintf("BINOP %v %v (%v) (%v)", e.Type.Repr(), e.Operator, e.Left.Repr(), e.Right.Repr())
 }
 func (e BinOpExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
 

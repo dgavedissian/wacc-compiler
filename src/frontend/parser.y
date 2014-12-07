@@ -197,12 +197,12 @@ primary_expression
 
 unary_expression
     : primary_expression   { $$.Expr = $1.Expr }
-    | '!' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "!", $2.Expr} }
-    | '+' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "+", $2.Expr} }
-    | '-' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "-", $2.Expr} }
-    | LEN unary_expression { $$.Expr = &UnaryExpr{$1.Position, "len", $2.Expr} }
-    | ORD unary_expression { $$.Expr = &UnaryExpr{$1.Position, "ord", $2.Expr} }
-    | CHR unary_expression { $$.Expr = &UnaryExpr{$1.Position, "chr", $2.Expr} }
+    | '!' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "!", $2.Expr, nil} }
+    | '+' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "+", $2.Expr, nil} }
+    | '-' unary_expression { $$.Expr = &UnaryExpr{$1.Position, "-", $2.Expr, nil} }
+    | LEN unary_expression { $$.Expr = &UnaryExpr{$1.Position, "len", $2.Expr, nil} }
+    | ORD unary_expression { $$.Expr = &UnaryExpr{$1.Position, "ord", $2.Expr, nil} }
+    | CHR unary_expression { $$.Expr = &UnaryExpr{$1.Position, "chr", $2.Expr, nil} }
     ;
 
 multiplicative_expression
@@ -210,39 +210,39 @@ multiplicative_expression
         VerifyNoOverflows($1.Expr)
         $$.Expr = $1.Expr
     }
-    | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "*", $3.Expr} }
-    | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "/", $3.Expr} }
-    | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "%", $3.Expr} }
+    | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "*", $3.Expr, nil} }
+    | multiplicative_expression '/' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "/", $3.Expr, nil} }
+    | multiplicative_expression '%' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "%", $3.Expr, nil} }
     ;
 
 additive_expression
     : multiplicative_expression { $$.Expr = $1.Expr }
-    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "+", $3.Expr} }
-    | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "-", $3.Expr} }
+    | additive_expression '+' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "+", $3.Expr, nil} }
+    | additive_expression '-' multiplicative_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "-", $3.Expr, nil} }
     ;
 
 relational_expression
     : additive_expression { $$.Expr = $1.Expr }
-    | relational_expression '<' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<", $3.Expr} }
-    | relational_expression '>' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">", $3.Expr} }
-    | relational_expression LE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<=", $3.Expr} }
-    | relational_expression GE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">=", $3.Expr} }
+    | relational_expression '<' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<", $3.Expr, nil} }
+    | relational_expression '>' additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">", $3.Expr, nil} }
+    | relational_expression LE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "<=", $3.Expr, nil} }
+    | relational_expression GE additive_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, ">=", $3.Expr, nil} }
     ;
 
 equality_expression
     : relational_expression { $$.Expr = $1.Expr }
-    | equality_expression EQ relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "==", $3.Expr} }
-    | equality_expression NE relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "!=", $3.Expr} }
+    | equality_expression EQ relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "==", $3.Expr, nil} }
+    | equality_expression NE relational_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "!=", $3.Expr, nil} }
     ;
 
 logical_and_expression
     : equality_expression { $$.Expr = $1.Expr }
-    | logical_and_expression AND equality_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "&&", $3.Expr} }
+    | logical_and_expression AND equality_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "&&", $3.Expr, nil} }
     ;
 
 logical_or_expression
     : logical_and_expression { $$.Expr = $1.Expr }
-    | logical_or_expression OR logical_and_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "||", $3.Expr} }
+    | logical_or_expression OR logical_and_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "||", $3.Expr, nil} }
     ;
 
 expression
