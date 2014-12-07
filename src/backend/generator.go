@@ -16,36 +16,6 @@ type GeneratorContext struct {
 	funcStack        []string
 }
 
-// Search for any string array literals and replace them with labels in the
-// data section
-func (ctx *GeneratorContext) handleString(expr Expr) Expr {
-	// Is the expr an array
-	if expr, ok := expr.(*ArrayConstExpr); ok {
-		// Is the source an array of ascii chars?
-		if elem, ok := expr.Elems[0].(*CharConstExpr); ok {
-			if elem.Size == 1 {
-				// Build a string from the char array
-				str := ""
-				for _, e := range expr.Elems {
-					str += string(e.(*CharConstExpr).Value)
-				}
-
-				// Generate a label
-				label := fmt.Sprintf("stringlit%v", ctx.stringCounter)
-				ctx.stringCounter += 1
-
-				// Record the string in the data section
-				ctx.data += fmt.Sprintf("%v:\n", label)
-				ctx.data += fmt.Sprintf("\t.asciz \"%v\"\n", str)
-
-				// Replace src with a label
-				return &LocationExpr{label}
-			}
-		}
-	}
-	return expr
-}
-
 func (ctx *GeneratorContext) pushLabel(label string) {
 	ctx.text += fmt.Sprintf("%v:\n", label)
 }
@@ -104,11 +74,7 @@ func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
 		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
 
 	case *ArrayConstExpr:
-		if len(obj.Elems) > 0 {
-			return &TypeExpr{frontend.ArrayType{getTypeForExpr(ctx, obj.Elems[0]).Type}}
-		} else {
-			return &TypeExpr{frontend.ArrayType{frontend.AnyType{}}}
-		}
+		return &TypeExpr{obj.Type}
 
 	case *BoolConstExpr:
 		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
@@ -117,7 +83,7 @@ func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
 		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
 
 	case *RegisterExpr:
-		//TODO: log.Println("REG", obj.Repr())
+		log.Println("REG", obj.Repr())
 		return getTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
 
 	case *LocationExpr:

@@ -184,6 +184,7 @@ type ArrayLit struct {
 	ValuesPos *Position
 	Values    []Expr
 	EndPos    *Position
+	Type      Type
 }
 
 type UnaryExpr struct {

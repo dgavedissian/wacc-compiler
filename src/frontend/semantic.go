@@ -142,9 +142,14 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		return expr.Type
 
 	case *ArrayLit:
+		// Check if we've already calculated the type (strings).
+		if expr.Type != nil {
+			return expr.Type
+		}
 		// Check if the array has any elements
 		if len(expr.Values) == 0 {
-			return ArrayType{AnyType{}}
+			expr.Type = ArrayType{AnyType{}}
+			return expr.Type
 		}
 
 		// Check that all the types match
@@ -157,7 +162,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		}
 
 		// Just return the first elements type
-		return ArrayType{t}
+		expr.Type = ArrayType{t}
+		return expr.Type
 
 	case *UnaryExpr:
 		t := ctx.DeriveType(expr.Operand)

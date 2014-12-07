@@ -39,7 +39,7 @@ type PointerConstExpr struct {
 }
 
 type ArrayConstExpr struct {
-	Type  frontend.BasicType
+	Type  frontend.Type
 	Elems []Expr
 }
 

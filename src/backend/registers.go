@@ -169,13 +169,7 @@ func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r in
 }
 
 func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	useHeap := len(e.Elems) == 0
-	if !useHeap {
-		_, ok := e.Elems[0].(*CharConstExpr)
-		useHeap = !ok
-	}
-
-	if useHeap {
+	if !e.Type.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
 		// Allocate space on the heap
 		length := len(e.Elems)
 		ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})

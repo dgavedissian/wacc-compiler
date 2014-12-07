@@ -85,7 +85,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			Right:    ctx.translateExpr(expr.Right)}
 
 	case *frontend.ArrayLit:
-		a := &ArrayConstExpr{}
+		a := &ArrayConstExpr{Type: expr.Type}
 		a.Elems = make([]Expr, len(expr.Values))
 		for i, e := range expr.Values {
 			a.Elems[i] = ctx.translateExpr(e)

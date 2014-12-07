@@ -114,7 +114,7 @@ assign_rhs
         $$.Expr = &NewPairCmd{$1.Position, $3.Expr, $5.Expr, $6.Position}
       }
     | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position} }
-    | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position} }
+    | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position, nil} }
     | pair_elem
     ;
 
@@ -196,7 +196,7 @@ primary_expression
 		for i, s := range(chars) {
 			exprs[i] = &BasicLit{$1.Position.Add(i), BasicType{CHAR}, s}
 		}
-		$$.Expr = &ArrayLit{$1.Position, exprs, $1.Position.Add(len($1.Value))}
+		$$.Expr = &ArrayLit{$1.Position, exprs, $1.Position.Add(len($1.Value)), ArrayType{BasicType{CHAR}}}
 	}
     | PAIR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{PAIR}, $1.Value} }
     | '(' expression ')'  { $$.Expr = $2.Expr }
