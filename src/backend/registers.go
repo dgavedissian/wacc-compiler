@@ -226,6 +226,16 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Array.allocateRegisters(ctx, r+1)
 	e.Index.allocateRegisters(ctx, r+2)
+
+	// Runtime safety check
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{1},
+		Src: &RegisterExpr{r + 1}})
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{0},
+		Src: &RegisterExpr{r + 2}})
+	ctx.pushInstr(&CallInstr{Label: &LocationExpr{RuntimeCheckArrayBoundsLabel}})
+
 	ctx.pushInstr(&AddInstr{
 		Dst:      &RegisterExpr{r + 1},
 		Op1:      &RegisterExpr{r + 1},
