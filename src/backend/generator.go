@@ -107,7 +107,7 @@ func getFormatStringFromType(t *TypeExpr) string {
 	} else if internalType.Equals(frontend.BasicType{frontend.CHAR}) {
 		return "printf_fmt_char"
 	} else if internalType.Equals(frontend.BasicType{frontend.STRING}) {
-		return "printf_fmt_str"
+		return "printf_fmt_wstr"
 	} else {
 		return "printf_fmt_addr"
 	}
@@ -154,9 +154,9 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	} else if derivedType.Equals(frontend.BasicType{frontend.CHAR}) {
 		ctx.pushCode("bl _wacc_print_char")
 	} else if derivedType.Equals(frontend.BasicType{frontend.STRING}) {
-		ctx.pushCode("bl _wacc_print_str")
+		ctx.pushCode("bl _wacc_print_wstr")
 	} else if derivedType.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
-		ctx.pushCode("bl _wacc_print_str")
+		ctx.pushCode("bl _wacc_print_wstr")
 	} else {
 		ctx.pushCode("bl _wacc_print_addr")
 	}
@@ -415,7 +415,7 @@ printf_fmt_int:
 	.asciz "%d"
 printf_fmt_char:
 	.asciz "%c"
-printf_fmt_str:
+printf_fmt_wstr:
 	.ascii "%\000\000\000.\000\000\000*\000\000\000l\000\000\000s\000\000\000\000\000\000\000"
 	.align 2
 printf_fmt_addr:
@@ -425,13 +425,13 @@ printf_true:
 printf_false:
 	.asciz "false"
 _wacc_overflow_error_msg:
-	.asciz	"OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
+	.asciz "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
 _wacc_divide_by_zero_msg:
 	.asciz "DivideByZeroError: divide or modulo by zero\n"
 _wacc_array_index_negative_msg:
-	.asciz	"ArrayIndexOutOfBoundsError: negative index\n\0"
+	.asciz "ArrayIndexOutOfBoundsError: negative index\n"
 _wacc_array_index_large_msg:
-	.asciz "ArrayIndexOutOfBoundsError: index too large\n\0"
+	.asciz "ArrayIndexOutOfBoundsError: index too large\n"
 `
 	ctx.generateData(ifCtx)
 
@@ -454,24 +454,26 @@ _wacc_array_index_large_msg:
 ` + RuntimeCheckArrayBoundsLabel + `:
 	push {lr}
 	cmp r0, #0
-	ldrlt r1, =_wacc_array_index_negative_msg
+	ldrlt r0, =_wacc_array_index_negative_msg
 	bllt _wacc_throw_runtime_error
 	ldr r1, [r1]
 	cmp r0, r1
-	ldrge r1, =_wacc_array_index_large_msg
+	ldrge r0, =_wacc_array_index_large_msg
 	blge _wacc_throw_runtime_error
 	pop {pc}
 ` + RuntimeCheckDivZeroLabel + `:
 	push {lr}
 	cmp r1, #0
-	ldreq r1, =_wacc_divide_by_zero_msg
+	ldreq r0, =_wacc_divide_by_zero_msg
 	bleq _wacc_throw_runtime_error
 	pop {pc}
 ` + RuntimeOverflowLabel + `:
-	ldr r1, =_wacc_overflow_error_msg
+	ldr r0, =_wacc_overflow_error_msg
 	bl _wacc_throw_runtime_error
 _wacc_throw_runtime_error:
-	bl _wacc_print_str
+	bl printf
+	mov r0, #0
+	bl fflush
 	mov r0, #-1
 	bl exit
 _wacc_print_bool:
@@ -501,11 +503,11 @@ _wacc_print_char:
 	mov r0, #0
 	bl fflush
 	pop {pc}
-_wacc_print_str:
+_wacc_print_wstr:
 	push {lr}
 	add r2, r1, #4
 	ldr r1, [r1]
-	ldr r0, =printf_fmt_str
+	ldr r0, =printf_fmt_wstr
 	bl wprintf
 	mov r0, #0
 	bl fflush
