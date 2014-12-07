@@ -2,11 +2,30 @@ package backend
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"unicode/utf8"
 
 	"../frontend"
 )
+
+type IFContext struct {
+	// Variable scoping
+	scope []map[string]frontend.Type
+	depth int
+
+	// Labels
+	labels map[string]Instr
+
+	// Functions
+	main      *InstrNode
+	functions map[string]*InstrNode
+	current   *InstrNode
+
+	// Data Store
+	dataStore      map[string]*StringConstExpr
+	currentCounter int
+}
 
 func TranslateToIF(program *frontend.ProgStmt) *IFContext {
 	ctx := new(IFContext)
@@ -40,10 +59,37 @@ func (ctx *IFContext) addInstr(i Instr) *InstrNode {
 	return newNode
 }
 
+func (ctx *IFContext) addType(v string, t frontend.Type) {
+	log.Printf("New type for %v in scope %d: %v", v, ctx.depth-1, t.Repr())
+	ctx.scope[ctx.depth-1][v] = t
+}
+
+func (ctx *IFContext) pushScope() {
+	ctx.scope = append(ctx.scope, make(map[string]frontend.Type))
+	ctx.depth++
+	ctx.addInstr(&PushScopeInstr{})
+}
+
+func (ctx *IFContext) popScope() {
+	ctx.addInstr(&PopScopeInstr{})
+	ctx.scope = ctx.scope[:ctx.depth-1]
+	ctx.depth--
+}
+
 func (ctx *IFContext) getType(expr Expr) frontend.Type {
 	switch expr := expr.(type) {
 	case *BinOpExpr:
 		return expr.Type
+	case *VarExpr:
+		// Search scopes for type
+		for i := ctx.depth - 1; i >= 0; i-- {
+			if t, ok := ctx.scope[i][expr.Name]; ok {
+				return t
+			}
+		}
+
+		// Cant find the variable, this should never happen
+		panic(fmt.Sprintf("Cannot find variable %s", expr.Name))
 	default:
 		return nil
 	}
@@ -177,6 +223,8 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		for _, f := range node.Funcs {
 			ctx.beginFunction(f.Ident.Name)
 
+			ctx.pushScope()
+
 			if len(f.Params) > 4 {
 				panic("More than 4 parameters unimplemented!")
 			}
@@ -191,19 +239,23 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 			for _, n := range f.Body {
 				ctx.translate(n)
 			}
+			ctx.popScope()
 		}
 
 		// Main
 		ctx.beginMain()
+		ctx.pushScope()
 		for _, n := range node.Body {
 			ctx.translate(n)
 		}
+		ctx.popScope()
 
 	case *frontend.SkipStmt:
 		ctx.addInstr(&NoOpInstr{})
 
 	case *frontend.DeclStmt:
 		v := &VarExpr{node.Ident.Name}
+		ctx.addType(v.Name, node.Type)
 		ctx.addInstr(&DeclareInstr{v, node.Type})
 		ctx.addInstr(&MoveInstr{
 			Dst: v,
@@ -287,11 +339,11 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 	// Scope
 	case *frontend.ScopeStmt:
-		ctx.addInstr(&PushScopeInstr{})
+		ctx.pushScope()
 		for _, stmt := range node.Body {
 			ctx.translate(stmt)
 		}
-		ctx.addInstr(&PopScopeInstr{})
+		ctx.popScope()
 
 	default:
 		panic(fmt.Sprintf("Unhandled statement %T", node))

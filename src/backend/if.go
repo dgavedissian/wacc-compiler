@@ -534,16 +534,6 @@ func (i *HeapAllocInstr) Repr() string {
 	return fmt.Sprintf("ALLOC %v SIZE %v", i.Dst.Repr(), i.Size)
 }
 
-type IFContext struct {
-	labels         map[string]Instr
-	main           *InstrNode
-	functions      map[string]*InstrNode
-	current        *InstrNode
-	nextTemp       int
-	dataStore      map[string]*StringConstExpr
-	currentCounter int
-}
-
 /*
 		Toothless defends this code
 
