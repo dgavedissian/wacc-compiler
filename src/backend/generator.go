@@ -525,7 +525,7 @@ _wacc_print_addr:
 _wacc_print_nl:
 	push {lr}
 	mov r0, #'\n'
-	bl putchar
+	bl putwchar
 	pop {pc}
 `
 }
