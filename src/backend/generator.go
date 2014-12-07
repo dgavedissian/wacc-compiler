@@ -51,7 +51,10 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("pop {r0,r1}")
 }
 
-func (i *FreeInstr) generateCode(*GeneratorContext) {}
+func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r0, %v", i.Object.(*RegisterExpr).Repr())
+	ctx.pushCode("bl free")
+}
 
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
@@ -130,7 +133,11 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 
 	case *BoolConstExpr:
 		value := i.Expr.(*BoolConstExpr).Value
-		ctx.pushCode("ldr r1, =%v", value)
+		if value {
+			ctx.pushCode("ldr r1, =1")
+		} else {
+			ctx.pushCode("ldr r1, =0")
+		}
 
 	case *CharConstExpr:
 		value := int(i.Expr.(*CharConstExpr).Value)

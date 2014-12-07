@@ -469,7 +469,12 @@ func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
 }
 
-func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	r := ctx.allocateRegister()
+	i.Object.allocateRegisters(ctx, r.Id)
+	i.Object = r
+	ctx.freeRegister(r)
+}
 
 func (i *ReturnInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
