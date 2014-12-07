@@ -515,6 +515,7 @@ func (ctx *RegisterAllocatorContext) dataStorePrefix(e Expr) string {
 	switch e.(type) {
 	case *ArrayConstExpr:
 		return "arraylit"
+
 	default:
 		panic("Unknown item attempted to store data?!?")
 	}
@@ -540,6 +541,7 @@ func AllocateRegisters(ifCtx *IFContext) {
 		ctx.allocateRegistersForBranch(f)
 	}
 	ctx.allocateRegistersForBranch(ifCtx.main)
+	ctx.pushInstr(&MoveInstr{&RegisterExpr{0}, &IntConstExpr{0}})
 
 	ifCtx.dataStore = ctx.dataStore
 }
