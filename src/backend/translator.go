@@ -163,7 +163,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 			ctx.beginFunction(f.Ident.Name)
 
 			if len(f.Params) > 4 {
-				panic("Unimplemented!")
+				panic("More than 4 parameters unimplemented!")
 			}
 			for regNum, p := range f.Params {
 				ctx.addInstr(&MoveInstr{
