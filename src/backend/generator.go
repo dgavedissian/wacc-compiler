@@ -130,7 +130,11 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 
 	case *BoolConstExpr:
 		value := i.Expr.(*BoolConstExpr).Value
-		ctx.pushCode("ldr r1, =%v", value)
+		if value {
+			ctx.pushCode("ldr r1, =1")
+		} else {
+			ctx.pushCode("ldr r1, =0")
+		}
 
 	case *CharConstExpr:
 		value := int(i.Expr.(*CharConstExpr).Value)
