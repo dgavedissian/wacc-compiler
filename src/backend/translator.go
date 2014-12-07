@@ -117,13 +117,13 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			/* Fold ints in an optimisation step */
 			return &ChrExpr{ctx.translateExpr(expr.Operand)}
 		case Neg:
-			/* Fold negating ints in optimisation step
-			if x, ok := expr.Operand.(*BasicLit); ok {
+			/* Fold negating ints */
+			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
 				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
 					n, _ := strconv.Atoi(x.Value)
 					return &IntConstExpr{-n}
 				}
-			}*/
+			}
 			return &NegExpr{ctx.translateExpr(expr.Operand)}
 		case Len:
 			/* Constant fold on strings and array literals */
