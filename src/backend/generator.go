@@ -364,7 +364,6 @@ func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 				wideString += fmt.Sprintf("\\%03o", b)
 			}
 		}
-		wideString += "\\000\\000\\000\\000"
 		ctx.data += fmt.Sprintf("%s:\n\t.word %v\n\t.ascii \"%s\"\n", k, len(v.Value), wideString)
 	}
 }
@@ -412,14 +411,15 @@ func GenerateCode(ifCtx *IFContext) string {
 	// Printf format strings
 	ctx.data += `
 printf_fmt_int:
-	.asciz "%d"
+	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
 printf_fmt_char:
-	.asciz "%c"
+	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
+printf_fmt_str:
+	.ascii "%\000\000\000s\000\000\000\000\000\000\000"
 printf_fmt_wstr:
 	.ascii "%\000\000\000.\000\000\000*\000\000\000l\000\000\000s\000\000\000\000\000\000\000"
-	.align 2
 printf_fmt_addr:
-	.asciz "%p"
+	.ascii "%\000\000\000p\000\000\000\000\000\000"
 printf_true:
 	.asciz "true"
 printf_false:
@@ -454,52 +454,55 @@ _wacc_array_index_large_msg:
 ` + RuntimeCheckArrayBoundsLabel + `:
 	push {lr}
 	cmp r0, #0
-	ldrlt r0, =_wacc_array_index_negative_msg
+	ldrlt r1, =_wacc_array_index_negative_msg
 	bllt _wacc_throw_runtime_error
 	ldr r1, [r1]
 	cmp r0, r1
-	ldrge r0, =_wacc_array_index_large_msg
+	ldrge r1, =_wacc_array_index_large_msg
 	blge _wacc_throw_runtime_error
 	pop {pc}
 ` + RuntimeCheckDivZeroLabel + `:
 	push {lr}
 	cmp r1, #0
-	ldreq r0, =_wacc_divide_by_zero_msg
+	ldreq r1, =_wacc_divide_by_zero_msg
 	bleq _wacc_throw_runtime_error
 	pop {pc}
 ` + RuntimeOverflowLabel + `:
-	ldr r0, =_wacc_overflow_error_msg
+	ldr r1, =_wacc_overflow_error_msg
 	bl _wacc_throw_runtime_error
 _wacc_throw_runtime_error:
-	bl printf
-	mov r0, #0
-	bl fflush
+	bl _wacc_print_str
 	mov r0, #-1
 	bl exit
 _wacc_print_bool:
 	push {lr}
 	cmp r1, #0
 	beq _wacc_print_bool_false
-	ldr r0, =printf_true
+	ldr r1, =printf_true
 	b _wacc_print_bool_done
 _wacc_print_bool_false:
-	ldr r0, =printf_false
+	ldr r1, =printf_false
 _wacc_print_bool_done:
-	bl printf
-	mov r0, #0
-	bl fflush
+	bl _wacc_print_str
 	pop {pc}
 _wacc_print_int:
 	push {lr}
 	ldr r0, =printf_fmt_int
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
 _wacc_print_char:
 	push {lr}
 	ldr r0, =printf_fmt_char
-	bl printf
+	bl wprintf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_str:
+	push {lr}
+	ldr r0, =printf_fmt_str
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
@@ -515,7 +518,7 @@ _wacc_print_wstr:
 _wacc_print_addr:
 	push {lr}
 	ldr r0, =printf_fmt_addr
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
