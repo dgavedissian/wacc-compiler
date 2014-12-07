@@ -11,7 +11,7 @@ type VariableScope struct {
 	variableMap        map[string]*RegisterExpr
 	stashedVariableMap map[string]int
 	next               int
-	registerUseMap     map[int]bool
+	registerUseList    [12]bool
 }
 
 type RegisterAllocatorContext struct {
@@ -24,22 +24,26 @@ type RegisterAllocatorContext struct {
 }
 
 func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool) {
-	var r *RegisterExpr
-	for reg, inUse := range ctx.scope[0].registerUseMap {
+	var reg *RegisterExpr
+	for k, inUse := range ctx.scope[0].registerUseList {
+		if k < 4 {
+			continue
+		}
 		if !inUse {
-			r = &RegisterExpr{reg}
+			reg = &RegisterExpr{k}
 			break
 		}
 	}
 
-	if r == nil {
+	if reg == nil {
 		if !ctx.stashLiveVariables() {
 			return nil, false
 		}
 		return ctx.allocateRegister(), true
 	}
-	ctx.scope[0].registerUseMap[r.Id] = true
-	return r, true
+	ctx.scope[0].registerUseList[reg.Id] = true
+	log.Printf("%#v", ctx.scope[0].registerUseList)
+	return reg, true
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
@@ -51,10 +55,10 @@ func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 }
 
 func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
-	if !ctx.scope[0].registerUseMap[r.Id] {
+	if !ctx.scope[0].registerUseList[r.Id] {
 		panic("Freeing register not in use?!?")
 	}
-	ctx.scope[0].registerUseMap[r.Id] = false
+	ctx.scope[0].registerUseList[r.Id] = false
 }
 
 func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*RegisterExpr, bool) {
@@ -576,20 +580,11 @@ func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
 	return label
 }
 
-func makeStartRegisterMap() map[int]bool {
-	x := make(map[int]bool)
-	for n := 4; n <= 12; n++ {
-		x[n] = false
-	}
-	return x
-}
-
 func AllocateRegisters(ifCtx *IFContext) {
 	ctx := new(RegisterAllocatorContext)
 	ctx.scope = make([]VariableScope, 1)
 	ctx.scope[0] = VariableScope{
 		variableMap:        make(map[string]*RegisterExpr),
-		registerUseMap:     makeStartRegisterMap(),
 		stashedVariableMap: make(map[string]int)}
 	ctx.dataStore = make(map[string]*StringConstExpr)
 	ctx.dataStoreIndex = 0
