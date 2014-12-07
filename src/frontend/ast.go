@@ -278,6 +278,11 @@ func (bt BasicType) Equals(t2 Type) bool {
 	} else if bt2, ok := t2.(BasicType); ok {
 		return bt2.TypeId == bt.TypeId
 	}
+	if bt.Equals(BasicType{STRING}) {
+		if array, ok := t2.(ArrayType); ok {
+			return array.BaseType.Equals(BasicType{CHAR})
+		}
+	}
 	return false
 }
 func (bt BasicType) Repr() string {
@@ -301,6 +306,11 @@ func (bt BasicType) Repr() string {
 func (at ArrayType) Equals(t2 Type) bool {
 	if at2, ok := t2.(ArrayType); ok {
 		return at2.BaseType.Equals(at.BaseType)
+	}
+	if at.BaseType.Equals(BasicType{CHAR}) {
+		if bt2, ok := t2.(BasicType); ok {
+			return bt2.TypeId == STRING
+		}
 	}
 	return false
 }

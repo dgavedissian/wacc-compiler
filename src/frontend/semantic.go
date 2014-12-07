@@ -115,6 +115,9 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 	case *ArrayElemExpr:
 		t := ctx.DeriveType(expr.Volume) // given a[i] - find a
+		if t.Equals(BasicType{STRING}) {
+			return BasicType{CHAR}
+		}
 		if array, ok := t.(ArrayType); ok {
 			return array.BaseType
 		} else {
