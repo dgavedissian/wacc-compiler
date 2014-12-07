@@ -235,6 +235,7 @@ func (i *NegInstr) generateCode(ctx *GeneratorContext) {
 	arg := i.Expr.(*RegisterExpr).Repr()
 
 	ctx.pushCode("rsbs %v, %v, #0", arg, arg)
+	ctx.pushCode("blvs " + RuntimeOverflowLabel)
 }
 
 func (i *CmpInstr) generateCode(ctx *GeneratorContext) {
@@ -282,7 +283,7 @@ func (i *AddInstr) generateCode(ctx *GeneratorContext) {
 	} else {
 		ctx.pushCode("adds %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
 	}
-	ctx.pushCode("blvs _wacc_throw_overflow_error")
+	ctx.pushCode("blvs " + RuntimeOverflowLabel)
 }
 
 func (i *SubInstr) generateCode(ctx *GeneratorContext) {
@@ -297,19 +298,19 @@ func (i *SubInstr) generateCode(ctx *GeneratorContext) {
 	} else {
 		ctx.pushCode("subs %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
 	}
-	ctx.pushCode("blvs _wacc_throw_overflow_error")
+	ctx.pushCode("blvs " + RuntimeOverflowLabel)
 }
 
 func (i *MulInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op1.Repr())
-	ctx.pushCode("CMP %v, %v, ASR #31", i.Op1.Repr(), i.Dst.Repr())
-	ctx.pushCode("BLNE _wacc_throw_overflow_error")
+	ctx.pushCode("cmp %v, %v, ASR #31", i.Op1.Repr(), i.Dst.Repr())
+	ctx.pushCode("blne " + RuntimeOverflowLabel)
 }
 
 func (i *DivInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Op1.Repr())
 	ctx.pushCode("mov r1, %v", i.Op2.Repr())
-	ctx.pushCode("bl _wacc_check_divide_by_zero")
+	ctx.pushCode("bl " + RuntimeCheckDivZeroLabel)
 	ctx.pushCode("bl __aeabi_idiv")
 	ctx.pushCode("mov %v, r0", i.Dst.Repr())
 }
@@ -424,6 +425,10 @@ _wacc_overflow_error_msg:
 	.asciz	"OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
 _wacc_divide_by_zero_msg:
 	.asciz "DivideByZeroError: divide or modulo by zero\n"
+_wacc_array_index_negative_msg:
+	.asciz	"ArrayIndexOutOfBoundsError: negative index\n\0"
+_wacc_array_index_large_msg:
+	.asciz "ArrayIndexOutOfBoundsError: index too large\n\0"
 `
 	ctx.generateData(ifCtx)
 
@@ -443,13 +448,23 @@ _wacc_divide_by_zero_msg:
 
 	// Combine data and text sections
 	return ".data\n" + ctx.data + ".text\n" + ctx.text + `
-_wacc_check_divide_by_zero:
-	PUSH {lr}
-	CMP r1, #0
-	LDREQ r1, =_wacc_divide_by_zero_msg
-	BLEQ _wacc_throw_runtime_error
-	POP {pc}
-_wacc_throw_overflow_error:
+` + RuntimeCheckArrayBoundsLabel + `:
+	push {lr}
+	cmp r0, #0
+	ldrlt r1, =_wacc_array_index_negative_msg
+	bllt _wacc_throw_runtime_error
+	ldr r1, [r1]
+	cmp r0, r1
+	ldrge r1, =_wacc_array_index_large_msg
+	blge _wacc_throw_runtime_error
+	pop {pc}
+` + RuntimeCheckDivZeroLabel + `:
+	push {lr}
+	cmp r1, #0
+	ldreq r1, =_wacc_divide_by_zero_msg
+	bleq _wacc_throw_runtime_error
+	pop {pc}
+` + RuntimeOverflowLabel + `:
 	ldr r1, =_wacc_overflow_error_msg
 	bl _wacc_throw_runtime_error
 _wacc_throw_runtime_error:
