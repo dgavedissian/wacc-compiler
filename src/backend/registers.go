@@ -14,11 +14,11 @@ type VariableScope struct {
 }
 
 type RegisterAllocatorContext struct {
-	scope              []VariableScope
-	prevNode           *InstrNode
-	currentNode        *InstrNode
-	dataStore          map[string]Expr
-	dataStoreAllocator map[string]int
+	scope          []VariableScope
+	prevNode       *InstrNode
+	currentNode    *InstrNode
+	dataStore      map[string]*StringConstExpr
+	dataStoreIndex int
 }
 
 func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool) {
@@ -162,6 +162,12 @@ func (e *CharConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) 
 		Src: e})
 }
 
+func (e *StringConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: &LocationExpr{ctx.pushDataStore(e)}})
+}
+
 func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
@@ -169,29 +175,22 @@ func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r in
 }
 
 func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	if !e.Type.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
-		// Allocate space on the heap
-		length := len(e.Elems)
-		ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})
-		ctx.pushInstr(&MoveInstr{
-			&RegisterExpr{r + 1},
-			&IntConstExpr{length}})
-		ctx.pushInstr(&MoveInstr{
-			Dst: &MemExpr{&RegisterExpr{r}, 0},
-			Src: &RegisterExpr{r + 1}})
+	// Allocate space on the heap
+	length := len(e.Elems)
+	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})
+	ctx.pushInstr(&MoveInstr{
+		&RegisterExpr{r + 1},
+		&IntConstExpr{length}})
+	ctx.pushInstr(&MoveInstr{
+		Dst: &MemExpr{&RegisterExpr{r}, 0},
+		Src: &RegisterExpr{r + 1}})
 
-		// Copy each element into the array
-		for i, e := range e.Elems {
-			e.allocateRegisters(ctx, r+1)
-			ctx.pushInstr(&MoveInstr{
-				Dst: &MemExpr{&RegisterExpr{r}, (i + 1) * regWidth},
-				Src: &RegisterExpr{r + 1}})
-		}
-	} else {
+	// Copy each element into the array
+	for i, e := range e.Elems {
+		e.allocateRegisters(ctx, r+1)
 		ctx.pushInstr(&MoveInstr{
-			Dst: &RegisterExpr{r},
-			Src: &LocationExpr{ctx.pushDataStore(e)},
-		})
+			Dst: &MemExpr{&RegisterExpr{r}, (i + 1) * regWidth},
+			Src: &RegisterExpr{r + 1}})
 	}
 }
 
@@ -487,32 +486,11 @@ func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
 	n.stackSpace = ctx.scope[0].next
 }
 
-func (ctx *RegisterAllocatorContext) pushDataStore(e Expr) string {
-	var nextIndex int
-	var ok bool
-
-	dataStorePrefix := ctx.dataStorePrefix(e)
-	nextIndex, ok = ctx.dataStoreAllocator[dataStorePrefix]
-	if !ok {
-		nextIndex = 0
-	}
-
-	label := fmt.Sprintf("%s%d", dataStorePrefix, nextIndex)
-
+func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
+	label := fmt.Sprintf("stringlit%d", ctx.dataStoreIndex)
 	ctx.dataStore[label] = e
-	ctx.dataStoreAllocator[dataStorePrefix] = nextIndex + 1
-
+	ctx.dataStoreIndex = ctx.dataStoreIndex + 1
 	return label
-}
-
-func (ctx *RegisterAllocatorContext) dataStorePrefix(e Expr) string {
-	switch e.(type) {
-	case *ArrayConstExpr:
-		return "arraylit"
-
-	default:
-		panic("Unknown item attempted to store data?!?")
-	}
 }
 
 func makeStartRegisterMap() map[RegisterExpr]bool {
@@ -526,9 +504,12 @@ func makeStartRegisterMap() map[RegisterExpr]bool {
 func AllocateRegisters(ifCtx *IFContext) {
 	ctx := new(RegisterAllocatorContext)
 	ctx.scope = make([]VariableScope, 1)
-	ctx.scope[0] = VariableScope{variableMap: make(map[string]*RegisterExpr), registerUseMap: makeStartRegisterMap(), stashedVariableMap: make(map[string]int)}
-	ctx.dataStore = make(map[string]Expr)
-	ctx.dataStoreAllocator = make(map[string]int)
+	ctx.scope[0] = VariableScope{
+		variableMap:        make(map[string]*RegisterExpr),
+		registerUseMap:     makeStartRegisterMap(),
+		stashedVariableMap: make(map[string]int)}
+	ctx.dataStore = make(map[string]*StringConstExpr)
+	ctx.dataStoreIndex = 0
 
 	// Iterate through nodes in the IF
 	for _, f := range ifCtx.functions {

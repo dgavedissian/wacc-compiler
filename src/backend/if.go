@@ -34,6 +34,10 @@ type CharConstExpr struct {
 	Size  int
 }
 
+type StringConstExpr struct {
+	Value string
+}
+
 type PointerConstExpr struct {
 	Value int
 }
@@ -131,6 +135,10 @@ func (e CharConstExpr) Repr() string {
 	}
 }
 func (CharConstExpr) Weight() int { return 1 }
+
+func (StringConstExpr) expr()          {}
+func (e StringConstExpr) Repr() string { return fmt.Sprintf("STRING %#v", e.Value) }
+func (StringConstExpr) Weight() int    { return 1 }
 
 func (PointerConstExpr) expr()          {}
 func (e PointerConstExpr) Repr() string { return fmt.Sprintf("PTR 0x%x", e.Value) }
@@ -504,7 +512,7 @@ type IFContext struct {
 	functions      map[string]*InstrNode
 	current        *InstrNode
 	nextTemp       int
-	dataStore      map[string]Expr
+	dataStore      map[string]*StringConstExpr
 	currentCounter int
 }
 

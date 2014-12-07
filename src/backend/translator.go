@@ -60,6 +60,10 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			return &CharConstExpr{value, size}
 		}
 
+		if expr.Type.Equals(frontend.BasicType{frontend.STRING}) {
+			return &StringConstExpr{expr.Value}
+		}
+
 		// Null
 		if expr.Type.Equals(frontend.BasicType{frontend.PAIR}) {
 			return &PointerConstExpr{0}

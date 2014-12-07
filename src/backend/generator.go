@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"log"
+	"unicode/utf8"
 
 	"../frontend"
 )
@@ -12,7 +13,7 @@ type GeneratorContext struct {
 	data             string
 	text             string
 	registerContents []map[string]Expr
-	dataContents     map[string]Expr
+	dataContents     map[string]*StringConstExpr
 	funcStack        []string
 }
 
@@ -102,7 +103,7 @@ func getFormatStringFromType(t *TypeExpr) string {
 		return "printf_fmt_int"
 	} else if internalType.Equals(frontend.BasicType{frontend.CHAR}) {
 		return "printf_fmt_char"
-	} else if internalType.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
+	} else if internalType.Equals(frontend.BasicType{frontend.STRING}) {
 		return "printf_fmt_str"
 	} else {
 		return "printf_fmt_addr"
@@ -149,11 +150,10 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 		ctx.pushCode("bl _wacc_print_int")
 	} else if derivedType.Equals(frontend.BasicType{frontend.CHAR}) {
 		ctx.pushCode("bl _wacc_print_char")
+	} else if derivedType.Equals(frontend.BasicType{frontend.STRING}) {
+		ctx.pushCode("bl _wacc_print_str")
 	} else if derivedType.Equals(frontend.ArrayType{frontend.BasicType{frontend.CHAR}}) {
-		ctx.pushCode("ldr r0, =printf_fmt_str")
-		ctx.pushCode("bl printf")
-		ctx.pushCode("mov r0, #0")
-		ctx.pushCode("bl fflush")
+		ctx.pushCode("bl _wacc_print_str")
 	} else {
 		ctx.pushCode("bl _wacc_print_addr")
 	}
@@ -346,13 +346,16 @@ func (i *HeapAllocInstr) generateCode(ctx *GeneratorContext) {
 
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	for k, v := range ifCtx.dataStore {
-		av := v.(*ArrayConstExpr)
-		// Build a string from the char array
-		str := ""
-		for _, e := range av.Elems {
-			str += string(e.(*CharConstExpr).Value)
+		wideString := ""
+		for _, c := range v.Value {
+			bs := make([]byte, 4)
+			utf8.EncodeRune(bs, c)
+			for _, b := range bs {
+				wideString += fmt.Sprintf("\\%03o", b)
+			}
 		}
-		ctx.data += fmt.Sprintf("%s:\n\t.asciz \"%s\"\n", k, str)
+		wideString += "\\000\\000\\000\\000"
+		ctx.data += fmt.Sprintf("%s:\n\t.word %v\n\t.ascii \"%s\"\n", k, len(v.Value), wideString)
 	}
 }
 
@@ -403,7 +406,8 @@ printf_fmt_int:
 printf_fmt_char:
 	.asciz "%c"
 printf_fmt_str:
-	.asciz "%s"
+	.ascii "%\000\000\000.\000\000\000*\000\000\000l\000\000\000s\000\000\000\000\000\000\000"
+	.align 2
 printf_fmt_addr:
 	.asciz "%p"
 printf_true:
@@ -475,8 +479,10 @@ _wacc_print_char:
 	pop {pc}
 _wacc_print_str:
 	push {lr}
+	add r2, r1, #4
+	ldr r1, [r1]
 	ldr r0, =printf_fmt_str
-	bl printf
+	bl wprintf
 	mov r0, #0
 	bl fflush
 	pop {pc}
