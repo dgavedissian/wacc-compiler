@@ -231,6 +231,12 @@ func (i *NotInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mvn %v, %v", dst, src)
 }
 
+func (i *NegInstr) generateCode(ctx *GeneratorContext) {
+	arg := i.Expr.(*RegisterExpr).Repr()
+
+	ctx.pushCode("rsbs %v, %v, #0", arg, arg)
+}
+
 func (i *CmpInstr) generateCode(ctx *GeneratorContext) {
 	cc := "al"
 	switch i.Operator {

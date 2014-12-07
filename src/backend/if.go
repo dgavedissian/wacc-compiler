@@ -294,6 +294,10 @@ type NotInstr struct {
 	Src Expr
 }
 
+type NegInstr struct {
+	Expr Expr
+}
+
 type CmpInstr struct {
 	Left     Expr
 	Right    Expr
@@ -441,6 +445,11 @@ func (i MoveInstr) Repr() string {
 func (NotInstr) instr() {}
 func (i NotInstr) Repr() string {
 	return fmt.Sprintf("NOT (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
+}
+
+func (NegInstr) instr() {}
+func (i NegInstr) Repr() string {
+	return fmt.Sprintf("NEG (%v)", i.Expr.Repr())
 }
 
 func (CmpInstr) instr() {}
