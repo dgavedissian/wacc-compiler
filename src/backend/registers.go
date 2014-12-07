@@ -8,14 +8,13 @@ import (
 )
 
 type VariableScope struct {
-	variableMap        map[string]*RegisterExpr
-	stashedVariableMap map[string]int
-	next               int
-	registerUseList    [12]bool
+	variableMap map[string]int
+	next        int
 }
 
 type RegisterAllocatorContext struct {
 	scope            []VariableScope
+	registerUseList  [12]bool
 	registerContents []map[string]Expr
 	prevNode         *InstrNode
 	currentNode      *InstrNode
@@ -23,9 +22,9 @@ type RegisterAllocatorContext struct {
 	dataStoreIndex   int
 }
 
-func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool) {
+func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 	var reg *RegisterExpr
-	for k, inUse := range ctx.scope[0].registerUseList {
+	for k, inUse := range ctx.registerUseList {
 		if k < 4 {
 			continue
 		}
@@ -36,33 +35,21 @@ func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool)
 	}
 
 	if reg == nil {
-		if !ctx.stashLiveVariables() {
-			return nil, false
-		}
-		return ctx.allocateRegister(), true
+		panic("Ran out of registers - need to spill or something")
 	}
-	ctx.scope[0].registerUseList[reg.Id] = true
-	log.Printf("%#v", ctx.scope[0].registerUseList)
-	return reg, true
-}
-
-func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
-	r, ok := ctx.tryAllocateRegister()
-	if !ok {
-		panic("unable to relieve memory pressure by moving variables to stack")
-	}
-	return r
+	ctx.registerUseList[reg.Id] = true
+	return reg
 }
 
 func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
-	if !ctx.scope[0].registerUseList[r.Id] {
-		panic("Freeing register not in use?!?")
+	if !ctx.registerUseList[r.Id] {
+		panic("Freeing register not in use")
 	}
-	ctx.scope[0].registerUseList[r.Id] = false
+	ctx.registerUseList[r.Id] = false
 }
 
 func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*StackLocationExpr, bool) {
-	if stash, ok := ctx.scope[0].stashedVariableMap[v.Name]; ok {
+	if stash, ok := ctx.scope[0].variableMap[v.Name]; ok {
 		return &StackLocationExpr{stash}, true
 	} else {
 		return nil, false
@@ -82,12 +69,56 @@ func (ctx *RegisterAllocatorContext) lookupOrCreateVariable(v *VarExpr) *StackLo
 		return loc
 	} else {
 		n := ctx.scope[0].next
-		ctx.scope[0].stashedVariableMap[v.Name] = n
+		ctx.scope[0].variableMap[v.Name] = n
 		ctx.scope[0].next++
 		return &StackLocationExpr{n}
 	}
 }
 
+func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
+	ctx.prevNode.Next = &InstrNode{i, 0, ctx.currentNode}
+	ctx.prevNode = ctx.prevNode.Next
+}
+
+func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
+	ctx.currentNode = n
+	for ctx.currentNode != nil {
+		ctx.currentNode.Instr.allocateRegisters(ctx)
+		ctx.prevNode = ctx.currentNode
+		ctx.currentNode = ctx.currentNode.Next
+	}
+	n.stackSpace = ctx.scope[0].next
+}
+
+func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
+	label := fmt.Sprintf("stringlit%d", ctx.dataStoreIndex)
+	ctx.dataStore[label] = e
+	ctx.dataStoreIndex = ctx.dataStoreIndex + 1
+	return label
+}
+
+func AllocateRegisters(ifCtx *IFContext) {
+	ctx := new(RegisterAllocatorContext)
+	ctx.scope = make([]VariableScope, 1)
+	ctx.scope[0] = VariableScope{
+		variableMap: make(map[string]int)}
+	ctx.dataStore = make(map[string]*StringConstExpr)
+	ctx.dataStoreIndex = 0
+	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
+
+	// Iterate through nodes in the IF
+	for _, f := range ifCtx.functions {
+		ctx.allocateRegistersForBranch(f)
+	}
+	ctx.allocateRegistersForBranch(ifCtx.main)
+	ctx.pushInstr(&MoveInstr{&RegisterExpr{0}, &IntConstExpr{0}})
+
+	ifCtx.dataStore = ctx.dataStore
+}
+
+//
+// Expression Utils
+//
 func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 	switch expr := e.(type) {
 	case *VarExpr:
@@ -131,73 +162,6 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 	default:
 		panic(fmt.Sprintf("Unhandled lvalue %T", expr))
 	}
-}
-
-func (ctx *RegisterAllocatorContext) stashLiveVariables() bool {
-	if len(ctx.scope[0].variableMap) == 0 {
-		return false
-	}
-
-	for vname, expr := range ctx.scope[0].variableMap {
-		var n int
-		if previousN, ok := ctx.scope[0].stashedVariableMap[vname]; ok {
-			n = previousN
-		} else {
-			n = ctx.scope[0].next
-			ctx.scope[0].next++
-		}
-		ctx.pushInstr(&MoveInstr{
-			Dst: &StackLocationExpr{n},
-			Src: expr,
-		})
-		// we need to emit typing instructions, too
-		ctx.scope[0].stashedVariableMap[vname] = n
-		ctx.freeRegister(expr)
-	}
-	ctx.scope[0].variableMap = make(map[string]*RegisterExpr)
-	return true
-}
-
-func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
-	ctx.prevNode.Next = &InstrNode{i, 0, ctx.currentNode}
-	ctx.prevNode = ctx.prevNode.Next
-}
-
-func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
-	ctx.currentNode = n
-	for ctx.currentNode != nil {
-		ctx.currentNode.Instr.allocateRegisters(ctx)
-		ctx.prevNode = ctx.currentNode
-		ctx.currentNode = ctx.currentNode.Next
-	}
-	n.stackSpace = ctx.scope[0].next
-}
-
-func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
-	label := fmt.Sprintf("stringlit%d", ctx.dataStoreIndex)
-	ctx.dataStore[label] = e
-	ctx.dataStoreIndex = ctx.dataStoreIndex + 1
-	return label
-}
-
-func AllocateRegisters(ifCtx *IFContext) {
-	ctx := new(RegisterAllocatorContext)
-	ctx.scope = make([]VariableScope, 1)
-	ctx.scope[0] = VariableScope{
-		variableMap:        make(map[string]*RegisterExpr),
-		stashedVariableMap: make(map[string]int)}
-	ctx.dataStore = make(map[string]*StringConstExpr)
-	ctx.dataStoreIndex = 0
-	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
-
-	// Iterate through nodes in the IF
-	for _, f := range ifCtx.functions {
-		ctx.allocateRegistersForBranch(f)
-	}
-	ctx.allocateRegistersForBranch(ifCtx.main)
-	ctx.pushInstr(&MoveInstr{&RegisterExpr{0}, &IntConstExpr{0}})
-
-	ifCtx.dataStore = ctx.dataStore
 }
 
 //
