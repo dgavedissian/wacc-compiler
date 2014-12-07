@@ -7,10 +7,15 @@ import (
 	"../frontend"
 )
 
+type Variable struct {
+	stack       int
+	typeInfo    frontend.Type
+	initialised bool
+}
+
 type VariableScope struct {
-	variableMap   map[string]int
-	variableTypes map[string]frontend.Type
-	next          int
+	variableMap map[string]*Variable
+	next        int
 }
 
 type RegisterAllocatorContext struct {
@@ -57,29 +62,44 @@ func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
 	ctx.registerUseList[r.Id] = false
 }
 
-func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*StackLocationExpr, frontend.Type, bool) {
+func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*Variable, bool) {
 	// Search all scopes from the top most for this variable
 	for i := ctx.depth - 1; i >= 0; i-- {
-		if stash, ok := ctx.scope[i].variableMap[v.Name]; ok {
-			return &StackLocationExpr{stash}, ctx.scope[i].variableTypes[v.Name], true
+		if v, ok := ctx.scope[i].variableMap[v.Name]; ok {
+			if v.initialised {
+				return v, true
+			}
 		}
 	}
 
 	// Give up
-	return nil, nil, false
+	return nil, false
+}
+
+func (ctx *RegisterAllocatorContext) initialiseVariable(v *VarExpr) {
+	// Search all scopes from the top most for this variable
+	for i := ctx.depth - 1; i >= 0; i-- {
+		if v, ok := ctx.scope[i].variableMap[v.Name]; ok {
+			v.initialised = true
+			return
+		}
+	}
+
+	// Give up
+	panic(fmt.Sprintf("Trying to initialise non-existent variable '%s'", v.Name))
 }
 
 func (ctx *RegisterAllocatorContext) lookupVariable(v *VarExpr) *StackLocationExpr {
-	if loc, _, ok := ctx.innerLookupVariable(v); ok {
-		return loc
+	if innerVar, ok := ctx.innerLookupVariable(v); ok {
+		return &StackLocationExpr{innerVar.stack}
 	} else {
 		panic(fmt.Sprintf("Trying to access non-existent variable '%s'", v.Name))
 	}
 }
 
 func (ctx *RegisterAllocatorContext) lookupType(v *VarExpr) frontend.Type {
-	if _, t, ok := ctx.innerLookupVariable(v); ok {
-		return t
+	if innerVar, ok := ctx.innerLookupVariable(v); ok {
+		return innerVar.typeInfo
 	} else {
 		panic(fmt.Sprintf("Trying to get type of non-existent variable '%s'", v.Name))
 	}
@@ -88,8 +108,7 @@ func (ctx *RegisterAllocatorContext) lookupType(v *VarExpr) frontend.Type {
 func (ctx *RegisterAllocatorContext) createVariable(d *DeclareInstr) *StackLocationExpr {
 	n := ctx.scope[ctx.depth-1].next
 	log.Printf("New variable at scope %d (stack pos %d)\n", ctx.depth-1, n)
-	ctx.scope[ctx.depth-1].variableMap[d.Var.Name] = n
-	ctx.scope[ctx.depth-1].variableTypes[d.Var.Name] = d.Type
+	ctx.scope[ctx.depth-1].variableMap[d.Var.Name] = &Variable{n, d.Type, false}
 	ctx.scope[ctx.depth-1].next++
 	return &StackLocationExpr{n}
 }
@@ -119,9 +138,8 @@ func (ctx *RegisterAllocatorContext) getTypeForExpr(expr Expr) *TypeExpr {
 
 		// Search all scopes from the top most for this variable
 		for i := ctx.depth - 1; i >= 0; i-- {
-			s := ctx.scope[i]
-			for name, loc := range s.variableMap {
-				if loc == obj.Id {
+			for name, innerVar := range ctx.scope[i].variableMap {
+				if innerVar.stack == obj.Id {
 					v = &VarExpr{name}
 					break
 				}
@@ -171,9 +189,7 @@ func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
 func (ctx *RegisterAllocatorContext) pushScope() {
 	// Create a new scope and start at the next available stack address of the
 	// parent scope
-	newScope := VariableScope{
-		variableMap:   make(map[string]int),
-		variableTypes: make(map[string]frontend.Type)}
+	newScope := VariableScope{variableMap: make(map[string]*Variable)}
 	if ctx.depth > 0 {
 		newScope.next = ctx.scope[ctx.depth-1].next
 	}
@@ -210,6 +226,7 @@ func AllocateRegisters(ifCtx *IFContext) {
 func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 	switch expr := e.(type) {
 	case *VarExpr:
+		ctx.initialiseVariable(expr)
 		return ctx.lookupVariable(expr)
 
 	case *ArrayElemExpr:
