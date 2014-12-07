@@ -282,6 +282,7 @@ type ExitInstr struct {
 
 type PrintInstr struct {
 	Expr Expr
+	Type frontend.Type
 }
 
 type MoveInstr struct {
@@ -314,6 +315,14 @@ type JmpCondInstr struct {
 	Cond Expr
 }
 
+//
+// Meta data
+//
+type DeclareInstr struct {
+	Var  *VarExpr
+	Type frontend.Type
+}
+
 type PushScopeInstr struct {
 }
 
@@ -323,6 +332,11 @@ type PopScopeInstr struct {
 type DeclareTypeInstr struct {
 	Dst  Expr
 	Type *TypeExpr
+}
+
+func (DeclareInstr) instr() {}
+func (e DeclareInstr) Repr() string {
+	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
 }
 
 func (PushScopeInstr) instr() {}
@@ -434,7 +448,11 @@ func (i ExitInstr) Repr() string {
 
 func (PrintInstr) instr() {}
 func (i PrintInstr) Repr() string {
-	return fmt.Sprintf("PRINT %s", i.Expr.Repr())
+	if i.Type == nil {
+		return fmt.Sprintf("PRINT <nil> %s", i.Expr.Repr())
+	} else {
+		return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
+	}
 }
 
 func (MoveInstr) instr() {}

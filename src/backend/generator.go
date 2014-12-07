@@ -73,6 +73,8 @@ func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
+	log.Printf("%T\n", expr)
+
 	switch obj := expr.(type) {
 	case *TypeExpr:
 		return obj
@@ -103,7 +105,7 @@ func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
 		return getTypeForExpr(ctx, ctx.dataContents[obj.Label])
 
 	default:
-		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %#v", expr))
+		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %T", expr))
 	}
 }
 
@@ -159,7 +161,12 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 		panic(fmt.Sprintf("Cannot print an object of type %T", obj))
 	}
 
-	derivedType := getTypeForExpr(ctx, i.Expr).Type
+	var derivedType frontend.Type
+	if i.Type != nil {
+		derivedType = i.Type
+	} else {
+		derivedType = getTypeForExpr(ctx, i.Expr).Type
+	}
 	if derivedType.Equals(frontend.BasicType{frontend.BOOL}) {
 		ctx.pushCode("bl _wacc_print_bool")
 	} else if derivedType.Equals(frontend.BasicType{frontend.INT}) {
@@ -339,17 +346,23 @@ func (i *OrInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("orr %v, %v, %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
+func (*DeclareInstr) generateCode(*GeneratorContext) {}
+
 func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("push {r4-r11}")
-	ctx.registerContents = append([]map[string]Expr{make(map[string]Expr)}, ctx.registerContents...)
-	for k, v := range ctx.registerContents[1] {
-		ctx.registerContents[0][k] = v
-	}
+	/*
+		ctx.pushCode("push {r4-r11}")
+		ctx.registerContents = append([]map[string]Expr{make(map[string]Expr)}, ctx.registerContents...)
+		for k, v := range ctx.registerContents[1] {
+			ctx.registerContents[0][k] = v
+		}
+	*/
 }
 
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("pop {r4-r11}")
-	ctx.registerContents = ctx.registerContents[1:]
+	/*
+		ctx.pushCode("pop {r4-r11}")
+		ctx.registerContents = ctx.registerContents[1:]
+	*/
 }
 
 func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {

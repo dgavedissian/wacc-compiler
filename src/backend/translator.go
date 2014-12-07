@@ -193,10 +193,11 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.addInstr(&NoOpInstr{})
 
 	case *frontend.DeclStmt:
-		ctx.addInstr(
-			&MoveInstr{
-				Dst: &VarExpr{node.Ident.Name},
-				Src: ctx.translateExpr(node.Right)})
+		v := &VarExpr{node.Ident.Name}
+		ctx.addInstr(&DeclareInstr{v, node.Type})
+		ctx.addInstr(&MoveInstr{
+			Dst: v,
+			Src: ctx.translateExpr(node.Right)})
 		ctx.generateTypeDeclaration(node.Ident.Name, node.Type)
 
 	case *frontend.AssignStmt:
@@ -218,9 +219,11 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.addInstr(&ExitInstr{ctx.translateExpr(node.Result)})
 
 	case *frontend.PrintStmt:
-		ctx.addInstr(&PrintInstr{ctx.translateExpr(node.Right)})
+		ctx.addInstr(&PrintInstr{Expr: ctx.translateExpr(node.Right)})
 		if node.NewLine {
-			ctx.addInstr(&PrintInstr{&CharConstExpr{'\n', 1}})
+			ctx.addInstr(&PrintInstr{
+				Expr: &CharConstExpr{'\n', 1},
+				Type: frontend.BasicType{frontend.CHAR}})
 		}
 
 	case *frontend.IfStmt:

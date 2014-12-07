@@ -8,18 +8,27 @@ import (
 )
 
 type VariableScope struct {
-	variableMap map[string]int
-	next        int
+	variableMap   map[string]int
+	variableTypes map[string]frontend.Type
+	next          int
 }
 
 type RegisterAllocatorContext struct {
-	scope            []VariableScope
+	// Variable scoping
+	scope []VariableScope
+	depth int
+
+	// Registers in use and their types
 	registerUseList  [12]bool
 	registerContents []map[string]Expr
-	prevNode         *InstrNode
-	currentNode      *InstrNode
-	dataStore        map[string]*StringConstExpr
-	dataStoreIndex   int
+
+	// Current location in the list
+	prevNode    *InstrNode
+	currentNode *InstrNode
+
+	// String data store
+	dataStore      map[string]*StringConstExpr
+	dataStoreIndex int
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
@@ -48,30 +57,90 @@ func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
 	ctx.registerUseList[r.Id] = false
 }
 
-func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*StackLocationExpr, bool) {
-	if stash, ok := ctx.scope[0].variableMap[v.Name]; ok {
-		return &StackLocationExpr{stash}, true
-	} else {
-		return nil, false
+func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*StackLocationExpr, frontend.Type, bool) {
+	// Search all scopes from the top most for this variable
+	for i := ctx.depth - 1; i >= 0; i-- {
+		if stash, ok := ctx.scope[i].variableMap[v.Name]; ok {
+			return &StackLocationExpr{stash}, ctx.scope[i].variableTypes[v.Name], true
+		}
 	}
+
+	// Give up
+	return nil, nil, false
 }
 
 func (ctx *RegisterAllocatorContext) lookupVariable(v *VarExpr) *StackLocationExpr {
-	if loc, ok := ctx.innerLookupVariable(v); ok {
+	if loc, _, ok := ctx.innerLookupVariable(v); ok {
 		return loc
 	} else {
 		panic(fmt.Sprintf("Trying to access non-existent variable '%s'", v.Name))
 	}
 }
 
-func (ctx *RegisterAllocatorContext) lookupOrCreateVariable(v *VarExpr) *StackLocationExpr {
-	if loc, ok := ctx.innerLookupVariable(v); ok {
-		return loc
+func (ctx *RegisterAllocatorContext) lookupType(v *VarExpr) frontend.Type {
+	if _, t, ok := ctx.innerLookupVariable(v); ok {
+		return t
 	} else {
-		n := ctx.scope[0].next
-		ctx.scope[0].variableMap[v.Name] = n
-		ctx.scope[0].next++
-		return &StackLocationExpr{n}
+		panic(fmt.Sprintf("Trying to get type of non-existent variable '%s'", v.Name))
+	}
+}
+
+func (ctx *RegisterAllocatorContext) createVariable(d *DeclareInstr) *StackLocationExpr {
+	n := ctx.scope[ctx.depth-1].next
+	log.Printf("New variable at scope %d (stack pos %d)\n", ctx.depth-1, n)
+	ctx.scope[ctx.depth-1].variableMap[d.Var.Name] = n
+	ctx.scope[ctx.depth-1].variableTypes[d.Var.Name] = d.Type
+	ctx.scope[ctx.depth-1].next++
+	return &StackLocationExpr{n}
+}
+
+func (ctx *RegisterAllocatorContext) getTypeForExpr(expr Expr) *TypeExpr {
+	switch obj := expr.(type) {
+	case *TypeExpr:
+		return obj
+
+	case *IntConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.INT}}
+
+	case *CharConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
+
+	case *ArrayConstExpr:
+		return &TypeExpr{obj.Type}
+
+	case *BoolConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
+
+	case *PointerConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
+
+	case *StackLocationExpr:
+		var v *VarExpr
+
+		// Search all scopes from the top most for this variable
+		for i := ctx.depth - 1; i >= 0; i-- {
+			s := ctx.scope[i]
+			for name, loc := range s.variableMap {
+				if loc == obj.Id {
+					v = &VarExpr{name}
+					break
+				}
+			}
+		}
+
+		// If nothing panic
+		if v == nil {
+			panic("No variable at this location??")
+		}
+
+		return &TypeExpr{ctx.lookupType(v)}
+
+	case *RegisterExpr:
+		log.Println("REG", obj.Repr())
+		return ctx.getTypeForExpr(ctx.registerContents[0][obj.Repr()])
+
+	default:
+		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %#v", expr))
 	}
 }
 
@@ -81,6 +150,7 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
+	ctx.pushScope()
 	ctx.currentNode = n
 	for ctx.currentNode != nil {
 		ctx.currentNode.Instr.allocateRegisters(ctx)
@@ -88,6 +158,7 @@ func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
 		ctx.currentNode = ctx.currentNode.Next
 	}
 	n.stackSpace = ctx.scope[0].next
+	ctx.popScope()
 }
 
 func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
@@ -97,11 +168,28 @@ func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
 	return label
 }
 
+func (ctx *RegisterAllocatorContext) pushScope() {
+	// Create a new scope and start at the next available stack address of the
+	// parent scope
+	newScope := VariableScope{
+		variableMap:   make(map[string]int),
+		variableTypes: make(map[string]frontend.Type)}
+	if ctx.depth > 0 {
+		newScope.next = ctx.scope[ctx.depth-1].next
+	}
+
+	// Add to the top of the scope stack
+	ctx.scope = append(ctx.scope, newScope)
+	ctx.depth++
+}
+
+func (ctx *RegisterAllocatorContext) popScope() {
+	ctx.scope = ctx.scope[:ctx.depth-1]
+	ctx.depth--
+}
+
 func AllocateRegisters(ifCtx *IFContext) {
 	ctx := new(RegisterAllocatorContext)
-	ctx.scope = make([]VariableScope, 1)
-	ctx.scope[0] = VariableScope{
-		variableMap: make(map[string]int)}
 	ctx.dataStore = make(map[string]*StringConstExpr)
 	ctx.dataStoreIndex = 0
 	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
@@ -122,7 +210,7 @@ func AllocateRegisters(ifCtx *IFContext) {
 func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 	switch expr := e.(type) {
 	case *VarExpr:
-		return ctx.lookupOrCreateVariable(expr)
+		return ctx.lookupVariable(expr)
 
 	case *ArrayElemExpr:
 		expr.Array.allocateRegisters(ctx, r+1)
@@ -255,35 +343,6 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 		Dst: &RegisterExpr{r},
 		Src: e,
 	})
-}
-
-func (ctx *RegisterAllocatorContext) getTypeForExpr(expr Expr) *TypeExpr {
-	switch obj := expr.(type) {
-	case *TypeExpr:
-		return obj
-
-	case *IntConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.INT}}
-
-	case *CharConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
-
-	case *ArrayConstExpr:
-		return &TypeExpr{obj.Type}
-
-	case *BoolConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
-
-	case *PointerConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
-
-	case *RegisterExpr:
-		log.Println("REG", obj.Repr())
-		return ctx.getTypeForExpr(ctx.registerContents[0][obj.Repr()])
-
-	default:
-		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %#v", expr))
-	}
 }
 
 func (ctx *RegisterAllocatorContext) setType(r int, t *TypeExpr) {
@@ -443,7 +502,7 @@ func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	i.Dst = ctx.lookupOrCreateVariable(i.Dst.(*VarExpr))
+	i.Dst = ctx.lookupVariable(i.Dst.(*VarExpr))
 }
 
 func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
@@ -480,6 +539,11 @@ func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Expr.allocateRegisters(ctx, r.Id)
 	i.Expr = r
+	if v, ok := i.Expr.(*VarExpr); ok {
+		i.Type = ctx.lookupType(v)
+	} else {
+		i.Type = ctx.getTypeForExpr(i.Expr).Type
+	}
 	ctx.freeRegister(r)
 }
 
@@ -526,9 +590,17 @@ func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.freeRegister(r)
 }
 
-func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *DeclareInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	ctx.createVariable(i)
+}
 
-func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	ctx.pushScope()
+}
+
+func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	ctx.popScope()
+}
 
 func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Dst = ctx.lookupVariable(i.Dst.(*VarExpr))
