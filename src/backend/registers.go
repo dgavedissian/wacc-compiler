@@ -96,10 +96,33 @@ func (ctx *RegisterAllocatorContext) lookupOrCreateVariable(v *VarExpr) *Registe
 	}
 }
 
-func (ctx *RegisterAllocatorContext) translateLValue(e Expr) Expr {
+func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 	switch expr := e.(type) {
 	case *VarExpr:
 		return ctx.lookupOrCreateVariable(expr)
+
+	case *ArrayElemExpr:
+		expr.Array.allocateRegisters(ctx, r+1)
+		expr.Index.allocateRegisters(ctx, r+2)
+
+		arrayPtr := &RegisterExpr{r + 1}
+		index := &RegisterExpr{r + 2}
+
+		// Runtime safety check
+		ctx.pushInstr(&MoveInstr{
+			Dst: &RegisterExpr{1},
+			Src: arrayPtr})
+		ctx.pushInstr(&MoveInstr{
+			Dst: &RegisterExpr{0},
+			Src: index})
+		ctx.pushInstr(&CallInstr{Label: &LocationExpr{RuntimeCheckArrayBoundsLabel}})
+
+		ctx.pushInstr(&AddInstr{
+			Dst:      arrayPtr,
+			Op1:      arrayPtr,
+			Op2:      index,
+			Op2Shift: &LSL{2}})
+		return &MemExpr{arrayPtr, 4}
 
 	case *PairElemExpr:
 		var offset int
@@ -210,12 +233,13 @@ func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	reg := &RegisterExpr{r}
 	variable := ctx.lookupVariable(e)
 
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: variable})
+
 	// If this move is redundant, don't bother with it to prevent an infinite
 	// loop when deriving the type
 	if reg.Repr() != variable.Repr() {
-		ctx.pushInstr(&MoveInstr{
-			Dst: &RegisterExpr{r},
-			Src: variable})
 		ctx.registerContents[0][reg.Repr()] = variable
 	}
 }
@@ -285,51 +309,17 @@ func (ctx *RegisterAllocatorContext) setType(r int, t *TypeExpr) {
 }
 
 func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	e.Array.allocateRegisters(ctx, r+1)
-	e.Index.allocateRegisters(ctx, r+2)
-
-	arrayPtr := &RegisterExpr{r + 1}
-	index := &RegisterExpr{r + 2}
-
-	// Runtime safety check
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{1},
-		Src: arrayPtr})
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{0},
-		Src: index})
-	ctx.pushInstr(&CallInstr{Label: &LocationExpr{RuntimeCheckArrayBoundsLabel}})
-
-	// Derive the array element type
-	arrayType := ctx.getTypeForExpr(arrayPtr).Type.(frontend.ArrayType)
-
-	ctx.pushInstr(&AddInstr{
-		Dst:      arrayPtr,
-		Op1:      arrayPtr,
-		Op2:      &IntConstExpr{4},
-		Op2Shift: nil})
-	ctx.pushInstr(&AddInstr{
-		Dst:      arrayPtr,
-		Op1:      arrayPtr,
-		Op2:      index,
-		Op2Shift: &LSL{2}})
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
-		Src: &MemExpr{arrayPtr, 0}})
+		Src: ctx.translateLValue(e, r)})
+	arrayType := ctx.getTypeForExpr(&RegisterExpr{r + 1}).Type.(frontend.ArrayType)
 	ctx.setType(r, &TypeExpr{arrayType.BaseType})
 }
 
 func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	var offset int
-	if e.Fst {
-		offset = 0
-	} else {
-		offset = regWidth
-	}
-
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
-		Src: &MemExpr{ctx.lookupVariable(e.Operand), offset}})
+		Src: ctx.translateLValue(e, r)})
 }
 
 func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
@@ -510,15 +500,15 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Src.allocateRegisters(ctx, r.Id)
 	i.Src = r
-	i.Dst = ctx.translateLValue(i.Dst)
 	ctx.freeRegister(r)
+	i.Dst = ctx.translateLValue(i.Dst, r.Id)
 }
 
 func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	i.Src.allocateRegisters(ctx, r.Id)
 	i.Src = r
-	i.Dst = ctx.translateLValue(i.Dst)
+	i.Dst = ctx.translateLValue(i.Dst, r.Id)
 	ctx.freeRegister(r)
 }
 
