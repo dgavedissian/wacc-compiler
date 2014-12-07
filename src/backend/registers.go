@@ -394,7 +394,7 @@ func (e *OrdExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Operand.allocateRegisters(ctx, r)
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
+	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
 }
 
 func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
