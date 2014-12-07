@@ -78,31 +78,17 @@ type PairElemExpr struct {
 	Operand *VarExpr
 }
 
-type BinOpExpr struct {
+type UnaryExpr struct {
+	Operator string
+	Operand  Expr
+	Type     frontend.Type
+}
+
+type BinaryExpr struct {
 	Operator string
 	Left     Expr
 	Right    Expr
 	Type     frontend.Type
-}
-
-type NotExpr struct {
-	Operand Expr
-}
-
-type OrdExpr struct {
-	Operand Expr
-}
-
-type ChrExpr struct {
-	Operand Expr
-}
-
-type NegExpr struct {
-	Operand Expr
-}
-
-type LenExpr struct {
-	Operand Expr
 }
 
 type NewPairExpr struct {
@@ -191,38 +177,19 @@ func (e PairElemExpr) Repr() string {
 }
 func (PairElemExpr) Weight() int { return 1 }
 
-func (BinOpExpr) expr() {}
-func (e BinOpExpr) Repr() string {
-	return fmt.Sprintf("BINOP %v %v (%v) (%v)", e.Type.Repr(), e.Operator, e.Left.Repr(), e.Right.Repr())
+func (UnaryExpr) expr() {}
+func (e UnaryExpr) Repr() string {
+	return fmt.Sprintf("UNARY %v %v (%v)", e.Type.Repr(), e.Operator, e.Operand.Repr())
 }
-func (e BinOpExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
+func (e UnaryExpr) Weight() int { return e.Operand.Weight() + 1 }
 
-func (NotExpr) expr() {}
-func (e NotExpr) Repr() string {
-	return fmt.Sprintf("NOT %v", e.Operand)
+func (BinaryExpr) expr() {}
+func (e BinaryExpr) Repr() string {
+	return fmt.Sprintf("BINARY %v %v (%v) (%v)", e.Type.Repr(), e.Operator, e.Left.Repr(), e.Right.Repr())
 }
-func (e NotExpr) Weight() int { return e.Operand.Weight() + 1 }
-func (OrdExpr) expr()         {}
-func (e OrdExpr) Repr() string {
-	return fmt.Sprintf("Ord %v", e.Operand)
-}
-func (e OrdExpr) Weight() int { return e.Operand.Weight() + 1 }
-func (ChrExpr) expr()         {}
-func (e ChrExpr) Repr() string {
-	return fmt.Sprintf("Chr %v", e.Operand)
-}
-func (e ChrExpr) Weight() int { return e.Operand.Weight() + 1 }
-func (NegExpr) expr()         {}
-func (e NegExpr) Repr() string {
-	return fmt.Sprintf("Neg %v", e.Operand)
-}
-func (e NegExpr) Weight() int { return e.Operand.Weight() + 1 }
-func (LenExpr) expr()         {}
-func (e LenExpr) Repr() string {
-	return fmt.Sprintf("Len %v", e.Operand)
-}
-func (e LenExpr) Weight() int { return e.Operand.Weight() + 1 }
-func (NewPairExpr) expr()     {}
+func (e BinaryExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
+
+func (NewPairExpr) expr() {}
 func (e NewPairExpr) Repr() string {
 	return fmt.Sprintf("NEWPAIR %v %v", e.Left.Repr(), e.Right.Repr())
 }

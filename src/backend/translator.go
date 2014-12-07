@@ -78,8 +78,12 @@ func (ctx *IFContext) popScope() {
 
 func (ctx *IFContext) getType(expr Expr) frontend.Type {
 	switch expr := expr.(type) {
-	case *BinOpExpr:
+	case *BinaryExpr:
 		return expr.Type
+
+	case *UnaryExpr:
+		return expr.Type
+
 	case *VarExpr:
 		// Search scopes for type
 		for i := ctx.depth - 1; i >= 0; i-- {
@@ -137,8 +141,24 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			expr.SelectorType == frontend.FST,
 			&VarExpr{expr.Operand.Name}}
 
+	case *frontend.UnaryExpr:
+		/* Fold negating ints */
+		if expr.Operator == Neg {
+			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
+				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
+					n, _ := strconv.Atoi(x.Value)
+					return &IntConstExpr{-n}
+				}
+			}
+		}
+
+		return &UnaryExpr{
+			Operator: expr.Operator,
+			Operand:  ctx.translateExpr(expr.Operand),
+			Type:     expr.Type}
+
 	case *frontend.BinaryExpr:
-		return &BinOpExpr{
+		return &BinaryExpr{
 			Operator: expr.Operator,
 			Left:     ctx.translateExpr(expr.Left),
 			Right:    ctx.translateExpr(expr.Right),
@@ -151,47 +171,6 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			a.Elems[i] = ctx.translateExpr(e)
 		}
 		return a
-
-	case *frontend.UnaryExpr:
-		op := expr.Operator
-		switch op {
-		case Not:
-			/*
-				Fold binaries in an optimisation step.
-			*/
-			return &NotExpr{ctx.translateExpr(expr.Operand)}
-
-		case Ord:
-			/* Fold chars in an optimisation step
-			if x, ok := expr.Operand.(*BasicLit); ok {
-				if x.Type.Equals(frontend.BasicType{frontend.CHAR}) {
-					r, size := utf8.DecodeRuneInString(x.Value)
-					return &IntConstExpr{r}
-				}
-			}*/
-			return &OrdExpr{ctx.translateExpr(expr.Operand)}
-
-		case Chr:
-			/* Fold ints in an optimisation step */
-			return &ChrExpr{ctx.translateExpr(expr.Operand)}
-
-		case Neg:
-			/* Fold negating ints */
-			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
-				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
-					n, _ := strconv.Atoi(x.Value)
-					return &IntConstExpr{-n}
-				}
-			}
-			return &NegExpr{ctx.translateExpr(expr.Operand)}
-
-		case Len:
-			/* Constant fold on strings and array literals */
-			return &LenExpr{ctx.translateExpr(expr.Operand)}
-
-		default:
-			panic(fmt.Sprintf("Unhandled unary operator %v", expr.Operator))
-		}
 
 	case *frontend.NewPairCmd:
 		return &NewPairExpr{
@@ -298,7 +277,10 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.currentCounter += 1
 
 		trexpr := ctx.translateExpr(node.Cond)
-		ctx.addInstr(&JmpCondInstr{startElse, &NotExpr{trexpr}})
+		ctx.addInstr(&JmpCondInstr{startElse, &UnaryExpr{
+			Operator: Not,
+			Operand:  trexpr,
+			Type:     frontend.BasicType{frontend.BOOL}}})
 
 		// Build main branch
 		for _, n := range node.Body {
@@ -326,7 +308,10 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		ctx.appendNode(beginWhile)
 
 		trexpr := ctx.translateExpr(node.Cond)
-		ctx.addInstr(&JmpCondInstr{endWhile, &NotExpr{trexpr}})
+		ctx.addInstr(&JmpCondInstr{endWhile, &UnaryExpr{
+			Operator: Not,
+			Operand:  trexpr,
+			Type:     frontend.BasicType{frontend.BOOL}}})
 
 		// Build body
 		for _, n := range node.Body {

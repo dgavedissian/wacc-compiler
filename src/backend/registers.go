@@ -368,7 +368,41 @@ func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		Src: ctx.translateLValue(e, r)})
 }
 
-func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	e.Operand.allocateRegisters(ctx, r)
+	switch e.Operator {
+	case Not:
+		dst := &RegisterExpr{r}
+		dst2 := ctx.allocateRegister()
+		ctx.pushInstr(&NotInstr{dst, dst})
+		ctx.pushInstr(&MoveInstr{dst2, &IntConstExpr{1}})
+		ctx.pushInstr(&AndInstr{Dst: dst, Op1: dst, Op2: dst2})
+		ctx.freeRegister(dst2)
+
+	case Ord:
+		ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
+
+	case Chr:
+		ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
+
+	case Neg:
+		dst := &RegisterExpr{r}
+		ctx.pushInstr(&NegInstr{dst})
+
+	case Len:
+		/*tx.pushInstr(&MoveInstr{
+		&RegisterExpr{r},
+		&MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), 0}})
+		*/ctx.pushInstr(&DeclareTypeInstr{
+			&RegisterExpr{r},
+			&TypeExpr{frontend.BasicType{frontend.INT}}})
+
+	default:
+		panic("Unhandled unary operator")
+	}
+}
+
+func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	var op1, op2, r2 *RegisterExpr
 	dst := &RegisterExpr{r}
 	if e.Left.Weight() > e.Right.Weight() {
@@ -421,41 +455,6 @@ func (e *BinOpExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		panic(fmt.Sprintf("Unknown operator %v", e.Operator))
 	}
 	ctx.freeRegister(r2)
-}
-
-func (e *NotExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	e.Operand.allocateRegisters(ctx, r)
-	dst := &RegisterExpr{r}
-	dst2 := ctx.allocateRegister()
-	ctx.pushInstr(&NotInstr{dst, dst})
-	ctx.pushInstr(&MoveInstr{dst2, &IntConstExpr{1}})
-	ctx.pushInstr(&AndInstr{Dst: dst, Op1: dst, Op2: dst2})
-	ctx.freeRegister(dst2)
-}
-
-func (e *OrdExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	e.Operand.allocateRegisters(ctx, r)
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
-}
-
-func (e *ChrExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	e.Operand.allocateRegisters(ctx, r)
-	ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
-}
-
-func (e *NegExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	e.Operand.allocateRegisters(ctx, r)
-	dst := &RegisterExpr{r}
-	ctx.pushInstr(&NegInstr{dst})
-}
-
-func (e *LenExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	/*tx.pushInstr(&MoveInstr{
-	&RegisterExpr{r},
-	&MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), 0}})
-	*/ctx.pushInstr(&DeclareTypeInstr{
-		&RegisterExpr{r},
-		&TypeExpr{frontend.BasicType{frontend.INT}}})
 }
 
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
