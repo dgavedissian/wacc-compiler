@@ -30,7 +30,7 @@ BACKEND_FILES := \
 	$(BACKEND_DIR)/optimiser.go \
 	$(BACKEND_DIR)/translator.go \
 	$(BACKEND_DIR)/registers.go \
-	$(BACKEND_DIR)/enums.go
+	$(BACKEND_DIR)/constants.go
 
 GENERATED_FILES := \
 	$(FRONTEND_DIR)/parser.go \
