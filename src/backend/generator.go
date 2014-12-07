@@ -77,6 +77,9 @@ func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
 	case *ArrayConstExpr:
 		return &TypeExpr{obj.Type}
 
+	case *StringConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.STRING}}
+
 	case *BoolConstExpr:
 		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
 

@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"log"
 
 	"../frontend"
 )
@@ -10,22 +11,23 @@ type VariableScope struct {
 	variableMap        map[string]*RegisterExpr
 	stashedVariableMap map[string]int
 	next               int
-	registerUseMap     map[RegisterExpr]bool
+	registerUseMap     map[int]bool
 }
 
 type RegisterAllocatorContext struct {
-	scope          []VariableScope
-	prevNode       *InstrNode
-	currentNode    *InstrNode
-	dataStore      map[string]*StringConstExpr
-	dataStoreIndex int
+	scope            []VariableScope
+	registerContents []map[string]Expr
+	prevNode         *InstrNode
+	currentNode      *InstrNode
+	dataStore        map[string]*StringConstExpr
+	dataStoreIndex   int
 }
 
 func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool) {
 	var r *RegisterExpr
 	for reg, inUse := range ctx.scope[0].registerUseMap {
 		if !inUse {
-			r = &reg
+			r = &RegisterExpr{reg}
 			break
 		}
 	}
@@ -36,7 +38,7 @@ func (ctx *RegisterAllocatorContext) tryAllocateRegister() (*RegisterExpr, bool)
 		}
 		return ctx.allocateRegister(), true
 	}
-	ctx.scope[0].registerUseMap[*r] = true
+	ctx.scope[0].registerUseMap[r.Id] = true
 	return r, true
 }
 
@@ -49,10 +51,10 @@ func (ctx *RegisterAllocatorContext) allocateRegister() *RegisterExpr {
 }
 
 func (ctx *RegisterAllocatorContext) freeRegister(r *RegisterExpr) {
-	if !ctx.scope[0].registerUseMap[*r] {
+	if !ctx.scope[0].registerUseMap[r.Id] {
 		panic("Freeing register not in use?!?")
 	}
-	ctx.scope[0].registerUseMap[*r] = false
+	ctx.scope[0].registerUseMap[r.Id] = false
 }
 
 func (ctx *RegisterAllocatorContext) innerLookupVariable(v *VarExpr) (*RegisterExpr, bool) {
@@ -145,20 +147,23 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 func (e *TypeExpr) allocateRegisters(*RegisterAllocatorContext, int) {}
 
 func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	reg := &RegisterExpr{r}
 	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
+		Dst: reg,
 		Src: e})
 }
 
 func (e *BoolConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	reg := &RegisterExpr{r}
 	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
+		Dst: reg,
 		Src: e})
 }
 
 func (e *CharConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	reg := &RegisterExpr{r}
 	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
+		Dst: reg,
 		Src: e})
 }
 
@@ -169,8 +174,9 @@ func (e *StringConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int
 }
 
 func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	reg := &RegisterExpr{r}
 	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
+		Dst: reg,
 		Src: e})
 }
 
@@ -197,9 +203,17 @@ func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int)
 func (e *LocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
 
 func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: ctx.lookupVariable(e)})
+	reg := &RegisterExpr{r}
+	variable := ctx.lookupVariable(e)
+
+	// If this move is redundant, don't bother with it to prevent an infinite
+	// loop when deriving the type
+	if reg.Repr() != variable.Repr() {
+		ctx.pushInstr(&MoveInstr{
+			Dst: &RegisterExpr{r},
+			Src: variable})
+		ctx.registerContents[0][reg.Repr()] = variable
+	}
 }
 
 func (e *MemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
@@ -223,35 +237,82 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 	})
 }
 
+func (ctx *RegisterAllocatorContext) getTypeForExpr(expr Expr) *TypeExpr {
+	switch obj := expr.(type) {
+	case *TypeExpr:
+		return obj
+
+	case *IntConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.INT}}
+
+	case *CharConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
+
+	case *ArrayConstExpr:
+		return &TypeExpr{obj.Type}
+
+	case *BoolConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
+
+	case *PointerConstExpr:
+		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
+
+	case *RegisterExpr:
+		log.Println("REG", obj.Repr())
+		if _, ok := ctx.registerContents[0][obj.Repr()]; !ok {
+			log.Printf("Object %v doesn't exist\n", obj.Repr())
+			return &TypeExpr{frontend.ArrayType{frontend.BasicType{frontend.INT}}}
+		}
+		if obj.Repr() == ctx.registerContents[0][obj.Repr()].Repr() {
+			log.Println("LOOP")
+			return &TypeExpr{frontend.ArrayType{frontend.BasicType{frontend.INT}}}
+		}
+		return ctx.getTypeForExpr(ctx.registerContents[0][obj.Repr()])
+
+	default:
+		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %#v", expr))
+	}
+}
+
+func (ctx *RegisterAllocatorContext) setType(r int, t *TypeExpr) {
+	reg := &RegisterExpr{r}
+	ctx.pushInstr(&DeclareTypeInstr{reg, t})
+	ctx.registerContents[0][reg.Repr()] = t
+}
+
 func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	e.Array.allocateRegisters(ctx, r+1)
 	e.Index.allocateRegisters(ctx, r+2)
 
+	arrayPtr := &RegisterExpr{r + 1}
+	index := &RegisterExpr{r + 2}
+
 	// Runtime safety check
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{1},
-		Src: &RegisterExpr{r + 1}})
+		Src: arrayPtr})
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{0},
-		Src: &RegisterExpr{r + 2}})
+		Src: index})
 	ctx.pushInstr(&CallInstr{Label: &LocationExpr{RuntimeCheckArrayBoundsLabel}})
 
+	// Derive the array element type
+	arrayType := ctx.getTypeForExpr(arrayPtr).Type.(frontend.ArrayType)
+
 	ctx.pushInstr(&AddInstr{
-		Dst:      &RegisterExpr{r + 1},
-		Op1:      &RegisterExpr{r + 1},
+		Dst:      arrayPtr,
+		Op1:      arrayPtr,
 		Op2:      &IntConstExpr{4},
 		Op2Shift: nil})
 	ctx.pushInstr(&AddInstr{
-		Dst:      &RegisterExpr{r + 1},
-		Op1:      &RegisterExpr{r + 1},
-		Op2:      &RegisterExpr{r + 2},
+		Dst:      arrayPtr,
+		Op1:      arrayPtr,
+		Op2:      index,
 		Op2Shift: &LSL{2}})
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
-		Src: &MemExpr{&RegisterExpr{r + 1}, 0}})
-	ctx.pushInstr(&DeclareTypeInstr{
-		&RegisterExpr{r},
-		&TypeExpr{frontend.BasicType{frontend.INT}}})
+		Src: &MemExpr{arrayPtr, 0}})
+	ctx.setType(r, &TypeExpr{arrayType.BaseType})
 }
 
 func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
@@ -485,6 +546,7 @@ func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Dst = ctx.lookupVariable(i.Dst.(*VarExpr))
+	ctx.registerContents[0][i.Dst.Repr()] = i.Type
 }
 
 // Second stage IF instructions should never do anything
@@ -514,10 +576,10 @@ func (ctx *RegisterAllocatorContext) pushDataStore(e *StringConstExpr) string {
 	return label
 }
 
-func makeStartRegisterMap() map[RegisterExpr]bool {
-	x := make(map[RegisterExpr]bool)
+func makeStartRegisterMap() map[int]bool {
+	x := make(map[int]bool)
 	for n := 4; n <= 12; n++ {
-		x[RegisterExpr{n}] = false
+		x[n] = false
 	}
 	return x
 }
@@ -531,6 +593,7 @@ func AllocateRegisters(ifCtx *IFContext) {
 		stashedVariableMap: make(map[string]int)}
 	ctx.dataStore = make(map[string]*StringConstExpr)
 	ctx.dataStoreIndex = 0
+	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
 
 	// Iterate through nodes in the IF
 	for _, f := range ifCtx.functions {
