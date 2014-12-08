@@ -68,6 +68,10 @@ type StackLocationExpr struct {
 	Id int
 }
 
+type StackArgumentExpr struct {
+	Id int
+}
+
 type ArrayElemExpr struct {
 	Array Expr
 	Index Expr
@@ -160,6 +164,10 @@ func (RegisterExpr) Weight() int    { return 1 }
 func (StackLocationExpr) expr()          {}
 func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
 func (StackLocationExpr) Weight() int    { return 1 }
+
+func (StackArgumentExpr) expr()          {}
+func (e StackArgumentExpr) Repr() string { return fmt.Sprintf("STARG_%d", e.Id) }
+func (StackArgumentExpr) Weight() int    { return 1 }
 
 func (ArrayElemExpr) expr() {}
 func (e ArrayElemExpr) Repr() string {
@@ -398,6 +406,14 @@ type HeapAllocInstr struct {
 	Size int
 }
 
+type PushInstr struct {
+	Op *RegisterExpr
+}
+
+type PopInstr struct {
+	Op *RegisterExpr
+}
+
 func (NoOpInstr) instr()       {}
 func (NoOpInstr) Repr() string { return "NOOP" }
 
@@ -511,6 +527,16 @@ func (i *CallInstr) Repr() string {
 func (*HeapAllocInstr) instr() {}
 func (i *HeapAllocInstr) Repr() string {
 	return fmt.Sprintf("ALLOC %v SIZE %v", i.Dst.Repr(), i.Size)
+}
+
+func (*PushInstr) instr() {}
+func (i *PushInstr) Repr() string {
+	return fmt.Sprintf("PUSH %v", i.Op)
+}
+
+func (*PopInstr) instr() {}
+func (i *PopInstr) Repr() string {
+	return fmt.Sprintf("POP %v", i.Op)
 }
 
 /*

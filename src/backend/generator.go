@@ -242,6 +242,9 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		case *StackLocationExpr:
 			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.generateStackOffset(src))
 
+		case *StackArgumentExpr:
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.stackDistance+(src.Id+13)*4)
+
 		case *MemExpr:
 			if src.Offset == 0 {
 				ctx.pushCode("ldr %v, [%v]", dst.Repr(), src.Address.Repr())
@@ -409,6 +412,14 @@ func (i *HeapAllocInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("ldr r0, =%v", i.Size)
 	ctx.pushCode("bl malloc")
 	ctx.pushCode("mov %v, r0", i.Dst.Repr())
+}
+
+func (i *PushInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("push {%v}", i.Op.Repr())
+}
+
+func (i *PopInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("pop {%v}", i.Op.Repr())
 }
 
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {

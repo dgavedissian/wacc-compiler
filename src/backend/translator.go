@@ -231,19 +231,28 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 			ctx.pushScope()
 
-			if len(f.Params) > 4 {
-				panic("More than 4 parameters unimplemented!")
-			}
 			for regNum, p := range f.Params {
-				ctx.addType(p.Ident.Name, p.Type)
-				ctx.addInstr(&DeclareInstr{
-					&VarExpr{p.Ident.Name},
-					p.Type})
-				ctx.addInstr(&MoveInstr{
-					Dst: &VarExpr{p.Ident.Name},
-					Src: &RegisterExpr{regNum},
-				})
-				ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
+				if regNum < 4 {
+					ctx.addType(p.Ident.Name, p.Type)
+					ctx.addInstr(&DeclareInstr{
+						&VarExpr{p.Ident.Name},
+						p.Type})
+					ctx.addInstr(&MoveInstr{
+						Dst: &VarExpr{p.Ident.Name},
+						Src: &RegisterExpr{regNum},
+					})
+					ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
+				} else {
+					ctx.addType(p.Ident.Name, p.Type)
+					ctx.addInstr(&DeclareInstr{
+						&VarExpr{p.Ident.Name},
+						p.Type})
+					ctx.addInstr(&MoveInstr{
+						Dst: &VarExpr{p.Ident.Name},
+						Src: &StackArgumentExpr{(len(f.Params) - 5) - (regNum - 4)},
+					})
+					ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
+				}
 			}
 
 			for _, n := range f.Body {

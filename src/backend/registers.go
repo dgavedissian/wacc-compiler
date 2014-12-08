@@ -369,6 +369,13 @@ func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r i
 	})
 }
 
+func (e *StackArgumentExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+	ctx.pushInstr(&MoveInstr{
+		Dst: &RegisterExpr{r},
+		Src: e,
+	})
+}
+
 func (ctx *RegisterAllocatorContext) setType(r int, t *TypeExpr) {
 	reg := &RegisterExpr{r}
 	ctx.pushInstr(&DeclareTypeInstr{reg, t})
@@ -500,11 +507,18 @@ func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	// Move arguments into r0-r4
-	if len(e.Args) > 4 {
-		panic("unimplemented!")
-	}
 	for n, arg := range e.Args {
-		arg.allocateRegisters(ctx, n)
+		//arg := e.Args[n]
+		if n < 4 {
+			arg.allocateRegisters(ctx, n)
+		} else {
+			freeReg := ctx.allocateRegister()
+			arg.allocateRegisters(ctx, freeReg.Id)
+			ctx.pushInstr(&PushInstr{
+				Op: freeReg,
+			})
+			ctx.freeRegister(freeReg)
+		}
 	}
 
 	// Call function
@@ -514,6 +528,17 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
 		Src: &RegisterExpr{0}})
+
+	// Get rid of arguments
+	if len(e.Args) > 4 {
+		freeReg := ctx.allocateRegister()
+		for n := len(e.Args) - 1; n >= 4; n-- {
+			ctx.pushInstr(&PopInstr{
+				Op: freeReg,
+			})
+		}
+		ctx.freeRegister(freeReg)
+	}
 }
 
 //
@@ -635,6 +660,9 @@ func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 func (i *DeclareInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.createVariable(i)
 }
+
+func (i *PushInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (i *PopInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
 
 func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.pushScope()
