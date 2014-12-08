@@ -11,8 +11,9 @@ import (
 
 type IFContext struct {
 	// Variable scoping
-	scope []map[string]frontend.Type
-	depth int
+	scope          []map[string]frontend.Type
+	scopePushInstr []*PushScopeInstr
+	depth          int
 
 	// Labels
 	labels map[string]Instr
@@ -65,14 +66,21 @@ func (ctx *IFContext) addType(v string, t frontend.Type) {
 }
 
 func (ctx *IFContext) pushScope() {
+	pushScopeInstr := &PushScopeInstr{StackSize: 0}
 	ctx.scope = append(ctx.scope, make(map[string]frontend.Type))
+	ctx.scopePushInstr = append(ctx.scopePushInstr, pushScopeInstr)
 	ctx.depth++
-	ctx.addInstr(&PushScopeInstr{})
+	ctx.addInstr(pushScopeInstr)
 }
 
 func (ctx *IFContext) popScope() {
-	ctx.addInstr(&PopScopeInstr{})
+	// Determine stack size
+	stackSize := len(ctx.scope[ctx.depth-1]) * regWidth
+
+	ctx.addInstr(&PopScopeInstr{stackSize})
+	ctx.scopePushInstr[ctx.depth-1].StackSize = stackSize
 	ctx.scope = ctx.scope[:ctx.depth-1]
+	ctx.scopePushInstr = ctx.scopePushInstr[:ctx.depth-1]
 	ctx.depth--
 }
 

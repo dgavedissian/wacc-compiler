@@ -293,9 +293,11 @@ type DeclareInstr struct {
 }
 
 type PushScopeInstr struct {
+	StackSize int
 }
 
 type PopScopeInstr struct {
+	StackSize int
 }
 
 type DeclareTypeInstr struct {
@@ -314,12 +316,12 @@ func (e DeclareInstr) Repr() string {
 
 func (PushScopeInstr) instr() {}
 func (e PushScopeInstr) Repr() string {
-	return fmt.Sprintf("PUSH SCOPE")
+	return fmt.Sprintf("PUSH SCOPE %v", e.StackSize)
 }
 
 func (PopScopeInstr) instr() {}
 func (e PopScopeInstr) Repr() string {
-	return fmt.Sprintf("POP SCOPE")
+	return fmt.Sprintf("POP SCOPE %v", e.StackSize)
 }
 
 func (DeclareTypeInstr) instr() {}

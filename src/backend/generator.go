@@ -15,6 +15,7 @@ type GeneratorContext struct {
 	registerContents []map[string]Expr
 	dataContents     map[string]*StringConstExpr
 	funcStack        []string
+	stackDistance    int
 }
 
 func (ctx *GeneratorContext) pushLabel(label string) {
@@ -31,12 +32,11 @@ func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushLabel(i.Label)
 }
 
+func (ctx *GeneratorContext) generateStackOffset(stack *StackLocationExpr) int {
+	return ctx.stackDistance - regWidth*stack.Id
+}
+
 func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
-	// save regs r0 and r1
-	ctx.pushCode("push {r0,r1}")
-
-	log.Printf("%#v\n", i.Dst)
-
 	ctx.pushCode("add r1, sp, #0")
 
 	// Get scanf format string depending on type
@@ -56,13 +56,10 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	if mem, ok := i.Dst.(*MemExpr); ok {
 		ctx.pushCode("str r1, [%v, #%v]", mem.Address.Repr(), mem.Offset)
 	} else if stack, ok := i.Dst.(*StackLocationExpr); ok {
-		ctx.pushCode("str r1, [sp, #%v]", stack.Id*regWidth)
+		ctx.pushCode("str r1, [sp, #%v]", ctx.generateStackOffset(stack))
 	} else {
 		ctx.pushCode("mov %s, r1", i.Dst.Repr())
 	}
-
-	// load regs r0 and r1
-	ctx.pushCode("pop {r0,r1}")
 }
 
 func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
@@ -73,6 +70,7 @@ func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
+	ctx.pushCode("add sp, sp, #%v", ctx.stackDistance)
 	ctx.pushCode("b _" + ctx.funcStack[0] + "_end")
 }
 
@@ -204,7 +202,9 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		}
 
 	case *StackLocationExpr:
-		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*regWidth)
+		ctx.pushCode("str %v, [sp, #%v]",
+			i.Src.(*RegisterExpr).Repr(),
+			ctx.generateStackOffset(i.Dst.(*StackLocationExpr)))
 
 	case *RegisterExpr:
 		// Optimisation step: If we're moving from a constant, just load
@@ -238,7 +238,7 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 			ctx.registerContents[0][dst.Repr()] = ctx.registerContents[0][src.Repr()]
 
 		case *StackLocationExpr:
-			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), src.Id*regWidth)
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.generateStackOffset(src))
 
 		case *MemExpr:
 			if src.Offset == 0 {
@@ -358,21 +358,15 @@ func (i *OrInstr) generateCode(ctx *GeneratorContext) {
 func (*DeclareInstr) generateCode(*GeneratorContext) {}
 
 func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {
-	/*
-		ctx.pushCode("push {r4-r11}")
-		ctx.registerContents = append([]map[string]Expr{make(map[string]Expr)}, ctx.registerContents...)
-		for k, v := range ctx.registerContents[1] {
-			ctx.registerContents[0][k] = v
-		}
-	*/
+	ctx.pushCode("sub sp, sp, #%v", i.StackSize)
+	ctx.stackDistance += i.StackSize
 }
 
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
-	/*
-		ctx.pushCode("pop {r4-r11}")
-		ctx.registerContents = ctx.registerContents[1:]
-	*/
+	ctx.stackDistance -= i.StackSize
+	ctx.pushCode("add sp, sp, #%v", i.StackSize)
 }
+
 func (i *CheckNullDereferenceInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("push {r0}")
 	ctx.pushCode("mov r0, r%v", i.Ptr.(*RegisterExpr).Id)
@@ -414,15 +408,17 @@ func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
 	x.Instr.generateCode(ctx)
 	ctx.pushCode("push {r4-r11,lr}")
 
-	stackSpace := x.stackSpace * 4
-	for stackSpace > 0 {
-		thisTime := stackSpace
-		if thisTime > 1024 {
-			thisTime = 1024
+	/*
+		stackSpace := x.stackSpace * 4
+		for stackSpace > 0 {
+			thisTime := stackSpace
+			if thisTime > 1024 {
+				thisTime = 1024
+			}
+			ctx.pushCode("sub sp, sp, #%d", thisTime)
+			stackSpace -= thisTime
 		}
-		ctx.pushCode("sub sp, sp, #%d", thisTime)
-		stackSpace -= thisTime
-	}
+	*/
 
 	node := x.Next
 	for node != nil {
@@ -431,15 +427,17 @@ func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
 	}
 
 	ctx.pushLabel("_" + ctx.funcStack[0] + "_end")
-	stackSpace = x.stackSpace * 4
-	for stackSpace > 0 {
-		thisTime := stackSpace
-		if thisTime > 1024 {
-			thisTime = 1024
+	/*
+		stackSpace = x.stackSpace * 4
+		for stackSpace > 0 {
+			thisTime := stackSpace
+			if thisTime > 1024 {
+				thisTime = 1024
+			}
+			ctx.pushCode("add sp, sp, #%d", thisTime)
+			stackSpace -= thisTime
 		}
-		ctx.pushCode("add sp, sp, #%d", thisTime)
-		stackSpace -= thisTime
-	}
+	*/
 	ctx.pushCode("pop {r4-r11,pc}")
 	ctx.funcStack = ctx.funcStack[1:]
 }
