@@ -487,9 +487,6 @@ func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 }
 
 func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	// save registers
-	ctx.pushInstr(&PushScopeInstr{})
-
 	// Move arguments into r0-r4
 	if len(e.Args) > 4 {
 		panic("unimplemented!")
@@ -505,9 +502,6 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.pushInstr(&MoveInstr{
 		Dst: &RegisterExpr{r},
 		Src: &RegisterExpr{0}})
-
-	// restore registers
-	ctx.pushInstr(&PopScopeInstr{})
 }
 
 //

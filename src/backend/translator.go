@@ -112,6 +112,7 @@ func (ctx *IFContext) getType(expr Expr) frontend.Type {
 
 		// Cant find the variable, this should never happen
 		panic(fmt.Sprintf("Cannot find variable %s", expr.Name))
+
 	default:
 		return nil
 	}
@@ -226,6 +227,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 				panic("More than 4 parameters unimplemented!")
 			}
 			for regNum, p := range f.Params {
+				ctx.addInstr(&DeclareInstr{
+					&VarExpr{p.Ident.Name},
+					p.Type})
 				ctx.addInstr(&MoveInstr{
 					Dst: &VarExpr{p.Ident.Name},
 					Src: &RegisterExpr{regNum},
