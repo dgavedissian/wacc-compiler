@@ -10,6 +10,7 @@ from tempfile import NamedTemporaryFile
 import unittest
 from functools import partial
 import fnmatch
+import re
 
 COMPILE_FLAGS = ['--if=false', '--v=false']
 ASSEMBLER_FLAGS = ['-mcpu=arm1176jzf-s', '-mtune=arm1176jzf-s']
@@ -127,11 +128,18 @@ def hashcode(s: str) -> str:
 class RuntimeTests(unittest.TestCase):
     _multiprocess_can_split_ = True # Support for nose test runner
 
+    address_re = re.compile("0x[0-9a-f]+")
+
     def execute_file(self, wacc_filename: str, stdin: str) -> (str, str):
         with compile(wacc_filename) as asm_file:
             with assemble(asm_file) as binary_file:
                 stdout, exitcode = emulate(binary_file, stdin)
         return stdout, exitcode
+
+    def assertMatchesAddressless(self, actual, expected):
+        addressless_actual = self.address_re.sub('ADDR', actual)
+        addressless_expected = self.address_re.sub('ADDR', expected)
+        return addressless_actual == addressless_expected
 
     @classmethod    
     def attach_test(cls, wacc_filename: str, stdin: str, 
@@ -139,7 +147,10 @@ class RuntimeTests(unittest.TestCase):
 
         def test(self):
             stdout, exitcode = self.execute_file(wacc_filename, stdin)
-            self.assertEqual(stdout, expected_stdout)
+            if self.assertMatchesAddressless(stdout, expected_stdout):
+                self.assertTrue(True)
+            else:
+                self.assertEqual(stdout, expected_stdout)
             self.assertEqual(exitcode, expected_exitcode)
 
         setattr(cls, "test_{}_{}".format(wacc_filename, hashcode(stdin)), test)
