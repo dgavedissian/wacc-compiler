@@ -78,10 +78,28 @@ func (ctx *IFContext) popScope() {
 
 func (ctx *IFContext) getType(expr Expr) frontend.Type {
 	switch expr := expr.(type) {
-	case *BinaryExpr:
+	case *IntConstExpr:
+		return frontend.BasicType{frontend.INT}
+
+	case *CharConstExpr:
+		return frontend.BasicType{frontend.CHAR}
+
+	case *ArrayConstExpr:
 		return expr.Type
 
+	case *StringConstExpr:
+		return frontend.BasicType{frontend.STRING}
+
+	case *BoolConstExpr:
+		return frontend.BasicType{frontend.BOOL}
+
+	case *PointerConstExpr:
+		return frontend.BasicType{frontend.PAIR}
+
 	case *UnaryExpr:
+		return expr.Type
+
+	case *BinaryExpr:
 		return expr.Type
 
 	case *VarExpr:
@@ -283,17 +301,21 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 			Type:     frontend.BasicType{frontend.BOOL}}})
 
 		// Build main branch
+		ctx.pushScope()
 		for _, n := range node.Body {
 			ctx.translate(n)
 		}
+		ctx.popScope()
 
 		ctx.addInstr(&JmpInstr{endIfElse})
 		ctx.appendNode(startElse)
 
 		// Build else branch
+		ctx.pushScope()
 		for _, n := range node.Else {
 			ctx.translate(n)
 		}
+		ctx.popScope()
 
 		// Build end
 		ctx.appendNode(endIfElse)
@@ -314,9 +336,11 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 			Type:     frontend.BasicType{frontend.BOOL}}})
 
 		// Build body
+		ctx.pushScope()
 		for _, n := range node.Body {
 			ctx.translate(n)
 		}
+		ctx.popScope()
 
 		// Build end
 		ctx.addInstr(&JmpInstr{beginWhile})
