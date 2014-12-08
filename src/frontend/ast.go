@@ -89,6 +89,7 @@ type AssignStmt struct {
 type ReadStmt struct {
 	Read *Position
 	Dst  LValueExpr
+	Type Type
 }
 
 type FreeStmt struct {
@@ -110,6 +111,7 @@ type PrintStmt struct {
 	Print   *Position // position of print keyword
 	Right   Expr
 	NewLine bool
+	Type    Type
 }
 
 type IfStmt struct {

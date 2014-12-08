@@ -343,6 +343,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 		if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{CHAR}) {
 			SemanticError(statement.Dst.Pos(), "semantic error -- destination of read has incorrect type (expected: INT or CHAR, actual: %s)", t.Repr())
 		}
+		statement.Type = t
 
 	case *FreeStmt:
 		t := ctx.DeriveType(statement.Object)
@@ -371,7 +372,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 
 	case *PrintStmt:
 		// Verify expression by attempting to derive the type
-		ctx.DeriveType(statement.Right)
+		statement.Type = ctx.DeriveType(statement.Right)
 
 	case *IfStmt:
 		// Check the condition

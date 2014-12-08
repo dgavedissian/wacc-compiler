@@ -266,7 +266,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 				Src: ctx.translateExpr(node.Right)})
 
 	case *frontend.ReadStmt:
-		ctx.addInstr(&ReadInstr{ctx.translateExpr(node.Dst)})
+		ctx.addInstr(&ReadInstr{ctx.translateExpr(node.Dst), node.Type})
 
 	case *frontend.FreeStmt:
 		ctx.addInstr(&FreeInstr{ctx.translateExpr(node.Object)})
@@ -281,7 +281,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		right := ctx.translateExpr(node.Right)
 		ctx.addInstr(&PrintInstr{
 			Expr: right,
-			Type: ctx.getType(right)})
+			Type: node.Type})
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{
 				Expr: &CharConstExpr{'\n', 1},

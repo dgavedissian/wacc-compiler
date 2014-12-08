@@ -40,18 +40,26 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("add r1, sp, #0")
 
 	// Get scanf format string depending on type
-	t := getTypeForExpr(ctx, i.Dst).Type
+	t := i.Type
 	var fmtString string
 	if t.Equals(frontend.BasicType{frontend.INT}) {
 		fmtString = "scanf_fmt_int"
 	} else if t.Equals(frontend.BasicType{frontend.CHAR}) {
 		fmtString = "scanf_fmt_char"
 	}
+
 	ctx.pushCode("ldr r0, =%s", fmtString)
 	ctx.pushCode("bl wscanf")
 
 	// Move output to destination
-	ctx.pushCode("ldr %s, [sp]", i.Dst.Repr())
+	ctx.pushCode("ldr r1, [sp]")
+	if mem, ok := i.Dst.(*MemExpr); ok {
+		ctx.pushCode("str r1, [%v, #%v]", mem.Address.Repr(), mem.Offset)
+	} else if stack, ok := i.Dst.(*StackLocationExpr); ok {
+		ctx.pushCode("str r1, [sp, #%v]", stack.Id*regWidth)
+	} else {
+		ctx.pushCode("mov %s, r1", i.Dst.Repr())
+	}
 
 	// load regs r0 and r1
 	ctx.pushCode("pop {r0,r1}")
@@ -59,6 +67,7 @@ func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Object.(*RegisterExpr).Repr())
+	ctx.pushCode("bl " + RuntimeCheckNullPointerLabel)
 	ctx.pushCode("bl free")
 }
 
@@ -195,7 +204,7 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		}
 
 	case *StackLocationExpr:
-		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*4)
+		ctx.pushCode("str %v, [sp, #%v]", i.Src.(*RegisterExpr).Repr(), i.Dst.(*StackLocationExpr).Id*regWidth)
 
 	case *RegisterExpr:
 		// Optimisation step: If we're moving from a constant, just load
@@ -229,7 +238,7 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 			ctx.registerContents[0][dst.Repr()] = ctx.registerContents[0][src.Repr()]
 
 		case *StackLocationExpr:
-			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), src.Id*4)
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), src.Id*regWidth)
 
 		case *MemExpr:
 			if src.Offset == 0 {
@@ -364,6 +373,12 @@ func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
 		ctx.registerContents = ctx.registerContents[1:]
 	*/
 }
+func (i *CheckNullDereferenceInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("push {r0}")
+	ctx.pushCode("mov r0, r%v", i.Ptr.(*RegisterExpr).Id)
+	ctx.pushCode("bl " + RuntimeCheckNullPointerLabel)
+	ctx.pushCode("pop {r0}")
+}
 
 func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
 	dst := i.Dst.Repr()
@@ -462,6 +477,8 @@ _wacc_array_index_negative_msg:
 	.asciz "ArrayIndexOutOfBoundsError: negative index\n"
 _wacc_array_index_large_msg:
 	.asciz "ArrayIndexOutOfBoundsError: index too large\n"
+_wacc_null_dereference_msg:
+	.asciz "NullReferenceError: dereference a null reference\n"
 `
 	ctx.generateData(ifCtx)
 
@@ -500,6 +517,12 @@ _wacc_array_index_large_msg:
 ` + RuntimeOverflowLabel + `:
 	ldr r1, =_wacc_overflow_error_msg
 	bl _wacc_throw_runtime_error
+` + RuntimeCheckNullPointerLabel + `:
+  push {lr}
+	cmp r0, #0
+	ldreq r1, =_wacc_null_dereference_msg
+  bleq _wacc_throw_runtime_error
+	pop {pc}
 _wacc_throw_runtime_error:
 	bl _wacc_print_str
 	mov r0, #-1

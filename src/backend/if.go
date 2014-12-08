@@ -233,7 +233,8 @@ type LabelInstr struct {
 }
 
 type ReadInstr struct {
-	Dst Expr // LValueExpr
+	Dst  Expr // LValueExpr
+	Type frontend.Type
 }
 
 type FreeInstr struct {
@@ -302,6 +303,10 @@ type DeclareTypeInstr struct {
 	Type *TypeExpr
 }
 
+type CheckNullDereferenceInstr struct {
+	Ptr Expr
+}
+
 func (DeclareInstr) instr() {}
 func (e DeclareInstr) Repr() string {
 	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
@@ -320,6 +325,11 @@ func (e PopScopeInstr) Repr() string {
 func (DeclareTypeInstr) instr() {}
 func (e DeclareTypeInstr) Repr() string {
 	return fmt.Sprintf("TYPE OF %v IS %v", e.Dst.Repr(), e.Type.Type.Repr())
+}
+
+func (CheckNullDereferenceInstr) instr() {}
+func (i CheckNullDereferenceInstr) Repr() string {
+	return fmt.Sprintf("CHECK NULL %v", i.Ptr.Repr())
 }
 
 // Second stage instructions
@@ -396,7 +406,7 @@ func (i LabelInstr) Repr() string {
 
 func (ReadInstr) instr() {}
 func (i ReadInstr) Repr() string {
-	return fmt.Sprintf("READ %s", i.Dst.Repr())
+	return fmt.Sprintf("READ %v %s", i.Type.Repr(), i.Dst.Repr())
 }
 
 func (FreeInstr) instr() {}

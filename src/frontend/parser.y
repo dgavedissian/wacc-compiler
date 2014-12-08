@@ -86,12 +86,12 @@ statement
     : SKIP                            { $$.Stmt = &SkipStmt{$1.Position} }
     | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
     | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
-    | READ assign_lhs                 { $$.Stmt = &ReadStmt{$1.Position, $2.Expr.(LValueExpr)} }
+    | READ assign_lhs                 { $$.Stmt = &ReadStmt{$1.Position, $2.Expr.(LValueExpr), nil} }
     | FREE expression                 { $$.Stmt = &FreeStmt{$1.Position, $2.Expr} }
     | RETURN expression               { $$.Stmt = &ReturnStmt{$1.Position, $2.Expr} }
     | EXIT expression                 { $$.Stmt = &ExitStmt{$1.Position, $2.Expr} }
-    | PRINT expression                { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, false} }
-    | PRINTLN expression              { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, true} }
+    | PRINT expression                { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, false, nil} }
+    | PRINTLN expression              { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, true, nil} }
     | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{$1.Position, $2.Stmts, $3.Position} }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{$1.Position, $2.Expr, $4.Stmts, $6.Stmts, $7.Position}
