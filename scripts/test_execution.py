@@ -179,10 +179,9 @@ def generate_tests_for_program(test_case: RuntimeTests, wacc_filename: str) -> N
     input_filenames = get_input_filenames(wacc_filename)
     tests = list(map(get_test_parameters, input_filenames))
     for params in tests:
-        print(wacc_filename, params)
         test_case.attach_test(wacc_filename, *params)
 
-def get_files_recursive(d, pattern):
+def get_files_recursive(d, pattern) -> None:
     matches = []
     for root, dirnames, filenames in os.walk(d):
         for filename in fnmatch.filter(filenames, pattern):
@@ -214,17 +213,9 @@ def main() -> None:
     runner = unittest.TextTestRunner()
     suite = unittest.TestLoader().loadTestsFromTestCase(RuntimeTests)
     runner.run(suite)
-    '''
-    asm_file = compile(wacc_filename)
-    binary_file = assemble(asm_file)
-    stdout, exitcode = emulate(binary_file)
-    print('STDOUT')
-    print(stdout)
-    print('EXIT CODE')
-    print(exitcode)
-    '''
 
 if __name__ == '__main__':
     main()
+    os._exit(0)
 
 
