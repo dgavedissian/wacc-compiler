@@ -237,15 +237,15 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 		expr.Index.allocateRegisters(ctx, index.Id)
 
 		// Runtime safety check
-		ctx.pushInstr(&MoveInstr{
-			Dst: &RegisterExpr{1},
-			Src: arrayPtr})
-		ctx.pushInstr(&MoveInstr{
-			Dst: &RegisterExpr{0},
-			Src: index})
+		ctx.pushInstr(&PushInstr{&RegisterExpr{0}})
+		ctx.pushInstr(&PushInstr{&RegisterExpr{1}})
+		ctx.pushInstr(&MoveInstr{Dst: &RegisterExpr{1}, Src: arrayPtr})
+		ctx.pushInstr(&MoveInstr{Dst: &RegisterExpr{0}, Src: index})
 		ctx.pushInstr(&CallInstr{Label: &LocationExpr{RuntimeCheckArrayBoundsLabel}})
-
 		ctx.pushInstr(&CheckNullDereferenceInstr{arrayPtr})
+		ctx.pushInstr(&PopInstr{&RegisterExpr{1}})
+		ctx.pushInstr(&PopInstr{&RegisterExpr{0}})
+
 		ctx.pushInstr(&AddInstr{
 			Dst:      arrayPtr,
 			Op1:      arrayPtr,
