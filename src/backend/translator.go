@@ -227,6 +227,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 				panic("More than 4 parameters unimplemented!")
 			}
 			for regNum, p := range f.Params {
+				ctx.addType(p.Ident.Name, p.Type)
 				ctx.addInstr(&DeclareInstr{
 					&VarExpr{p.Ident.Name},
 					p.Type})
