@@ -7,15 +7,31 @@ import (
 const LOWER_BOUND = -(1 << 31)
 const UPPER_BOUND = (1 << 31) - 1
 
+func VerifyFunctionReturns(stmtList []Stmt) {
+	if !VerifyStatementListReturns(stmtList) {
+		// TODO: Just pass position and print context
+		SyntaxError(stmtList[0].Pos().Line(), "syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
+	}
+}
+
+func VerifyStatementListReturns(stmtList []Stmt) bool {
+	for i := len(stmtList) - 1; i >= 0; i-- {
+		if VerifyStatementReturns(stmtList[i]) {
+			return true
+		}
+	}
+	return false
+}
+
 // Verification of a function body
 func VerifyStatementReturns(stmt Stmt) bool {
 	switch stmt := stmt.(type) {
 	case *IfStmt:
-		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1]) &&
-			VerifyStatementReturns(stmt.Else[len(stmt.Else)-1])
+		return VerifyStatementListReturns(stmt.Body) &&
+			VerifyStatementListReturns(stmt.Else)
 
 	case *WhileStmt:
-		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1])
+		return VerifyStatementListReturns(stmt.Body)
 
 	case *ExitStmt:
 		return true
@@ -76,14 +92,5 @@ func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
 		// TODO: Just pass position and print context
 		SyntaxError(expr.Pos().Line(), "syntax error - Int literal overflow")
-	}
-}
-
-// We're only concerned with the very last statement
-func VerifyFunctionReturns(stmtList []Stmt) {
-	endStmt := stmtList[len(stmtList)-1]
-	if !VerifyStatementReturns(endStmt) {
-		// TODO: Just pass position and print context
-		SyntaxError(stmtList[0].Pos().Line(), "syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }
