@@ -4,18 +4,18 @@ import os
 import subprocess
 import threading
 import sys
-import multiprocessing
-from glob import glob
-from tempfile import NamedTemporaryFile
 import unittest
-from functools import partial
 import fnmatch
 import re
+from glob import glob
+from tempfile import NamedTemporaryFile
+
 
 COMPILE_FLAGS = ['--if=false', '--v=false']
 ASSEMBLER_FLAGS = ['-mcpu=arm1176jzf-s', '-mtune=arm1176jzf-s']
 EMULATOR_FLAGS = ['-L', '/usr/arm-linux-gnueabi']
 TIMEOUT = 5
+
 
 class CompilePipelineException(Exception):
     def __init__(self, stdout, stderr, exitcode):
@@ -34,14 +34,18 @@ class CompilePipelineException(Exception):
                                self.stdout,
                                self.stderr)
 
+
 class CompilerException(CompilePipelineException):
     pass
+
 
 class AssemblerException(CompilePipelineException):
     pass
 
+
 class TimeoutException(Exception):
     pass
+
 
 class Command:
     def __init__(self, cmd: list):
@@ -66,6 +70,7 @@ class Command:
         if thread.is_alive():
             raise TimeoutException(' '.join(str(x) for x in self.cmd))
             self.process.terminate()
+
         return (self.stdout.decode('utf-8'), self.stderr.decode('utf-8'), 
                 self.process.returncode)
 
@@ -74,6 +79,7 @@ def call_external(cmd: str, input=None) -> (str, str, int):
     if input is None:
         input = ''
     return Command(cmd).run(input=input, timeout=TIMEOUT)
+
 
 def get_compiler_path() -> str:
     cwd = os.path.dirname(os.path.abspath(__file__))
@@ -85,14 +91,18 @@ def get_compiler_path() -> str:
 
     return compile_path
 
+
 def get_assembler_cmd() -> str:
     return ['arm-linux-gnueabi-gcc'] + ASSEMBLER_FLAGS
+
 
 def get_compiler_cmd() -> list:
     return [get_compiler_path()] + COMPILE_FLAGS
 
+
 def get_emulator_cmd() -> list:
     return ['qemu-arm'] + EMULATOR_FLAGS
+
 
 def compile(wacc_filename: str) -> NamedTemporaryFile:
     asm_file = NamedTemporaryFile(suffix='.s')
@@ -100,7 +110,9 @@ def compile(wacc_filename: str) -> NamedTemporaryFile:
     stdout, stderr, exitcode = call_external(cmd)
     if exitcode is not 0:
         raise CompilerException(stdout, stderr, exitcode)
+
     return asm_file
+
 
 def assemble(asm_file: NamedTemporaryFile) -> NamedTemporaryFile:
     binary_file = NamedTemporaryFile()
@@ -108,12 +120,15 @@ def assemble(asm_file: NamedTemporaryFile) -> NamedTemporaryFile:
     stdout, stderr, exitcode = call_external(cmd)
     if exitcode is not 0:
         raise AssemblerException(stdout, stderr, exitcode)
+
     return binary_file
+
 
 def emulate(binary_file: NamedTemporaryFile, stdin: str) -> (str, int):
     cmd = get_emulator_cmd() + [binary_file.name]
     stdout, _, exitcode = call_external(cmd, stdin)
     return (stdout, exitcode)
+
 
 def hashcode(s: str) -> str:
     n = len(s)
@@ -121,6 +136,7 @@ def hashcode(s: str) -> str:
     for i, c in enumerate(s):
         h += ord(c) * (31 ** (n - (i+1)))
         h = (h % (2 ** 32))
+
     return '{:X}'.format(h)
 
 
@@ -154,6 +170,7 @@ class RuntimeTests(unittest.TestCase):
 
         setattr(cls, "test_{}_{}".format(wacc_filename, hashcode(stdin)), test)
 
+
 def get_test_parameters(input_filename: str) -> (str, str, str):
     input_base = os.path.splitext(input_filename)[0]
     out_filename = input_base + '.output'
@@ -161,25 +178,34 @@ def get_test_parameters(input_filename: str) -> (str, str, str):
     input = ''
     expected_output = ''
     expected_exitcode = 0
+
     with open(input_filename, 'rb') as in_file:
         input = in_file.read().decode('utf-8')
+
     with open(out_filename, 'rb') as out_file:
         expected_output = out_file.read().decode('utf-8')
+
     with open(exitcode_filename, 'rb') as exitcode_file:
         expected_exitcode = exitcode_file.read().decode('utf-8')
         if expected_exitcode:
             expected_exitcode = int(expected_exitcode)
+
     return (input, expected_output, expected_exitcode)
+
 
 def get_input_filenames(wacc_filename: str) -> list:
     wacc_base = os.path.splitext(wacc_filename)[0]
     return glob(wacc_base + '.*.input')
 
-def generate_tests_for_program(test_case: RuntimeTests, wacc_filename: str) -> None:
+
+def generate_tests_for_program(test_case: RuntimeTests, 
+                               wacc_filename: str) -> None:
     input_filenames = get_input_filenames(wacc_filename)
     tests = list(map(get_test_parameters, input_filenames))
+
     for params in tests:
         test_case.attach_test(wacc_filename, *params)
+
 
 def get_files_recursive(d, pattern) -> None:
     matches = []
@@ -188,8 +214,10 @@ def get_files_recursive(d, pattern) -> None:
             matches.append(os.path.join(root, filename))
     return matches
 
+
 def print_usage() -> None:
     print('Usage: {} dirname|filename'.format(sys.argv[0]))
+
 
 def main() -> None:
     if len(sys.argv) != 2:
@@ -213,6 +241,7 @@ def main() -> None:
     runner = unittest.TextTestRunner()
     suite = unittest.TestLoader().loadTestsFromTestCase(RuntimeTests)
     runner.run(suite)
+
 
 if __name__ == '__main__':
     main()
