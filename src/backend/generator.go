@@ -334,8 +334,12 @@ func (i *SubInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *MulInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), i.Op2.Repr(), i.Op1.Repr(), i.Op2.Repr())
-	ctx.pushCode("cmp %v, %v, ASR #31", i.Op1.Repr(), i.Dst.Repr())
+	overflowReg := i.Op1
+	if i.Dst.Id == i.Op1.Id {
+		overflowReg = i.Op2
+	}
+	ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), overflowReg.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	ctx.pushCode("cmp %v, %v, ASR #31", overflowReg.Repr(), i.Dst.Repr())
 	ctx.pushCode("blne " + RuntimeOverflowLabel)
 }
 
