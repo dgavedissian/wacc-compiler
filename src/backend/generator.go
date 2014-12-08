@@ -243,7 +243,9 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.generateStackOffset(src))
 
 		case *StackArgumentExpr:
-			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.stackDistance+(src.Id+13)*4)
+			// 9 here signifies size different of the stack after push {r4-r11, lr}
+			saveRegsPushSize := 9
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.stackDistance+(src.Id+saveRegsPushSize)*regWidth)
 
 		case *MemExpr:
 			if src.Offset == 0 {
@@ -416,9 +418,11 @@ func (i *HeapAllocInstr) generateCode(ctx *GeneratorContext) {
 
 func (i *PushInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("push {%v}", i.Op.Repr())
+	ctx.stackDistance += 4
 }
 
 func (i *PopInstr) generateCode(ctx *GeneratorContext) {
+	ctx.stackDistance -= 4
 	ctx.pushCode("pop {%v}", i.Op.Repr())
 }
 
