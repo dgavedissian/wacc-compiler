@@ -243,7 +243,8 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.generateStackOffset(src))
 
 		case *StackArgumentExpr:
-			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.stackDistance+(src.Id+13)*4)
+			// 9 here signifies size different of the stack after push {r4-r11, lr}
+			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.stackDistance+(src.Id+9)*regWidth)
 
 		case *MemExpr:
 			if src.Offset == 0 {
