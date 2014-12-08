@@ -66,7 +66,6 @@ class Command:
         if thread.is_alive():
             raise TimeoutException(' '.join(str(x) for x in self.cmd))
             self.process.terminate()
-            thread.join()
         return (self.stdout.decode('utf-8'), self.stderr.decode('utf-8'), 
                 self.process.returncode)
 
