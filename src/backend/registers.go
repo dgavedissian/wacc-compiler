@@ -419,10 +419,8 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		ctx.pushInstr(&NegInstr{dst})
 
 	case Len:
-		/*tx.pushInstr(&MoveInstr{
-		&RegisterExpr{r},
-		&MemExpr{ctx.lookupVariable(e.Operand.(*VarExpr)), 0}})
-		*/ctx.pushInstr(&DeclareTypeInstr{
+		ctx.pushInstr(&MoveInstr{&RegisterExpr{r}, &MemExpr{&RegisterExpr{r}, 0}})
+		ctx.pushInstr(&DeclareTypeInstr{
 			&RegisterExpr{r},
 			&TypeExpr{frontend.BasicType{frontend.INT}}})
 
