@@ -467,6 +467,8 @@ printf_true:
 	.asciz "true"
 printf_false:
 	.asciz "false"
+printf_nil:
+	.asciz "(nil)"
 _wacc_overflow_error_msg:
 	.asciz "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
 _wacc_divide_by_zero_msg:
@@ -569,6 +571,9 @@ _wacc_print_wstr:
 _wacc_print_addr:
 	push {lr}
 	ldr r0, =printf_fmt_addr
+	cmp r1, #0
+	ldreq r0, =printf_fmt_str
+	ldreq r1, =printf_nil
 	bl wprintf
 	mov r0, #0
 	bl fflush
