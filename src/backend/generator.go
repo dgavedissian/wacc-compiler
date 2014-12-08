@@ -37,6 +37,8 @@ func (ctx *GeneratorContext) generateStackOffset(stack *StackLocationExpr) int {
 }
 
 func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r1, #0")
+	ctx.pushCode("str r1, [sp]")
 	ctx.pushCode("add r1, sp, #0")
 
 	// Get scanf format string depending on type
