@@ -7,15 +7,21 @@ import (
 const LOWER_BOUND = -(1 << 31)
 const UPPER_BOUND = (1 << 31) - 1
 
-// Verification of a function body
+func VerifyAnyStatementsReturn(stmts []Stmt) bool {
+	for i := len(stmts) - 1; i >= 0; i-- {
+		if VerifyStatementReturns(stmts[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// Verification of a statement
 func VerifyStatementReturns(stmt Stmt) bool {
 	switch stmt := stmt.(type) {
 	case *IfStmt:
-		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1]) &&
-			VerifyStatementReturns(stmt.Else[len(stmt.Else)-1])
-
-	case *WhileStmt:
-		return VerifyStatementReturns(stmt.Body[len(stmt.Body)-1])
+		return VerifyAnyStatementsReturn(stmt.Body) &&
+			VerifyAnyStatementsReturn(stmt.Else)
 
 	case *ExitStmt:
 		return true
@@ -74,16 +80,15 @@ func StaticExprOverflows(expr Expr) bool {
 
 func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
-		// TODO: Just pass position and print context
 		SyntaxError(expr.Pos().Line(), "syntax error - Int literal overflow")
 	}
 }
 
-// We're only concerned with the very last statement
+// Iterate in reverse through body. If any of the top level statements return,
+// it returns on all code paths. If none of the top level statements return,
+// error.
 func VerifyFunctionReturns(stmtList []Stmt) {
-	endStmt := stmtList[len(stmtList)-1]
-	if !VerifyStatementReturns(endStmt) {
-		// TODO: Just pass position and print context
+	if !VerifyAnyStatementsReturn(stmtList) {
 		SyntaxError(stmtList[0].Pos().Line(), "syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
 	}
 }
