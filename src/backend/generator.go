@@ -455,6 +455,9 @@ func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
 		}
 	*/
 	ctx.pushCode("pop {r4-r11,pc}")
+
+	// Assemble the current literal pool immediately
+	ctx.pushCode(".ltorg")
 	ctx.funcStack = ctx.funcStack[1:]
 }
 
