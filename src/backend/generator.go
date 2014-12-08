@@ -358,13 +358,29 @@ func (i *OrInstr) generateCode(ctx *GeneratorContext) {
 func (*DeclareInstr) generateCode(*GeneratorContext) {}
 
 func (i *PushScopeInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("sub sp, sp, #%v", i.StackSize)
+	stackSpace := i.StackSize
+	for stackSpace > 0 {
+		thisTime := stackSpace
+		if thisTime > 1024 {
+			thisTime = 1024
+		}
+		ctx.pushCode("sub sp, sp, #%v", thisTime)
+		stackSpace -= thisTime
+	}
 	ctx.stackDistance += i.StackSize
 }
 
 func (i *PopScopeInstr) generateCode(ctx *GeneratorContext) {
 	ctx.stackDistance -= i.StackSize
-	ctx.pushCode("add sp, sp, #%v", i.StackSize)
+	stackSpace := i.StackSize
+	for stackSpace > 0 {
+		thisTime := stackSpace
+		if thisTime > 1024 {
+			thisTime = 1024
+		}
+		ctx.pushCode("add sp, sp, #%v", thisTime)
+		stackSpace -= thisTime
+	}
 }
 
 func (i *CheckNullDereferenceInstr) generateCode(ctx *GeneratorContext) {
