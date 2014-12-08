@@ -1,4 +1,4 @@
-package main
+package frontend
 
 import (
 	"fmt"
@@ -64,10 +64,10 @@ type ErrorType struct {
 // Statements
 //
 type ProgStmt struct {
-	BeginKw *Position // position of "begin" keyword
-	Funcs   []*Function
-	Body    []Stmt
-	EndKw   *Position // position of "end keyword
+	BeginPos *Position // position of "begin" keyword
+	Funcs    []*Function
+	Body     []Stmt
+	EndPos   *Position // position of "end keyword
 }
 
 type SkipStmt struct {
@@ -75,10 +75,10 @@ type SkipStmt struct {
 }
 
 type DeclStmt struct {
-	TypeKw *Position // *Positionition of the type keyword
-	Type   Type
-	Ident  *IdentExpr
-	Right  Expr
+	TypePos *Position // Position of the type keyword
+	Type    Type
+	Ident   *IdentExpr
+	Right   Expr
 }
 
 type AssignStmt struct {
@@ -88,7 +88,8 @@ type AssignStmt struct {
 
 type ReadStmt struct {
 	Read *Position
-	Dest LValueExpr
+	Dst  LValueExpr
+	Type Type
 }
 
 type FreeStmt struct {
@@ -110,6 +111,7 @@ type PrintStmt struct {
 	Print   *Position // position of print keyword
 	Right   Expr
 	NewLine bool
+	Type    Type
 }
 
 type IfStmt struct {
@@ -167,7 +169,7 @@ type ArrayElemExpr struct {
 type PairElemExpr struct {
 	SelectorPos  *Position
 	SelectorType int
-	Operand      Expr
+	Operand      *IdentExpr
 	EndPos       *Position
 }
 
@@ -184,12 +186,14 @@ type ArrayLit struct {
 	ValuesPos *Position
 	Values    []Expr
 	EndPos    *Position
+	Type      Type
 }
 
 type UnaryExpr struct {
 	OperatorPos *Position
 	Operator    string
 	Operand     Expr
+	Type        Type
 }
 
 type BinaryExpr struct {
@@ -197,6 +201,7 @@ type BinaryExpr struct {
 	OperatorPos *Position
 	Operator    string
 	Right       Expr
+	Type        Type
 }
 
 //
@@ -277,6 +282,11 @@ func (bt BasicType) Equals(t2 Type) bool {
 	} else if bt2, ok := t2.(BasicType); ok {
 		return bt2.TypeId == bt.TypeId
 	}
+	if bt.Equals(BasicType{STRING}) {
+		if array, ok := t2.(ArrayType); ok {
+			return array.BaseType.Equals(BasicType{CHAR})
+		}
+	}
 	return false
 }
 func (bt BasicType) Repr() string {
@@ -300,6 +310,11 @@ func (bt BasicType) Repr() string {
 func (at ArrayType) Equals(t2 Type) bool {
 	if at2, ok := t2.(ArrayType); ok {
 		return at2.BaseType.Equals(at.BaseType)
+	}
+	if at.BaseType.Equals(BasicType{CHAR}) {
+		if bt2, ok := t2.(BasicType); ok {
+			return bt2.TypeId == STRING
+		}
 	}
 	return false
 }
@@ -342,9 +357,9 @@ func (ErrorType) Repr() string {
 
 // Program Statement
 func (ProgStmt) stmtNode()        {}
-func (s ProgStmt) Pos() *Position { return s.BeginKw }
+func (s ProgStmt) Pos() *Position { return s.BeginPos }
 func (s ProgStmt) End() *Position {
-	return s.EndKw.End()
+	return s.EndPos.End()
 }
 func (s ProgStmt) Repr() string {
 	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
@@ -361,7 +376,7 @@ func (s SkipStmt) Repr() string { return "Skip" }
 
 // Declaration statement
 func (DeclStmt) stmtNode()        {}
-func (s DeclStmt) Pos() *Position { return s.TypeKw }
+func (s DeclStmt) Pos() *Position { return s.TypePos }
 func (s DeclStmt) End() *Position { return s.Pos() } // TODO
 func (s DeclStmt) Repr() string {
 	if s.Right == nil {
@@ -384,12 +399,12 @@ func (s AssignStmt) Repr() string {
 // Read Statement
 func (ReadStmt) stmtNode()        {}
 func (s ReadStmt) Pos() *Position { return s.Read }
-func (s ReadStmt) End() *Position { return s.Dest.Pos().End() }
+func (s ReadStmt) End() *Position { return s.Dst.Pos().End() }
 func (s ReadStmt) Repr() string {
-	if s.Dest == nil {
+	if s.Dst == nil {
 		return "Read(<missing destination>)"
 	}
-	return "Read(" + s.Dest.Repr() + ")"
+	return "Read(" + s.Dst.Repr() + ")"
 }
 
 // Free Statement
@@ -541,7 +556,7 @@ func (PairElemExpr) exprNode()        {}
 func (x PairElemExpr) Pos() *Position { return x.SelectorPos }
 func (x PairElemExpr) End() *Position { return x.EndPos.End() }
 func (x PairElemExpr) Repr() string {
-	return fmt.Sprintf("PairElem(%d, %f)", x.SelectorType, x.Operand)
+	return fmt.Sprintf("PairElem(%d, %v)", x.SelectorType, x.Operand)
 }
 
 //
@@ -574,10 +589,11 @@ func (UnaryExpr) exprNode()        {}
 func (x UnaryExpr) Pos() *Position { return x.OperatorPos }
 func (x UnaryExpr) End() *Position { return x.Operand.End() }
 func (x UnaryExpr) Repr() string {
-	if x.Operand == nil {
-		return "Unary(" + x.Operator + ", <missing operand>)"
+	var t string
+	if x.Type != nil {
+		t = x.Type.Repr()
 	}
-	return "Unary(" + x.Operator + ", " + x.Operand.Repr() + ")"
+	return fmt.Sprintf("Unary(%v, %v, %v)", x.Operator, x.Operand.Repr(), t)
 }
 
 // Binary Expression
@@ -585,11 +601,11 @@ func (BinaryExpr) exprNode()        {}
 func (x BinaryExpr) Pos() *Position { return x.Left.Pos() }
 func (x BinaryExpr) End() *Position { return x.Right.End() }
 func (x BinaryExpr) Repr() string {
-	if x.Left == nil || x.Right == nil {
-		return "Binary(" + x.Operator + ", , )"
+	var t string
+	if x.Type != nil {
+		t = x.Type.Repr()
 	}
-	return "Binary(" + x.Operator + ", " +
-		x.Left.Repr() + ", " + x.Right.Repr() + ")"
+	return fmt.Sprintf("Binary(%v, %v, %v, %v)", x.Operator, x.Left.Repr(), x.Right.Repr(), t)
 }
 
 //
