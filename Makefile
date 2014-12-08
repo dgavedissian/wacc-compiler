@@ -85,5 +85,7 @@ testinvalidsyntax: compile
 testinvalidsemantic: compile
 	$(SCRIPTS_DIR)/test_examples.py "Invalid Semantic"
 
+testexecution: compile
+	$(SCRIPTS_DIR)/test_execution.py examples/valid/
 
-.PHONY: clean all test testvalid testinvalidsyntax testinvalidsemantic
+.PHONY: clean all test testvalid testinvalidsyntax testinvalidsemantic testexecution
