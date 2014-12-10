@@ -14,7 +14,7 @@ var exitFlag int = 0
 
 func main() {
 	enableDebug := flag.Bool("d", false, "Enable debug mode")
-	enableVerbose := flag.Bool("v", true, "Enable verbose logging")
+	enableVerbose := flag.Bool("v", false, "Enable verbose logging")
 	stopAtAST := flag.Bool("ast", false, "Stop the compile process once the AST has been generated")
 	stopAtIF := flag.Bool("if", false, "Stop the compile process once the IF representation has been generated")
 	stopAtFlatten := flag.Bool("flatten", false, "Stop the compile process once the IF has been flattened")
