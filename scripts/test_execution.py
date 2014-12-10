@@ -7,6 +7,7 @@ import sys
 import unittest
 import fnmatch
 import re
+import argparse
 from glob import glob
 from tempfile import NamedTemporaryFile
 
@@ -14,7 +15,7 @@ from tempfile import NamedTemporaryFile
 COMPILE_FLAGS = ['--if=false', '--v=false']
 ASSEMBLER_FLAGS = ['-mcpu=arm1176jzf-s', '-mtune=arm1176jzf-s']
 EMULATOR_FLAGS = ['-L', '/usr/arm-linux-gnueabi']
-TIMEOUT = 5
+TIMEOUT = 30
 
 
 class CompilePipelineException(Exception):
@@ -161,6 +162,7 @@ class RuntimeTests(unittest.TestCase):
             expected_stdout: str, expected_exitcode: int) -> None:
 
         def test(self):
+            self.maxDiff = None
             stdout, exitcode = self.execute_file(wacc_filename, stdin)
             if self.assertMatchesAddressless(stdout, expected_stdout):
                 self.assertTrue(True)
@@ -220,20 +222,43 @@ def print_usage() -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print_usage()
-        sys.exit(1)
+    global TIMEOUT
+    # Flags
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--timeout', '-t', type=int, default=TIMEOUT,
+            help='Maximum number of seconds a single test is allowed to run')
+    group.add_argument('--quick', default=False, action='store_true',
+            help='Kills tests lasting more than a second. Alias for -t 1')
 
-    path = sys.argv[1]
-    if not os.path.exists(path):
-        print_usage()
-        sys.exit(1)
+    # Positional args
+    parser.add_argument('target', nargs='+',
+            help='WACC target (file or directory) to test. '
+                 'Directories are searched recursively for .wacc files.')
+
+    args = parser.parse_args()
+
+    TIMEOUT = args.timeout
+
+    if args.quick:
+        TIMEOUT = 1
 
     programs = []
-    if os.path.isdir(path):
-        programs += get_files_recursive(path, '*.wacc')
-    else:
-        programs += [sys.argv[1]]
+    for path in args.target:
+        if not os.path.exists(path):
+            print('Target "{}" not found'.format(path), file=sys.stderr)
+            parser.print_usage()
+            sys.exit(1)
+
+        if os.path.isdir(path):
+            programs += get_files_recursive(path, '*.wacc')
+        else:
+            programs += [path]
+
+    programs = list(set(programs))
+    if not programs:
+        print('No programs found', file=sys.stderr)
+        sys.exit(1)
 
     for program in programs:
         generate_tests_for_program(RuntimeTests, program)
