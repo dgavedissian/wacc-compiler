@@ -30,7 +30,7 @@
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
 %token INT BOOL CHAR STRING PAIR
-%token IS
+%token IS EXTERNAL
 %token IF THEN ELSE FI
 %token WHILE DO DONE
 %token LEN ORD CHR FST SND
@@ -57,7 +57,10 @@ body
 func
     : type identifier '(' optional_param_list ')' IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
-        $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts}
+        $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
+      }
+    | type identifier '(' optional_param_list ')' IS EXTERNAL {
+        $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, nil, true} 
       }
     ;
 

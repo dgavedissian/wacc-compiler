@@ -103,6 +103,10 @@
 				lval.Position = NewPositionFromLexer(yylex)
 				return IS
 			}
+/external/ {
+        lval.Position = NewPositionFromLexer(yylex)
+        return EXTERNAL
+      }
 
 /if/		{
 				lval.Position = NewPositionFromLexer(yylex)

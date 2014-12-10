@@ -136,11 +136,12 @@ type ScopeStmt struct {
 }
 
 type Function struct {
-	Func   *Position
-	Type   Type
-	Ident  *IdentExpr
-	Params []Param
-	Body   []Stmt
+	Func     *Position
+	Type     Type
+	Ident    *IdentExpr
+	Params   []Param
+	Body     []Stmt
+	External bool
 }
 
 type Param struct {
@@ -366,6 +367,28 @@ func (s ProgStmt) Repr() string {
 		ReprNodes(s.Body) + ")"
 }
 
+// Function Statement
+func (s Function) Pos() *Position { return s.Func }
+func (s Function) End() *Position {
+	return s.Body[len(s.Body)-1].End()
+}
+func (s Function) Repr() string {
+	if s.External {
+		return fmt.Sprintf("Function(%v, %v)(%v)(external)",
+			s.Type.Repr(), s.Ident.Repr(), ReprNodes(s.Params))
+	} else {
+		return fmt.Sprintf("Function(%v, %v)(%v)(%v)",
+			s.Type.Repr(), s.Ident.Repr(), ReprNodes(s.Params), ReprNodes(s.Body))
+	}
+}
+
+// Function Parameter
+func (s Param) Pos() *Position { return s.Start }
+func (s Param) End() *Position { return s.Finish.End() }
+func (s Param) Repr() string {
+	return "Param(" + s.Type.Repr() + ", " + s.Ident.Repr() + ")"
+}
+
 // Skip Statement
 func (SkipStmt) stmtNode()        {}
 func (s SkipStmt) Pos() *Position { return s.Skip }
@@ -502,25 +525,6 @@ func (s ScopeStmt) End() *Position {
 }
 func (s ScopeStmt) Repr() string {
 	return "Scope(" + ReprNodes(s.Body) + ")"
-}
-
-// Function Statement
-func (s Function) Pos() *Position { return s.Func }
-func (s Function) End() *Position {
-	return s.Body[len(s.Body)-1].End()
-}
-func (s Function) Repr() string {
-	return "Function(type:" + s.Type.Repr() +
-		", name:" + s.Ident.Repr() +
-		", params:(" + ReprNodes(s.Params) +
-		"), body:(" + ReprNodes(s.Body) + ")"
-}
-
-// Function Parameter
-func (s Param) Pos() *Position { return s.Start }
-func (s Param) End() *Position { return s.Finish.End() }
-func (s Param) Repr() string {
-	return "Param(" + s.Type.Repr() + ", " + s.Ident.Repr() + ")"
 }
 
 //

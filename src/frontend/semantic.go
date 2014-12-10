@@ -22,11 +22,13 @@ func VerifyProgram(program *ProgStmt) {
 		ctx.AddFunction(f)
 	}
 	for _, f := range program.Funcs {
-		ctx.PushScope()
-		ctx.currentFunction = f
-		ctx.VerifyStatementList(f.Body)
-		ctx.currentFunction = nil
-		ctx.PopScope()
+		if !f.External {
+			ctx.PushScope()
+			ctx.currentFunction = f
+			ctx.VerifyStatementList(f.Body)
+			ctx.currentFunction = nil
+			ctx.PopScope()
+		}
 	}
 
 	// Verify main
