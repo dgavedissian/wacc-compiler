@@ -74,6 +74,10 @@ clean:
 	$(RM) $(FRONTEND_DIR)/parser.go $(FRONTEND_DIR)/lexer.go compile y.output
 
 test: compile
+	$(SCRIPTS_DIR)/test_examples.py \
+		&& $(SCRIPTS_DIR)/test_execution.py examples/valid/
+
+testfrontend: compile
 	$(SCRIPTS_DIR)/test_examples.py
 
 testvalid: compile
@@ -85,7 +89,7 @@ testinvalidsyntax: compile
 testinvalidsemantic: compile
 	$(SCRIPTS_DIR)/test_examples.py "Invalid Semantic"
 
-testexecution: compile
+testbackend: compile
 	$(SCRIPTS_DIR)/test_execution.py examples/valid/
 
-.PHONY: clean all test testvalid testinvalidsyntax testinvalidsemantic testexecution
+.PHONY: clean all test testvalid testinvalidsyntax testinvalidsemantic testbackend testfrontend
