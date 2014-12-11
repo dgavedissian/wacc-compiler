@@ -24,6 +24,9 @@ func (ctx *GeneratorContext) pushCode(s string, a ...interface{}) {
 	ctx.text += "\t" + fmt.Sprintf(s, a...) + "\n"
 }
 
+//
+// Instructions
+//
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
 
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
@@ -352,9 +355,6 @@ func (i *CheckNullDereferenceInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, r%v", i.Ptr.(*RegisterExpr).Id)
 	ctx.pushCode("bl " + RuntimeCheckNullPointerLabel)
 	ctx.pushCode("pop {r0}")
-}
-
-func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {

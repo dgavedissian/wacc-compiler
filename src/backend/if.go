@@ -298,11 +298,6 @@ type PopScopeInstr struct {
 	StackSize int
 }
 
-type DeclareTypeInstr struct {
-	Dst  Expr
-	Type *TypeExpr
-}
-
 func (DeclareInstr) instr() {}
 func (e DeclareInstr) Repr() string {
 	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
@@ -316,11 +311,6 @@ func (e PushScopeInstr) Repr() string {
 func (PopScopeInstr) instr() {}
 func (e PopScopeInstr) Repr() string {
 	return fmt.Sprintf("POP SCOPE %v", e.StackSize)
-}
-
-func (DeclareTypeInstr) instr() {}
-func (e DeclareTypeInstr) Repr() string {
-	return fmt.Sprintf("TYPE OF %v IS %v", e.Dst.Repr(), e.Type.Type.Repr())
 }
 
 //

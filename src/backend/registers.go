@@ -314,19 +314,16 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regist
 		ctx.freeRegister(dst2)
 
 	case Ord:
-		ctx.pushInstr(&DeclareTypeInstr{dst, &TypeExpr{frontend.BasicType{frontend.INT}}})
+		// Do nothing
 
 	case Chr:
-		ctx.pushInstr(&DeclareTypeInstr{dst, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
+		// Do nothing
 
 	case Neg:
 		ctx.pushInstr(&NegInstr{dst})
 
 	case Len:
 		ctx.pushInstr(&MoveInstr{dst, &MemExpr{dst, 0}})
-		ctx.pushInstr(&DeclareTypeInstr{
-			dst,
-			&TypeExpr{frontend.BasicType{frontend.INT}}})
 
 	default:
 		panic("Unhandled unary operator")
@@ -381,7 +378,6 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 
 	case LT, GT, LE, GE, EQ, NE:
 		ctx.pushInstr(&CmpInstr{Dst: dst, Left: op1, Right: op2, Operator: e.Operator})
-		ctx.pushInstr(&DeclareTypeInstr{dst, &TypeExpr{frontend.BasicType{frontend.BOOL}}})
 
 	default:
 		panic(fmt.Sprintf("Unknown operator %v", e.Operator))
@@ -523,10 +519,10 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	r := ctx.allocateRegister()
-	i.Cond.allocateRegisters(ctx, r)
-	i.Cond = r
-	ctx.freeRegister(r)
+	cond := ctx.allocateRegister()
+	i.Cond.allocateRegisters(ctx, cond)
+	i.Cond = cond
+	ctx.freeRegister(cond)
 }
 
 func (i *DeclareInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
@@ -539,10 +535,6 @@ func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 
 func (*PopScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.popScope()
-}
-
-func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	i.Dst = ctx.lookupVariable(i.Dst.(*VarExpr))
 }
 
 // Second stage IF instructions should never do anything
