@@ -10,14 +10,21 @@ import (
 	"./frontend"
 )
 
-var exitFlag int = 0
+const OK_CODE = 0
+const INTERRUPT_CODE = 1
 
-func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics bool) func(*os.File) (string, bool) {
-	compiler := func(input *os.File) (string, bool) {
-		ast, asterr := frontend.GenerateAST(input, checkSemantics)
+func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics bool) func(*os.File) (string, int) {
+	compiler := func(input *os.File) (string, int) {
+		ast, asterr := frontend.GenerateAST(input)
 
 		if asterr {
-			os.Exit(frontend.ExitCode())
+			return "", frontend.SYNTAX_ERROR
+		}
+
+		semanticOk := frontend.VerifySemantics(ast)
+
+		if !semanticOk {
+			return "", frontend.SEMANTIC_ERROR
 		}
 
 		if verbose {
@@ -44,7 +51,7 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 		}
 
 		if ifonly {
-			return "", true
+			return "", INTERRUPT_CODE
 		}
 
 		asm := backend.GenerateCode(intermediateForm)
@@ -54,7 +61,7 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 			fmt.Println(asm)
 		}
 
-		return asm, false
+		return asm, OK_CODE
 	}
 
 	return compiler
@@ -87,10 +94,10 @@ func main() {
 	compile := compilerFactory(*verboseFlag, *astonlyFlag, *ifonlyFlag, !*disableSemanticFlag)
 
 	// Compile the source code
-	asm, compilerErr := compile(input)
+	asm, compileCode := compile(input)
 
-	if compilerErr {
-		os.Exit(-1)
+	if compileCode != OK_CODE {
+		os.Exit(compileCode)
 	}
 
 	// Grab the assembled code from the source name.
