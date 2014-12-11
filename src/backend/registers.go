@@ -520,34 +520,6 @@ func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.freeRegister(src)
 }
 
-func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	// TODO: something about this doesn't seem right...
-	// if translateLValue makes use of r to
-	r := ctx.allocateRegister()
-	i.Src.allocateRegisters(ctx, r)
-	i.Src = r
-	i.Dst = ctx.translateLValue(i.Dst, r)
-	ctx.freeRegister(r)
-}
-
-func (i *NegInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	r := ctx.allocateRegister()
-	i.Expr.allocateRegisters(ctx, r)
-	i.Expr = r
-	ctx.freeRegister(r)
-}
-
-func (i *CmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
-	r := ctx.allocateRegister()
-	r2 := ctx.allocateRegister()
-	i.Left.allocateRegisters(ctx, r)
-	i.Right.allocateRegisters(ctx, r2)
-	i.Left = r
-	i.Right = r2
-	ctx.freeRegister(r)
-	ctx.freeRegister(r2)
-}
-
 func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
@@ -561,9 +533,6 @@ func (i *DeclareInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.createVariable(i)
 }
 
-func (i *PushInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
-func (i *PopInstr) allocateRegisters(ctx *RegisterAllocatorContext)  {}
-
 func (*PushScopeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	ctx.pushScope()
 }
@@ -576,14 +545,18 @@ func (i *DeclareTypeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	i.Dst = ctx.lookupVariable(i.Dst.(*VarExpr))
 }
 
-func (*CheckNullDereferenceInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
-
 // Second stage IF instructions should never do anything
-func (*AddInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
-func (*SubInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
-func (*MulInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
-func (*DivInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
-func (*AndInstr) allocateRegisters(ctx *RegisterAllocatorContext)       {}
-func (*OrInstr) allocateRegisters(ctx *RegisterAllocatorContext)        {}
-func (*CallInstr) allocateRegisters(ctx *RegisterAllocatorContext)      {}
-func (*HeapAllocInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+func (*AddInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*SubInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*MulInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*DivInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*AndInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*OrInstr) allocateRegisters(*RegisterAllocatorContext)                   {}
+func (*NotInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*NegInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*CmpInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*CallInstr) allocateRegisters(*RegisterAllocatorContext)                 {}
+func (*HeapAllocInstr) allocateRegisters(*RegisterAllocatorContext)            {}
+func (*PushInstr) allocateRegisters(*RegisterAllocatorContext)                 {}
+func (*PopInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
+func (*CheckNullDereferenceInstr) allocateRegisters(*RegisterAllocatorContext) {}
