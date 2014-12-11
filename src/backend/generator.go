@@ -11,8 +11,9 @@ type GeneratorContext struct {
 	stringCounter int
 	data          string
 	text          string
-	funcStack     []string
 	stackDistance int
+
+	currentFunction string
 }
 
 func (ctx *GeneratorContext) pushLabel(label string) {
@@ -70,7 +71,7 @@ func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
 	ctx.pushCode("add sp, sp, #%v", ctx.stackDistance)
-	ctx.pushCode("b _" + ctx.funcStack[0] + "_end")
+	ctx.pushCode("b _" + ctx.currentFunction + "_end")
 }
 
 func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
@@ -390,24 +391,26 @@ func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	}
 }
 
-func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
-	ctx.funcStack = append([]string{x.Instr.(*LabelInstr).Label}, ctx.funcStack...)
-	x.Instr.generateCode(ctx)
+func (ctx *GeneratorContext) generateFunction(n *InstrNode) {
+	ctx.currentFunction = n.Instr.(*LabelInstr).Label
+
+	// Generate the label
+	n.Instr.generateCode(ctx)
 	ctx.pushCode("push {r4-r11,lr}")
 
 	// Generate code for each instruction in the function
-	node := x.Next
+	node := n.Next
 	for node != nil {
 		node.Instr.generateCode(ctx)
 		node = node.Next
 	}
 
-	ctx.pushLabel("_" + ctx.funcStack[0] + "_end")
+	// Generate the function end label
+	ctx.pushLabel("_" + ctx.currentFunction + "_end")
 	ctx.pushCode("pop {r4-r11,pc}")
 
 	// Assemble the current literal pool immediately
 	ctx.pushCode(".ltorg")
-	ctx.funcStack = ctx.funcStack[1:]
 }
 
 func GenerateCode(ifCtx *IFContext) string {
