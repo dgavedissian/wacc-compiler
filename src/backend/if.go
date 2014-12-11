@@ -13,7 +13,7 @@ type Expr interface {
 	Repr() string
 	Weight() int
 
-	allocateRegisters(*RegisterAllocatorContext, int)
+	allocateRegisters(*RegisterAllocatorContext, *RegisterExpr)
 }
 
 // Type annotation pseudo-expression
@@ -444,11 +444,7 @@ func (i ExitInstr) Repr() string {
 
 func (PrintInstr) instr() {}
 func (i PrintInstr) Repr() string {
-	if i.Type == nil {
-		return fmt.Sprintf("PRINT <nil> %s", i.Expr.Repr())
-	} else {
-		return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
-	}
+	return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
 }
 
 func (MoveInstr) instr() {}

@@ -172,18 +172,18 @@ func AllocateRegisters(ifCtx *IFContext) {
 //
 // Expression Utils
 //
-func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
+func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Expr {
 	switch expr := e.(type) {
 	case *VarExpr:
 		ctx.initialiseVariable(expr)
 		return ctx.lookupVariable(expr)
 
 	case *ArrayElemExpr:
-		arrayPtr := &RegisterExpr{r}
+		arrayPtr := r
 		index := ctx.allocateRegister()
 
-		expr.Array.allocateRegisters(ctx, arrayPtr.Id)
-		expr.Index.allocateRegisters(ctx, index.Id)
+		expr.Array.allocateRegisters(ctx, arrayPtr)
+		expr.Index.allocateRegisters(ctx, index)
 
 		// Runtime safety check
 		ctx.pushInstr(&PushInstr{&RegisterExpr{0}})
@@ -212,11 +212,10 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 			offset = regWidth
 		}
 
-		reg := &RegisterExpr{r}
 		v := ctx.lookupVariable(expr.Operand)
-		ctx.pushInstr(&MoveInstr{reg, v})
-		ctx.pushInstr(&CheckNullDereferenceInstr{reg})
-		return &MemExpr{reg, offset}
+		ctx.pushInstr(&MoveInstr{r, v})
+		ctx.pushInstr(&CheckNullDereferenceInstr{r})
+		return &MemExpr{r, offset}
 
 	default:
 		panic(fmt.Sprintf("Unhandled lvalue %T", expr))
@@ -228,118 +227,89 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r int) Expr {
 //
 func (e *TypeExpr) allocateRegisters(*RegisterAllocatorContext, int) {}
 
-func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	reg := &RegisterExpr{r}
-	ctx.pushInstr(&MoveInstr{
-		Dst: reg,
-		Src: e})
+func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *BoolConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	reg := &RegisterExpr{r}
-	ctx.pushInstr(&MoveInstr{
-		Dst: reg,
-		Src: e})
+func (e *BoolConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *CharConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	reg := &RegisterExpr{r}
-	ctx.pushInstr(&MoveInstr{
-		Dst: reg,
-		Src: e})
+func (e *CharConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *StringConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: &LocationExpr{ctx.pushDataStore(e)}})
+func (e *StringConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: &LocationExpr{ctx.pushDataStore(e)}})
 }
 
-func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	reg := &RegisterExpr{r}
-	ctx.pushInstr(&MoveInstr{
-		Dst: reg,
-		Src: e})
+func (e *PointerConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *ArrayConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	helperReg := ctx.allocateRegister()
+
 	// Allocate space on the heap
 	length := len(e.Elems)
-	helperReg := ctx.allocateRegister()
-	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, (length + 1) * regWidth})
+	ctx.pushInstr(&HeapAllocInstr{r, (length + 1) * regWidth})
 	ctx.pushInstr(&MoveInstr{
 		helperReg,
 		&IntConstExpr{length}})
 	ctx.pushInstr(&MoveInstr{
-		Dst: &MemExpr{&RegisterExpr{r}, 0},
+		Dst: &MemExpr{r, 0},
 		Src: helperReg})
 
 	// Copy each element into the array
 	for i, e := range e.Elems {
-		e.allocateRegisters(ctx, helperReg.Id)
+		e.allocateRegisters(ctx, helperReg)
 		ctx.pushInstr(&MoveInstr{
-			Dst: &MemExpr{&RegisterExpr{r}, (i + 1) * regWidth},
+			Dst: &MemExpr{r, (i + 1) * regWidth},
 			Src: helperReg})
 	}
+
 	ctx.freeRegister(helperReg)
 }
 
-func (e *LocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {}
+func (e *LocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {}
 
-func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	reg := &RegisterExpr{r}
+func (e *VarExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	variable := ctx.lookupVariable(e)
-
-	ctx.pushInstr(&MoveInstr{
-		Dst: reg,
-		Src: variable})
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: variable})
 }
 
-func (e *MemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *MemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 }
 
-func (e *RegisterExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: e,
-	})
+func (e *RegisterExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: e,
-	})
+func (e *StackLocationExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *StackArgumentExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: e,
-	})
+func (e *StackArgumentExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: e})
 }
 
-func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: ctx.translateLValue(e, helperReg.Id)})
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: ctx.translateLValue(e, helperReg)})
 	ctx.freeRegister(helperReg)
 }
 
-func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
-	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
-		Src: ctx.translateLValue(e, helperReg.Id)})
+	ctx.pushInstr(&MoveInstr{Dst: r, Src: ctx.translateLValue(e, helperReg)})
 	ctx.freeRegister(helperReg)
 }
 
-func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	e.Operand.allocateRegisters(ctx, r)
 	switch e.Operator {
 	case Not:
-		dst := &RegisterExpr{r}
+		dst := r
 		dst2 := ctx.allocateRegister()
 		ctx.pushInstr(&NotInstr{dst, dst})
 		ctx.pushInstr(&MoveInstr{dst2, &IntConstExpr{1}})
@@ -347,19 +317,19 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 		ctx.freeRegister(dst2)
 
 	case Ord:
-		ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.INT}}})
+		ctx.pushInstr(&DeclareTypeInstr{r, &TypeExpr{frontend.BasicType{frontend.INT}}})
 
 	case Chr:
-		ctx.pushInstr(&DeclareTypeInstr{&RegisterExpr{r}, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
+		ctx.pushInstr(&DeclareTypeInstr{r, &TypeExpr{frontend.BasicType{frontend.CHAR}}})
 
 	case Neg:
-		dst := &RegisterExpr{r}
+		dst := r
 		ctx.pushInstr(&NegInstr{dst})
 
 	case Len:
-		ctx.pushInstr(&MoveInstr{&RegisterExpr{r}, &MemExpr{&RegisterExpr{r}, 0}})
+		ctx.pushInstr(&MoveInstr{r, &MemExpr{r, 0}})
 		ctx.pushInstr(&DeclareTypeInstr{
-			&RegisterExpr{r},
+			r,
 			&TypeExpr{frontend.BasicType{frontend.INT}}})
 
 	default:
@@ -367,20 +337,20 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	}
 }
 
-func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	var op1, op2, r2 *RegisterExpr
-	dst := &RegisterExpr{r}
+	dst := r
 	if e.Left.Weight() > e.Right.Weight() {
 		e.Left.allocateRegisters(ctx, r)
 		r2 = ctx.allocateRegister()
-		e.Right.allocateRegisters(ctx, r2.Id)
+		e.Right.allocateRegisters(ctx, r2)
 
 		op1 = dst
 		op2 = r2
 	} else {
 		e.Right.allocateRegisters(ctx, r)
 		r2 = ctx.allocateRegister()
-		e.Left.allocateRegisters(ctx, r2.Id)
+		e.Left.allocateRegisters(ctx, r2)
 
 		op1 = r2
 		op2 = dst
@@ -422,29 +392,29 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 	ctx.freeRegister(r2)
 }
 
-func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
-	ctx.pushInstr(&HeapAllocInstr{&RegisterExpr{r}, 2 * regWidth})
-	e.Left.allocateRegisters(ctx, helperReg.Id)
+	ctx.pushInstr(&HeapAllocInstr{r, 2 * regWidth})
+	e.Left.allocateRegisters(ctx, helperReg)
 	ctx.pushInstr(&MoveInstr{
-		&MemExpr{&RegisterExpr{r}, 0},
+		&MemExpr{r, 0},
 		helperReg})
-	e.Right.allocateRegisters(ctx, helperReg.Id)
+	e.Right.allocateRegisters(ctx, helperReg)
 	ctx.pushInstr(&MoveInstr{
-		&MemExpr{&RegisterExpr{r}, regWidth},
+		&MemExpr{r, regWidth},
 		helperReg})
 	ctx.freeRegister(helperReg)
 }
 
-func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
+func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r *RegisterExpr) {
 	// Move arguments into r0-r4
 	for n, arg := range e.Args {
 		//arg := e.Args[n]
 		if n < 4 {
-			arg.allocateRegisters(ctx, n)
+			arg.allocateRegisters(ctx, &RegisterExpr{n})
 		} else {
 			freeReg := ctx.allocateRegister()
-			arg.allocateRegisters(ctx, freeReg.Id)
+			arg.allocateRegisters(ctx, freeReg)
 			ctx.pushInstr(&PushInstr{
 				Op: freeReg,
 			})
@@ -457,7 +427,7 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, r int) {
 
 	// Copy result into r
 	ctx.pushInstr(&MoveInstr{
-		Dst: &RegisterExpr{r},
+		Dst: r,
 		Src: &RegisterExpr{0}})
 
 	// Get rid of arguments
@@ -485,12 +455,12 @@ func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 
 	} else if array, ok := i.Dst.(*ArrayElemExpr); ok {
 		r := ctx.allocateRegister()
-		i.Dst = ctx.translateLValue(array, r.Id)
+		i.Dst = ctx.translateLValue(array, r)
 		ctx.freeRegister(r)
 
 	} else if pair, ok := i.Dst.(*PairElemExpr); ok {
 		r := ctx.allocateRegister()
-		i.Dst = ctx.translateLValue(pair, r.Id)
+		i.Dst = ctx.translateLValue(pair, r)
 		ctx.freeRegister(r)
 
 	} //panic(fmt.Sprintf("Cannot read into %v", i.Dst.Repr()))
@@ -498,21 +468,21 @@ func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 
 func (i *FreeInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Object.allocateRegisters(ctx, r.Id)
+	i.Object.allocateRegisters(ctx, r)
 	i.Object = r
 	ctx.freeRegister(r)
 }
 
 func (i *ReturnInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Expr.allocateRegisters(ctx, r.Id)
+	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = r
 	ctx.freeRegister(r)
 }
 
 func (i *ExitInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Expr.allocateRegisters(ctx, r.Id)
+	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = r
 	ctx.freeRegister(r)
 }
@@ -528,7 +498,7 @@ func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 		return
 	}
 	r := ctx.allocateRegister()
-	i.Expr.allocateRegisters(ctx, r.Id)
+	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = r
 
 	// If the type is nil, we have an issue
@@ -542,24 +512,24 @@ func (i *PrintInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 func (i *MoveInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	src := ctx.allocateRegister()
 	dst := ctx.allocateRegister()
-	i.Src.allocateRegisters(ctx, src.Id)
+	i.Src.allocateRegisters(ctx, src)
 	i.Src = src
-	i.Dst = ctx.translateLValue(i.Dst, dst.Id)
+	i.Dst = ctx.translateLValue(i.Dst, dst)
 	ctx.freeRegister(dst)
 	ctx.freeRegister(src)
 }
 
 func (i *NotInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Src.allocateRegisters(ctx, r.Id)
+	i.Src.allocateRegisters(ctx, r)
 	i.Src = r
-	i.Dst = ctx.translateLValue(i.Dst, r.Id)
+	i.Dst = ctx.translateLValue(i.Dst, r)
 	ctx.freeRegister(r)
 }
 
 func (i *NegInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Expr.allocateRegisters(ctx, r.Id)
+	i.Expr.allocateRegisters(ctx, r)
 	i.Expr = r
 	ctx.freeRegister(r)
 }
@@ -567,8 +537,8 @@ func (i *NegInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 func (i *CmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
 	r2 := ctx.allocateRegister()
-	i.Left.allocateRegisters(ctx, r.Id)
-	i.Right.allocateRegisters(ctx, r2.Id)
+	i.Left.allocateRegisters(ctx, r)
+	i.Right.allocateRegisters(ctx, r2)
 	i.Left = r
 	i.Right = r2
 	ctx.freeRegister(r)
@@ -579,7 +549,7 @@ func (i *JmpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *JmpCondInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	r := ctx.allocateRegister()
-	i.Cond.allocateRegisters(ctx, r.Id)
+	i.Cond.allocateRegisters(ctx, r)
 	i.Cond = r
 	ctx.freeRegister(r)
 }
