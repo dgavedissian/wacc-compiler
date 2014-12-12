@@ -17,20 +17,19 @@ GO      := GOPATH=$(GOPATH) go
 GOGET   := $(GO) get
 
 FRONTEND_FILES := \
-	$(FRONTEND_DIR)/parser.go \
-	$(FRONTEND_DIR)/lexer.go \
 	$(FRONTEND_DIR)/ast.go \
+	$(FRONTEND_DIR)/errors.go \
+	$(FRONTEND_DIR)/position.go \
 	$(FRONTEND_DIR)/semantic.go \
-	$(FRONTEND_DIR)/syntax.go \
-	$(FRONTEND_DIR)/position.go
+	$(FRONTEND_DIR)/syntax.go
 
 BACKEND_FILES := \
+	$(BACKEND_DIR)/constants.go \
 	$(BACKEND_DIR)/generator.go \
 	$(BACKEND_DIR)/if.go \
 	$(BACKEND_DIR)/optimiser.go \
-	$(BACKEND_DIR)/translator.go \
 	$(BACKEND_DIR)/registers.go \
-	$(BACKEND_DIR)/constants.go
+	$(BACKEND_DIR)/translator.go
 
 GENERATED_FILES := \
 	$(FRONTEND_DIR)/parser.go \
