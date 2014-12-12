@@ -294,6 +294,8 @@ func (bt BasicType) Repr() string {
 	switch bt.TypeId {
 	case INT:
 		return "int"
+	case FLOAT:
+		return "float"
 	case BOOL:
 		return "bool"
 	case CHAR:

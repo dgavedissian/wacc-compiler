@@ -25,11 +25,11 @@
 %}
 
 %token BEGIN END
-%token INT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
+%token INT_LIT FLOAT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
-%token INT BOOL CHAR STRING PAIR
+%token INT FLOAT BOOL CHAR STRING PAIR
 %token IS EXTERNAL
 %token IF THEN ELSE FI
 %token WHILE DO DONE
@@ -146,6 +146,7 @@ type
 
 base_type
     : INT    { $$.Type = BasicType{INT} }
+    | FLOAT  { $$.Type = BasicType{FLOAT} }
     | BOOL   { $$.Type = BasicType{BOOL} }
     | CHAR   { $$.Type = BasicType{CHAR} }
     | STRING { $$.Type = BasicType{STRING} }
@@ -190,6 +191,7 @@ array_expression
 primary_expression
     : identifier          { $$.Expr = &IdentExpr{$1.Position, $1.Value} }
     | INT_LIT             { $$.Expr = &BasicLit{$1.Position, BasicType{INT}, $1.Value} }
+    | FLOAT_LIT           { $$.Expr = &BasicLit{$1.Position, BasicType{FLOAT}, $1.Value} }
     | BOOL_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{BOOL}, $1.Value} }
     | CHAR_LIT            { $$.Expr = &BasicLit{$1.Position, BasicType{CHAR}, $1.Value} }
     | STRING_LIT          { $$.Expr = &BasicLit{$1.Position, BasicType{STRING}, $1.Value} }

@@ -176,25 +176,24 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		case "!":
 			expected := BasicType{BOOL}
 			if !t.Equals(expected) {
-				SemanticError(expr.Pos(), "unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "unexpected operand type (expected: %s; actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			expr.Type = BasicType{BOOL}
 			return expr.Type
 
 		case "-":
-			expected := BasicType{INT}
-			if !t.Equals(expected) {
-				SemanticError(expr.Pos(), "unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+			if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{FLOAT}) {
+				SemanticError(expr.Pos(), "unexpected operand type (expected: int, float; actual: %s)", t.Repr())
 				return ErrorType{}
 			}
-			expr.Type = BasicType{INT}
+			expr.Type = t
 			return expr.Type
 
 		case "len":
 			expected := ArrayType{AnyType{}}
 			if !t.Equals(expected) {
-				SemanticError(expr.Pos(), "unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "unexpected operand type (expected: %s; actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			expr.Type = BasicType{INT}
@@ -203,7 +202,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		case "ord":
 			expected := BasicType{CHAR}
 			if !t.Equals(expected) {
-				SemanticError(expr.Pos(), "unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "unexpected operand type (expected: %s; actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			expr.Type = BasicType{INT}
@@ -212,7 +211,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		case "chr":
 			expected := BasicType{INT}
 			if !t.Equals(expected) {
-				SemanticError(expr.Pos(), "unexpected operand type (expected: %s, actual: %s)", expected.Repr(), t.Repr())
+				SemanticError(expr.Pos(), "unexpected operand type (expected: %s; actual: %s)", expected.Repr(), t.Repr())
 				return ErrorType{}
 			}
 			expr.Type = BasicType{CHAR}
@@ -228,24 +227,24 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 		switch expr.Operator {
 		case "*", "/", "%", "+", "-":
-			if !t1.Equals(BasicType{INT}) {
-				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: int, actual: %s)", expr.Operator, t1.Repr())
+			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{FLOAT}) {
+				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: int, float; actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
-			if !t2.Equals(BasicType{INT}) {
-				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: int, actual: %s)", expr.Operator, t2.Repr())
+			if !t2.Equals(BasicType{INT}) && !t1.Equals(BasicType{FLOAT}) {
+				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: int, float; actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
-			expr.Type = BasicType{INT}
+			expr.Type = t1
 			return expr.Type
 
 		case ">", ">=", "<", "<=":
-			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
-				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: int or char, actual: %s)", expr.Operator, t1.Repr())
+			if !t1.Equals(BasicType{INT}) && !t1.Equals(BasicType{FLOAT}) && !t1.Equals(BasicType{CHAR}) {
+				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: int, float, char; actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
-			if !t2.Equals(BasicType{INT}) && !t1.Equals(BasicType{CHAR}) {
-				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: int or char, actual: %s)", expr.Operator, t2.Repr())
+			if !t2.Equals(BasicType{INT}) && !t2.Equals(BasicType{FLOAT}) && !t2.Equals(BasicType{CHAR}) {
+				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: int, float, char; actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
 			if !t1.Equals(t2) {
@@ -265,11 +264,11 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 		case "&&", "||":
 			if !t1.Equals(BasicType{BOOL}) {
-				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: bool, actual: %s)", expr.Operator, t1.Repr())
+				SemanticError(expr.Pos(), "invalid type on left of operator '%s' (expected: bool; actual: %s)", expr.Operator, t1.Repr())
 				return ErrorType{}
 			}
 			if !t2.Equals(BasicType{BOOL}) {
-				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: bool, actual: %s)", expr.Operator, t2.Repr())
+				SemanticError(expr.Pos(), "invalid type on right of operator '%s' (expected: bool; actual: %s)", expr.Operator, t2.Repr())
 				return ErrorType{}
 			}
 			expr.Type = BasicType{BOOL}
@@ -288,7 +287,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
-				SemanticError(expr.Pos(), "wrong number of arguments to '%s' specified (expected: %d, actual: %d)", f.Ident.Name, argsLen, paramLen)
+				SemanticError(expr.Pos(), "wrong number of arguments to '%s' specified (expected: %d; actual: %d)", f.Ident.Name, argsLen, paramLen)
 				return ErrorType{}
 			}
 
@@ -296,7 +295,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			for i := 0; i < argsLen; i++ {
 				argType, paramType := ctx.DeriveType(expr.Args[i]), f.Params[i].Type
 				if !argType.Equals(paramType) {
-					SemanticError(expr.Pos(), "parameter type mismatch (expected: %s, actual: %s)", paramType.Repr(), argType.Repr())
+					SemanticError(expr.Pos(), "parameter type mismatch (expected: %s; actual: %s)", paramType.Repr(), argType.Repr())
 					return ErrorType{}
 				}
 			}
@@ -343,7 +342,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 	case *ReadStmt:
 		t := ctx.DeriveType(statement.Dst)
 		if !t.Equals(BasicType{INT}) && !t.Equals(BasicType{CHAR}) {
-			SemanticError(statement.Dst.Pos(), "destination of read has incorrect type (expected: int or char, actual: %s)", t.Repr())
+			SemanticError(statement.Dst.Pos(), "destination of read has incorrect type (expected: int or char; actual: %s)", t.Repr())
 		}
 		statement.Type = t
 
@@ -356,7 +355,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 	case *ExitStmt:
 		t := ctx.DeriveType(statement.Result)
 		if !t.Equals(BasicType{INT}) {
-			SemanticError(statement.Result.Pos(), "incorrect type in exit statement (expected: int, actual: %s)", t.Repr())
+			SemanticError(statement.Result.Pos(), "incorrect type in exit statement (expected: int; actual: %s)", t.Repr())
 		}
 
 	case *ReturnStmt:
@@ -367,7 +366,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 			// Check if the type of the operand matches the return type
 			t := ctx.DeriveType(statement.Result)
 			if !t.Equals(ctx.currentFunction.Type) {
-				SemanticError(statement.Result.Pos(), "type in return statement must match the return type of the function (expected: %s, actual: %s)",
+				SemanticError(statement.Result.Pos(), "type in return statement must match the return type of the function (expected: %s; actual: %s)",
 					ctx.currentFunction.Type.Repr(), t.Repr())
 			}
 		}
@@ -380,7 +379,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 		// Check the condition
 		t := ctx.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
-			SemanticError(statement.Cond.Pos(), "condition type is incorrect (expected: bool, actual: %s)", t.Repr())
+			SemanticError(statement.Cond.Pos(), "condition type is incorrect (expected: bool; actual: %s)", t.Repr())
 		}
 
 		// Verify true branch
@@ -397,7 +396,7 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 		// Check the condition
 		t := ctx.DeriveType(statement.Cond)
 		if !t.Equals(BasicType{BOOL}) {
-			SemanticError(statement.Cond.Pos(), "condition type is incorrect (expected: bool, actual: %s)", t.Repr())
+			SemanticError(statement.Cond.Pos(), "condition type is incorrect (expected: bool; actual: %s)", t.Repr())
 		}
 
 		// Verfy body
