@@ -437,7 +437,7 @@ printf_fmt_int:
 scanf_fmt_int:
 	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
 printf_fmt_float:
-	.ascii "%\000\000\000p\000\000\000\000\000\000\000"
+	.ascii "%\000\000\000f\000\000\000\000\000\000\000"
 printf_fmt_char:
 	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
 scanf_fmt_char:
@@ -532,9 +532,11 @@ _wacc_print_int:
 	pop {pc}
 _wacc_print_float:
 	push {lr}
-	ldr r0, =printf_fmt_float
-	mov r2, #0
+	mov r0, r1
+	bl __aeabi_f2d
+	mov r2, r0
 	mov r3, r1
+	ldr r0, =printf_fmt_float
 	bl wprintf
 	mov r0, #0
 	bl fflush
