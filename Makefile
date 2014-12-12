@@ -19,6 +19,7 @@ GOGET   := $(GO) get
 FRONTEND_FILES := \
 	$(FRONTEND_DIR)/ast.go \
 	$(FRONTEND_DIR)/errors.go \
+	$(FRONTEND_DIR)/frontend.go \
 	$(FRONTEND_DIR)/position.go \
 	$(FRONTEND_DIR)/semantic.go \
 	$(FRONTEND_DIR)/syntax.go
