@@ -199,7 +199,8 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 			Dst:      arrayPtr,
 			Op1:      arrayPtr,
 			Op2:      index,
-			Op2Shift: &LSL{2}})
+			Op2Shift: &LSL{2},
+			Type:     frontend.BasicType{frontend.INT}})
 
 		ctx.freeRegister(index)
 		return &MemExpr{arrayPtr, 4}
@@ -375,9 +376,9 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 
 	case Mod:
 		op3 := ctx.allocateRegister()
-		ctx.pushInstr(&DivInstr{Dst: op3, Op1: op1, Op2: op2})
-		ctx.pushInstr(&MulInstr{Dst: op3, Op1: op3, Op2: op2})
-		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op3})
+		ctx.pushInstr(&DivInstr{Dst: op3, Op1: op1, Op2: op2, Type: e.Type})
+		ctx.pushInstr(&MulInstr{Dst: op3, Op1: op3, Op2: op2, Type: e.Type})
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op3, Type: e.Type})
 		ctx.freeRegister(op3)
 
 	case LT, GT, LE, GE, EQ, NE:
