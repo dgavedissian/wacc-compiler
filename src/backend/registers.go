@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"log"
 
 	"../frontend"
 )
@@ -105,7 +104,6 @@ func (ctx *RegisterAllocatorContext) lookupType(v *VarExpr) frontend.Type {
 
 func (ctx *RegisterAllocatorContext) createVariable(d *DeclareInstr) *StackLocationExpr {
 	n := ctx.scope[ctx.depth-1].next
-	log.Printf("New variable at scope %d (stack pos %d)\n", ctx.depth-1, n)
 	ctx.scope[ctx.depth-1].variableMap[d.Var.Name] = &Variable{n, d.Type, false}
 	ctx.scope[ctx.depth-1].next++
 	return &StackLocationExpr{n}
