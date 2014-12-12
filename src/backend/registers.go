@@ -27,7 +27,6 @@ type RegisterAllocatorContext struct {
 	registerUseList [12]bool
 
 	// Current location in the list
-	prevNode    *InstrNode
 	currentNode *InstrNode
 
 	// String data store
@@ -113,17 +112,20 @@ func (ctx *RegisterAllocatorContext) createVariable(d *DeclareInstr) *StackLocat
 }
 
 func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
-	ctx.prevNode.Next = &InstrNode{i, 0, ctx.currentNode}
-	ctx.prevNode = ctx.prevNode.Next
+	node := &InstrNode{i, 0, ctx.currentNode, ctx.currentNode.Prev}
+	ctx.currentNode.Prev.Next = node
+	ctx.currentNode.Prev = node
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
 	ctx.pushScope()
 	ctx.currentNode = n
-	for ctx.currentNode != nil {
+	for {
 		ctx.currentNode.Instr.allocateRegisters(ctx)
-		ctx.prevNode = ctx.currentNode
 		ctx.currentNode = ctx.currentNode.Next
+		if ctx.currentNode.Next == nil {
+			break
+		}
 	}
 	n.stackSpace = ctx.scope[0].next
 	ctx.popScope()

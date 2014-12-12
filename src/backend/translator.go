@@ -35,7 +35,7 @@ func TranslateToIF(program *frontend.ProgStmt) *IFContext {
 }
 
 func (ctx *IFContext) makeNode(i Instr) *InstrNode {
-	return &InstrNode{i, 0, nil}
+	return &InstrNode{i, 0, nil, nil}
 }
 
 func (ctx *IFContext) beginFunction(name string) {
@@ -49,8 +49,14 @@ func (ctx *IFContext) beginMain() {
 }
 
 func (ctx *IFContext) appendNode(n *InstrNode) {
+	n.Prev = ctx.current
 	ctx.current.Next = n
 	ctx.current = ctx.current.Next
+}
+
+func (ctx *IFContext) removeNode(n *InstrNode) {
+	n.Prev.Next = n.Next
+	n.Next.Prev = n.Prev
 }
 
 func (ctx *IFContext) addInstr(i Instr) *InstrNode {

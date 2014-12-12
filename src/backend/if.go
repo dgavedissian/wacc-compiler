@@ -229,6 +229,7 @@ type InstrNode struct {
 	Instr      Instr
 	stackSpace int
 	Next       *InstrNode
+	Prev       *InstrNode
 }
 
 type Instr interface {
