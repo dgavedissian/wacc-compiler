@@ -292,17 +292,17 @@ func (bt BasicType) Equals(t2 Type) bool {
 func (bt BasicType) Repr() string {
 	switch bt.TypeId {
 	case INT:
-		return "INT"
+		return "int"
 	case BOOL:
-		return "BOOL"
+		return "bool"
 	case CHAR:
-		return "CHAR"
+		return "char"
 	case STRING:
-		return "STRING"
+		return "string"
 	case PAIR: // null
-		return "PAIR"
+		return "pair"
 	default:
-		panic(fmt.Sprintf("BasicType.Repr: wtf is a %d?", bt.TypeId))
+		panic(fmt.Sprintf("BasicType.Repr: Undefined repr for %d?", bt.TypeId))
 	}
 }
 
@@ -332,7 +332,7 @@ func (pt PairType) Equals(t2 Type) bool {
 	return false
 }
 func (pt PairType) Repr() string {
-	return "PAIR(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
+	return "pair(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
 }
 
 // Any Type
@@ -340,7 +340,7 @@ func (AnyType) Equals(Type) bool {
 	return true
 }
 func (AnyType) Repr() string {
-	return "ANY_TYPE"
+	return "T"
 }
 
 // Error Type
@@ -348,7 +348,7 @@ func (ErrorType) Equals(Type) bool {
 	return false
 }
 func (ErrorType) Repr() string {
-	return "ERROR_TYPE"
+	return "ERROR"
 }
 
 //

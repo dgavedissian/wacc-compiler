@@ -80,7 +80,7 @@ func StaticExprOverflows(expr Expr) bool {
 
 func VerifyNoOverflows(expr Expr) {
 	if StaticExprOverflows(expr) {
-		SyntaxError(expr.Pos().Line(), "syntax error - Int literal overflow")
+		SyntaxError(expr.Pos(), "integer literal does not fit in an int variable")
 	}
 }
 
@@ -89,6 +89,6 @@ func VerifyNoOverflows(expr Expr) {
 // error.
 func VerifyFunctionReturns(stmtList []Stmt) {
 	if !VerifyAnyStatementsReturn(stmtList) {
-		SyntaxError(stmtList[0].Pos().Line(), "syntax error - Function has no return statement on every control path or doesn't end in an exit statement")
+		SyntaxError(stmtList[0].Pos(), "function does not have a return or exit statement on every control path")
 	}
 }

@@ -8,12 +8,15 @@ import (
 	"../frontend"
 )
 
+//
+// Expressions
+//
 type Expr interface {
 	expr()
 	Repr() string
 	Weight() int
 
-	allocateRegisters(*RegisterAllocatorContext, int)
+	allocateRegisters(*RegisterAllocatorContext, *RegisterExpr)
 }
 
 // Type annotation pseudo-expression
@@ -219,6 +222,9 @@ func (e CallExpr) Weight() int {
 	return x
 }
 
+//
+// Instructions
+//
 type InstrNode struct {
 	Instr      Instr
 	stackSpace int
@@ -267,22 +273,6 @@ type MoveInstr struct {
 	Src Expr
 }
 
-type NotInstr struct {
-	Dst Expr // LValueExpr
-	Src Expr
-}
-
-type NegInstr struct {
-	Expr Expr
-}
-
-type CmpInstr struct {
-	Left     Expr
-	Right    Expr
-	Dst      Expr
-	Operator string
-}
-
 type JmpInstr struct {
 	Dst *InstrNode
 }
@@ -308,15 +298,6 @@ type PopScopeInstr struct {
 	StackSize int
 }
 
-type DeclareTypeInstr struct {
-	Dst  Expr
-	Type *TypeExpr
-}
-
-type CheckNullDereferenceInstr struct {
-	Ptr Expr
-}
-
 func (DeclareInstr) instr() {}
 func (e DeclareInstr) Repr() string {
 	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
@@ -332,17 +313,9 @@ func (e PopScopeInstr) Repr() string {
 	return fmt.Sprintf("POP SCOPE %v", e.StackSize)
 }
 
-func (DeclareTypeInstr) instr() {}
-func (e DeclareTypeInstr) Repr() string {
-	return fmt.Sprintf("TYPE OF %v IS %v", e.Dst.Repr(), e.Type.Type.Repr())
-}
-
-func (CheckNullDereferenceInstr) instr() {}
-func (i CheckNullDereferenceInstr) Repr() string {
-	return fmt.Sprintf("CHECK NULL %v", i.Ptr.Repr())
-}
-
+//
 // Second stage instructions
+//
 
 // Shift
 type Shift interface {
@@ -397,21 +370,46 @@ type OrInstr struct {
 	Op2 *RegisterExpr
 }
 
+// Unary operations
+type NotInstr struct {
+	Dst Expr // LValueExpr
+	Src Expr
+}
+
+type NegInstr struct {
+	Expr Expr
+}
+
+type CmpInstr struct {
+	Left     Expr
+	Right    Expr
+	Dst      Expr
+	Operator string
+}
+
+// Function call
 type CallInstr struct {
 	Label *LocationExpr
 }
 
+// Heap allocation
 type HeapAllocInstr struct {
 	Dst  *RegisterExpr
 	Size int
 }
 
+// Push/pop register
 type PushInstr struct {
 	Op *RegisterExpr
 }
 
 type PopInstr struct {
 	Op *RegisterExpr
+}
+
+// Runtime errors
+type CheckNullDereferenceInstr struct {
+	Ptr Expr
 }
 
 func (NoOpInstr) instr()       {}
@@ -444,31 +442,12 @@ func (i ExitInstr) Repr() string {
 
 func (PrintInstr) instr() {}
 func (i PrintInstr) Repr() string {
-	if i.Type == nil {
-		return fmt.Sprintf("PRINT <nil> %s", i.Expr.Repr())
-	} else {
-		return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
-	}
+	return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
 }
 
 func (MoveInstr) instr() {}
 func (i MoveInstr) Repr() string {
 	return fmt.Sprintf("MOVE (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
-}
-
-func (NotInstr) instr() {}
-func (i NotInstr) Repr() string {
-	return fmt.Sprintf("NOT (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
-}
-
-func (NegInstr) instr() {}
-func (i NegInstr) Repr() string {
-	return fmt.Sprintf("NEG (%v)", i.Expr.Repr())
-}
-
-func (CmpInstr) instr() {}
-func (i CmpInstr) Repr() string {
-	return fmt.Sprintf("CMP %v (%v) (%v) (%v)", i.Operator, i.Dst.Repr(), i.Left.Repr(), i.Right.Repr())
 }
 
 func (JmpInstr) instr() {}
@@ -519,6 +498,21 @@ func (i *OrInstr) Repr() string {
 	return fmt.Sprintf("OR %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
+func (NotInstr) instr() {}
+func (i NotInstr) Repr() string {
+	return fmt.Sprintf("NOT (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
+}
+
+func (NegInstr) instr() {}
+func (i NegInstr) Repr() string {
+	return fmt.Sprintf("NEG (%v)", i.Expr.Repr())
+}
+
+func (CmpInstr) instr() {}
+func (i CmpInstr) Repr() string {
+	return fmt.Sprintf("CMP %v (%v) (%v) (%v)", i.Operator, i.Dst.Repr(), i.Left.Repr(), i.Right.Repr())
+}
+
 func (*CallInstr) instr() {}
 func (i *CallInstr) Repr() string {
 	return fmt.Sprintf("CALL %v", i.Label.Label)
@@ -537,6 +531,11 @@ func (i *PushInstr) Repr() string {
 func (*PopInstr) instr() {}
 func (i *PopInstr) Repr() string {
 	return fmt.Sprintf("POP %v", i.Op)
+}
+
+func (CheckNullDereferenceInstr) instr() {}
+func (i CheckNullDereferenceInstr) Repr() string {
+	return fmt.Sprintf("CHECK NULL %v", i.Ptr.Repr())
 }
 
 /*

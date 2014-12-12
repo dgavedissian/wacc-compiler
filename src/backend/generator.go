@@ -2,20 +2,18 @@ package backend
 
 import (
 	"fmt"
-	"log"
 	"unicode/utf8"
 
 	"../frontend"
 )
 
 type GeneratorContext struct {
-	stringCounter    int
-	data             string
-	text             string
-	registerContents []map[string]Expr
-	dataContents     map[string]*StringConstExpr
-	funcStack        []string
-	stackDistance    int
+	stringCounter int
+	data          string
+	text          string
+	stackDistance int
+
+	currentFunction string
 }
 
 func (ctx *GeneratorContext) pushLabel(label string) {
@@ -26,6 +24,9 @@ func (ctx *GeneratorContext) pushCode(s string, a ...interface{}) {
 	ctx.text += "\t" + fmt.Sprintf(s, a...) + "\n"
 }
 
+//
+// Instructions
+//
 func (i *NoOpInstr) generateCode(*GeneratorContext) {}
 
 func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
@@ -73,49 +74,12 @@ func (i *FreeInstr) generateCode(ctx *GeneratorContext) {
 func (i *ReturnInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
 	ctx.pushCode("add sp, sp, #%v", ctx.stackDistance)
-	ctx.pushCode("b _" + ctx.funcStack[0] + "_end")
+	ctx.pushCode("b _" + ctx.currentFunction + "_end")
 }
 
 func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r0, %v", i.Expr.Repr())
 	ctx.pushCode("bl exit")
-}
-
-func getTypeForExpr(ctx *GeneratorContext, expr Expr) *TypeExpr {
-	log.Printf("%T\n", expr)
-
-	switch obj := expr.(type) {
-	case *TypeExpr:
-		return obj
-
-	case *IntConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.INT}}
-
-	case *CharConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.CHAR}}
-
-	case *ArrayConstExpr:
-		return &TypeExpr{obj.Type}
-
-	case *StringConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.STRING}}
-
-	case *BoolConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.BOOL}}
-
-	case *PointerConstExpr:
-		return &TypeExpr{frontend.BasicType{frontend.PAIR}}
-
-	case *RegisterExpr:
-		log.Println("REG", obj.Repr())
-		return getTypeForExpr(ctx, ctx.registerContents[0][obj.Repr()])
-
-	case *LocationExpr:
-		return getTypeForExpr(ctx, ctx.dataContents[obj.Label])
-
-	default:
-		panic(fmt.Sprintf("Attempted to get printf type for unknown thing %T", expr))
-	}
 }
 
 func getFormatStringFromType(t *TypeExpr) string {
@@ -170,11 +134,9 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 		panic(fmt.Sprintf("Cannot print an object of type %T", obj))
 	}
 
-	var derivedType frontend.Type
-	if i.Type != nil {
-		derivedType = i.Type
-	} else {
-		derivedType = getTypeForExpr(ctx, i.Expr).Type
+	derivedType := i.Type
+	if derivedType == nil {
+		panic(fmt.Sprintf("i.Type is nil for %T", i))
 	}
 	if derivedType.Equals(frontend.BasicType{frontend.BOOL}) {
 		ctx.pushCode("bl _wacc_print_bool")
@@ -213,7 +175,6 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		switch src := i.Src.(type) {
 		case *IntConstExpr:
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Value)
-			ctx.registerContents[0][dst.Repr()] = src
 
 		case *BoolConstExpr:
 			n := 0
@@ -221,23 +182,18 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 				n = 1
 			}
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), n)
-			ctx.registerContents[0][dst.Repr()] = src
 
 		case *CharConstExpr:
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), int(src.Value))
-			ctx.registerContents[0][dst.Repr()] = src
 
 		case *PointerConstExpr:
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Value)
-			ctx.registerContents[0][dst.Repr()] = src
 
 		case *LocationExpr:
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Label)
-			ctx.registerContents[0][dst.Repr()] = ctx.dataContents[src.Label]
 
 		case *RegisterExpr:
 			ctx.pushCode("mov %v, %v", dst.Repr(), src.Repr())
-			ctx.registerContents[0][dst.Repr()] = ctx.registerContents[0][src.Repr()]
 
 		case *StackLocationExpr:
 			ctx.pushCode("ldr %v, [sp, #%v]", dst.Repr(), ctx.generateStackOffset(src))
@@ -401,11 +357,6 @@ func (i *CheckNullDereferenceInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("pop {r0}")
 }
 
-func (i *DeclareTypeInstr) generateCode(ctx *GeneratorContext) {
-	dst := i.Dst.Repr()
-	ctx.registerContents[0][dst] = i.Type
-}
-
 func (i *CallInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl %v", i.Label.Label)
 }
@@ -440,52 +391,30 @@ func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	}
 }
 
-func (ctx *GeneratorContext) generateFunction(x *InstrNode) {
-	ctx.funcStack = append([]string{x.Instr.(*LabelInstr).Label}, ctx.funcStack...)
-	x.Instr.generateCode(ctx)
+func (ctx *GeneratorContext) generateFunction(n *InstrNode) {
+	ctx.currentFunction = n.Instr.(*LabelInstr).Label
+
+	// Generate the label
+	n.Instr.generateCode(ctx)
 	ctx.pushCode("push {r4-r11,lr}")
 
-	/*
-		stackSpace := x.stackSpace * 4
-		for stackSpace > 0 {
-			thisTime := stackSpace
-			if thisTime > 1024 {
-				thisTime = 1024
-			}
-			ctx.pushCode("sub sp, sp, #%d", thisTime)
-			stackSpace -= thisTime
-		}
-	*/
-
-	node := x.Next
+	// Generate code for each instruction in the function
+	node := n.Next
 	for node != nil {
 		node.Instr.generateCode(ctx)
 		node = node.Next
 	}
 
-	ctx.pushLabel("_" + ctx.funcStack[0] + "_end")
-	/*
-		stackSpace = x.stackSpace * 4
-		for stackSpace > 0 {
-			thisTime := stackSpace
-			if thisTime > 1024 {
-				thisTime = 1024
-			}
-			ctx.pushCode("add sp, sp, #%d", thisTime)
-			stackSpace -= thisTime
-		}
-	*/
+	// Generate the function end label
+	ctx.pushLabel("_" + ctx.currentFunction + "_end")
 	ctx.pushCode("pop {r4-r11,pc}")
 
 	// Assemble the current literal pool immediately
 	ctx.pushCode(".ltorg")
-	ctx.funcStack = ctx.funcStack[1:]
 }
 
 func GenerateCode(ifCtx *IFContext) string {
 	ctx := new(GeneratorContext)
-	ctx.registerContents = []map[string]Expr{make(map[string]Expr)}
-	ctx.dataContents = ifCtx.dataStore
 
 	// Printf format strings
 	ctx.data += `
