@@ -326,7 +326,7 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regist
 		// Do nothing
 
 	case Neg:
-		ctx.pushInstr(&NegInstr{dst})
+		ctx.pushInstr(&NegInstr{dst, e.Type})
 
 	case Len:
 		ctx.pushInstr(&MoveInstr{dst, &MemExpr{dst, 0}})
@@ -358,16 +358,16 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 	// Allocate registers depending on operator
 	switch e.Operator {
 	case Add:
-		ctx.pushInstr(&AddInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&AddInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Sub:
-		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Mul:
-		ctx.pushInstr(&MulInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&MulInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Div:
-		ctx.pushInstr(&DivInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&DivInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case And:
 		ctx.pushInstr(&AndInstr{Dst: dst, Op1: op1, Op2: op2})

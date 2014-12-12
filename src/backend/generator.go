@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"math"
 	"unicode/utf8"
 
 	"../frontend"
@@ -82,21 +83,6 @@ func (i *ExitInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("bl exit")
 }
 
-func getFormatStringFromType(t *TypeExpr) string {
-	internalType := t.Type
-	if internalType.Equals(frontend.BasicType{frontend.BOOL}) {
-		return "printf_fmt_int"
-	} else if internalType.Equals(frontend.BasicType{frontend.INT}) {
-		return "printf_fmt_int"
-	} else if internalType.Equals(frontend.BasicType{frontend.CHAR}) {
-		return "printf_fmt_char"
-	} else if internalType.Equals(frontend.BasicType{frontend.STRING}) {
-		return "printf_fmt_wstr"
-	} else {
-		return "printf_fmt_addr"
-	}
-}
-
 func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	// save regs r0 and r1
 	//ctx.pushCode("push {r0,r1}")
@@ -135,13 +121,12 @@ func (i *PrintInstr) generateCode(ctx *GeneratorContext) {
 	}
 
 	derivedType := i.Type
-	if derivedType == nil {
-		panic(fmt.Sprintf("i.Type is nil for %T", i))
-	}
-	if derivedType.Equals(frontend.BasicType{frontend.BOOL}) {
-		ctx.pushCode("bl _wacc_print_bool")
-	} else if derivedType.Equals(frontend.BasicType{frontend.INT}) {
+	if derivedType.Equals(frontend.BasicType{frontend.INT}) {
 		ctx.pushCode("bl _wacc_print_int")
+	} else if derivedType.Equals(frontend.BasicType{frontend.FLOAT}) {
+		ctx.pushCode("bl _wacc_print_float")
+	} else if derivedType.Equals(frontend.BasicType{frontend.BOOL}) {
+		ctx.pushCode("bl _wacc_print_bool")
 	} else if derivedType.Equals(frontend.BasicType{frontend.CHAR}) {
 		ctx.pushCode("bl _wacc_print_char")
 	} else if derivedType.Equals(frontend.BasicType{frontend.STRING}) {
@@ -175,7 +160,8 @@ func (i *MoveInstr) generateCode(ctx *GeneratorContext) {
 		switch src := i.Src.(type) {
 		case *IntConstExpr:
 			ctx.pushCode("ldr %v, =%v", dst.Repr(), src.Value)
-
+		case *FloatConstExpr:
+			ctx.pushCode("ldr %v, =%v", dst.Repr(), math.Float32bits(src.Value))
 		case *BoolConstExpr:
 			n := 0
 			if src.Value {
@@ -267,51 +253,79 @@ func (i *JmpCondInstr) generateCode(ctx *GeneratorContext) {
 }
 
 func (i *AddInstr) generateCode(ctx *GeneratorContext) {
-	shift := ""
-	if i.Op2Shift != nil {
-		shift = ", " + i.Op2Shift.Repr()
-	}
-
-	// ADD can have either an immediate or register as the 2nd operand
-	if imm, ok := i.Op2.(*IntConstExpr); ok {
-		ctx.pushCode("adds %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		ctx.pushCode("mov r0, %v", i.Op1.Repr())
+		ctx.pushCode("mov r1, %v", i.Op2.Repr())
+		ctx.pushCode("bl __aeabi_fadd")
+		ctx.pushCode("mov %v, r0", i.Dst.Repr())
 	} else {
-		ctx.pushCode("adds %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+		shift := ""
+		if i.Op2Shift != nil {
+			shift = ", " + i.Op2Shift.Repr()
+		}
+
+		// ADD can have either an immediate or register as the 2nd operand
+		if imm, ok := i.Op2.(*IntConstExpr); ok {
+			ctx.pushCode("adds %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+		} else {
+			ctx.pushCode("adds %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+		}
+		ctx.pushCode("blvs " + RuntimeOverflowLabel)
 	}
-	ctx.pushCode("blvs " + RuntimeOverflowLabel)
 }
 
 func (i *SubInstr) generateCode(ctx *GeneratorContext) {
-	shift := ""
-	if i.Op2Shift != nil {
-		shift = ", " + i.Op2Shift.Repr()
-	}
-
-	// SUB can have either an immediate or register as the 2nd operand
-	if imm, ok := i.Op2.(*IntConstExpr); ok {
-		ctx.pushCode("subs %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		ctx.pushCode("mov r0, %v", i.Op1.Repr())
+		ctx.pushCode("mov r1, %v", i.Op2.Repr())
+		ctx.pushCode("bl __aeabi_fsub")
+		ctx.pushCode("mov %v, r0", i.Dst.Repr())
 	} else {
-		ctx.pushCode("subs %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+		shift := ""
+		if i.Op2Shift != nil {
+			shift = ", " + i.Op2Shift.Repr()
+		}
+
+		// SUB can have either an immediate or register as the 2nd operand
+		if imm, ok := i.Op2.(*IntConstExpr); ok {
+			ctx.pushCode("subs %v, %v, #%v%v", i.Dst.Repr(), i.Op1.Repr(), imm.Value, shift)
+		} else {
+			ctx.pushCode("subs %v, %v, %v%v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.(*RegisterExpr).Repr(), shift)
+		}
+		ctx.pushCode("blvs " + RuntimeOverflowLabel)
 	}
-	ctx.pushCode("blvs " + RuntimeOverflowLabel)
 }
 
 func (i *MulInstr) generateCode(ctx *GeneratorContext) {
-	overflowReg := i.Op1
-	if i.Dst.Id == i.Op1.Id {
-		overflowReg = i.Op2
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		ctx.pushCode("mov r0, %v", i.Op1.Repr())
+		ctx.pushCode("mov r1, %v", i.Op2.Repr())
+		ctx.pushCode("bl __aeabi_fmul")
+		ctx.pushCode("mov %v, r0", i.Dst.Repr())
+	} else {
+		overflowReg := i.Op1
+		if i.Dst.Id == i.Op1.Id {
+			overflowReg = i.Op2
+		}
+		ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), overflowReg.Repr(), i.Op1.Repr(), i.Op2.Repr())
+		ctx.pushCode("cmp %v, %v, ASR #31", overflowReg.Repr(), i.Dst.Repr())
+		ctx.pushCode("blne " + RuntimeOverflowLabel)
 	}
-	ctx.pushCode("smull %v, %v, %v, %v", i.Dst.Repr(), overflowReg.Repr(), i.Op1.Repr(), i.Op2.Repr())
-	ctx.pushCode("cmp %v, %v, ASR #31", overflowReg.Repr(), i.Dst.Repr())
-	ctx.pushCode("blne " + RuntimeOverflowLabel)
 }
 
 func (i *DivInstr) generateCode(ctx *GeneratorContext) {
-	ctx.pushCode("mov r0, %v", i.Op1.Repr())
-	ctx.pushCode("mov r1, %v", i.Op2.Repr())
-	ctx.pushCode("bl " + RuntimeCheckDivZeroLabel)
-	ctx.pushCode("bl __aeabi_idiv")
-	ctx.pushCode("mov %v, r0", i.Dst.Repr())
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		ctx.pushCode("mov r0, %v", i.Op1.Repr())
+		ctx.pushCode("mov r1, %v", i.Op2.Repr())
+		ctx.pushCode("bl __aeabi_fdiv")
+		ctx.pushCode("mov %v, r0", i.Dst.Repr())
+	} else {
+		ctx.pushCode("mov r0, %v", i.Op1.Repr())
+		ctx.pushCode("mov r1, %v", i.Op2.Repr())
+		ctx.pushCode("bl " + RuntimeCheckDivZeroLabel)
+		ctx.pushCode("bl __aeabi_idiv")
+		ctx.pushCode("mov %v, r0", i.Dst.Repr())
+	}
 }
 
 func (i *AndInstr) generateCode(ctx *GeneratorContext) {
@@ -422,6 +436,8 @@ printf_fmt_int:
 	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
 scanf_fmt_int:
 	.ascii "%\000\000\000d\000\000\000\000\000\000\000"
+printf_fmt_float:
+	.ascii "%\000\000\000p\000\000\000\000\000\000\000"
 printf_fmt_char:
 	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
 scanf_fmt_char:
@@ -487,10 +503,10 @@ _wacc_null_dereference_msg:
 	ldr r1, =_wacc_overflow_error_msg
 	bl _wacc_throw_runtime_error
 ` + RuntimeCheckNullPointerLabel + `:
-  push {lr}
+	push {lr}
 	cmp r0, #0
 	ldreq r1, =_wacc_null_dereference_msg
-  bleq _wacc_throw_runtime_error
+	bleq _wacc_throw_runtime_error
 	pop {pc}
 _wacc_throw_runtime_error:
 	bl _wacc_print_str
@@ -510,6 +526,15 @@ _wacc_print_bool_done:
 _wacc_print_int:
 	push {lr}
 	ldr r0, =printf_fmt_int
+	bl wprintf
+	mov r0, #0
+	bl fflush
+	pop {pc}
+_wacc_print_float:
+	push {lr}
+	ldr r0, =printf_fmt_float
+	mov r2, #0
+	mov r3, r1
 	bl wprintf
 	mov r0, #0
 	bl fflush

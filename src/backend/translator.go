@@ -178,12 +178,16 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			&VarExpr{expr.Operand.Name}}
 
 	case *frontend.UnaryExpr:
-		/* Fold negating ints */
+		/* Fold negated constants */
 		if expr.Operator == Neg {
 			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
 				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
 					n, _ := strconv.Atoi(x.Value)
 					return &IntConstExpr{-n}
+				}
+				if x.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+					n, _ := strconv.ParseFloat(x.Value, 32)
+					return &FloatConstExpr{-float32(n)}
 				}
 			}
 		}

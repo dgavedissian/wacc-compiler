@@ -346,6 +346,7 @@ type AddInstr struct {
 	Op1      *RegisterExpr
 	Op2      Expr
 	Op2Shift Shift
+	Type     frontend.Type
 }
 
 type SubInstr struct {
@@ -353,18 +354,21 @@ type SubInstr struct {
 	Op1      *RegisterExpr
 	Op2      Expr
 	Op2Shift Shift
+	Type     frontend.Type
 }
 
 type MulInstr struct {
-	Dst *RegisterExpr
-	Op1 *RegisterExpr
-	Op2 *RegisterExpr
+	Dst  *RegisterExpr
+	Op1  *RegisterExpr
+	Op2  *RegisterExpr
+	Type frontend.Type
 }
 
 type DivInstr struct {
-	Dst *RegisterExpr
-	Op1 *RegisterExpr
-	Op2 *RegisterExpr
+	Dst  *RegisterExpr
+	Op1  *RegisterExpr
+	Op2  *RegisterExpr
+	Type frontend.Type
 }
 
 type AndInstr struct {
@@ -387,6 +391,7 @@ type NotInstr struct {
 
 type NegInstr struct {
 	Expr Expr
+	Type frontend.Type
 }
 
 type CmpInstr struct {
@@ -471,30 +476,54 @@ func (i JmpCondInstr) Repr() string {
 
 func (*AddInstr) instr() {}
 func (i *AddInstr) Repr() string {
+	// Is this a floating point instruction?
+	prefix := ""
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		prefix = "F"
+	}
+
 	if i.Op2Shift != nil {
-		return fmt.Sprintf("ADD %v %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
+		return fmt.Sprintf("%vADD %v %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
 	} else {
-		return fmt.Sprintf("ADD %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+		return fmt.Sprintf("%vADD %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 	}
 }
 
 func (*SubInstr) instr() {}
 func (i *SubInstr) Repr() string {
+	// Is this a floating point instruction?
+	prefix := ""
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		prefix = "F"
+	}
+
 	if i.Op2Shift != nil {
-		return fmt.Sprintf("SUB %v %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
+		return fmt.Sprintf("%vSUB %v %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr(), i.Op2Shift.Repr())
 	} else {
-		return fmt.Sprintf("SUB %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+		return fmt.Sprintf("%vSUB %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 	}
 }
 
 func (*MulInstr) instr() {}
 func (i *MulInstr) Repr() string {
-	return fmt.Sprintf("MUL %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	// Is this a floating point instruction?
+	prefix := ""
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		prefix = "F"
+	}
+
+	return fmt.Sprintf("%vMUL %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
 func (*DivInstr) instr() {}
 func (i *DivInstr) Repr() string {
-	return fmt.Sprintf("DIV %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+	// Is this a floating point instruction?
+	prefix := ""
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		prefix = "F"
+	}
+
+	return fmt.Sprintf("%vDIV %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
 
 func (*AndInstr) instr() {}
@@ -514,7 +543,13 @@ func (i NotInstr) Repr() string {
 
 func (NegInstr) instr() {}
 func (i NegInstr) Repr() string {
-	return fmt.Sprintf("NEG (%v)", i.Expr.Repr())
+	// Is this a floating point instruction?
+	prefix := ""
+	if i.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+		prefix = "F"
+	}
+
+	return fmt.Sprintf("%vNEG %v", prefix, i.Expr.Repr())
 }
 
 func (CmpInstr) instr() {}
