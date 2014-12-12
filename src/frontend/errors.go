@@ -66,7 +66,7 @@ func SetUpErrorOutput(r io.Reader) io.Reader {
 func dumpLineData(position *Position) {
 	lineToPrint := position.Line() - 1
 
-	if len(errBuffer) <= lineToPrint {
+	if lineToPrint < 0 || len(errBuffer) <= lineToPrint {
 		return
 	}
 
