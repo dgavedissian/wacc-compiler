@@ -233,6 +233,10 @@ func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Reg
 	ctx.pushInstr(&MoveInstr{Dst: dst, Src: e})
 }
 
+func (e *FloatConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: dst, Src: e})
+}
+
 func (e *BoolConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	ctx.pushInstr(&MoveInstr{Dst: dst, Src: e})
 }

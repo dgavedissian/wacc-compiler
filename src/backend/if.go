@@ -28,6 +28,10 @@ type IntConstExpr struct {
 	Value int
 }
 
+type FloatConstExpr struct {
+	Value float32
+}
+
 type BoolConstExpr struct {
 	Value bool
 }
@@ -115,6 +119,10 @@ func (TypeExpr) Weight() int    { return 0 }
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 func (IntConstExpr) Weight() int    { return 1 }
+
+func (FloatConstExpr) expr()          {}
+func (e FloatConstExpr) Repr() string { return fmt.Sprintf("FLOAT %v", e.Value) }
+func (FloatConstExpr) Weight() int    { return 1 }
 
 func (BoolConstExpr) expr()          {}
 func (e BoolConstExpr) Repr() string { return fmt.Sprintf("BOOL %v", e.Value) }

@@ -138,6 +138,11 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			return &IntConstExpr{value}
 		}
 
+		if expr.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+			value, _ := strconv.ParseFloat(expr.Value, 32)
+			return &FloatConstExpr{float32(value)}
+		}
+
 		if expr.Type.Equals(frontend.BasicType{frontend.BOOL}) {
 			if expr.Value == "true" {
 				return &BoolConstExpr{true}
