@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"unicode/utf8"
 
@@ -61,7 +60,6 @@ func (ctx *IFContext) addInstr(i Instr) *InstrNode {
 }
 
 func (ctx *IFContext) addType(v string, t frontend.Type) {
-	log.Printf("New type for %v in scope %d: %v", v, ctx.depth-1, t.Repr())
 	ctx.scope[ctx.depth-1][v] = t
 }
 
@@ -216,12 +214,6 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 	}
 }
 
-func (ctx *IFContext) generateTypeDeclaration(varName string, t frontend.Type) {
-	ctx.addInstr(&DeclareTypeInstr{
-		Dst:  &VarExpr{varName},
-		Type: &TypeExpr{t}})
-}
-
 func (ctx *IFContext) translate(node frontend.Stmt) {
 	switch node := node.(type) {
 	case *frontend.ProgStmt:
@@ -231,28 +223,18 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 				ctx.beginFunction(f.Ident.Name)
 				ctx.pushScope()
 
-				// Set up parameters
 				for regNum, p := range f.Params {
 					if regNum < 4 {
 						ctx.addType(p.Ident.Name, p.Type)
-						ctx.addInstr(&DeclareInstr{
-							&VarExpr{p.Ident.Name},
-							p.Type})
-						ctx.addInstr(&MoveInstr{
-							Dst: &VarExpr{p.Ident.Name},
-							Src: &RegisterExpr{regNum},
-						})
-						ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
+						ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
+						ctx.addInstr(&MoveInstr{Dst: &VarExpr{p.Ident.Name}, Src: &RegisterExpr{regNum}})
 					} else {
 						ctx.addType(p.Ident.Name, p.Type)
-						ctx.addInstr(&DeclareInstr{
-							&VarExpr{p.Ident.Name},
-							p.Type})
+						ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
 						ctx.addInstr(&MoveInstr{
 							Dst: &VarExpr{p.Ident.Name},
 							Src: &StackArgumentExpr{(len(f.Params) - 5) - (regNum - 4)},
 						})
-						ctx.generateTypeDeclaration(p.Ident.Name, p.Type)
 					}
 				}
 
@@ -279,10 +261,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 		v := &VarExpr{node.Ident.Name}
 		ctx.addType(v.Name, node.Type)
 		ctx.addInstr(&DeclareInstr{v, node.Type})
-		ctx.addInstr(&MoveInstr{
-			Dst: v,
-			Src: ctx.translateExpr(node.Right)})
-		ctx.generateTypeDeclaration(node.Ident.Name, node.Type)
+		ctx.addInstr(&MoveInstr{Dst: v, Src: ctx.translateExpr(node.Right)})
 
 	case *frontend.AssignStmt:
 		ctx.addInstr(
@@ -304,9 +283,7 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 	case *frontend.PrintStmt:
 		right := ctx.translateExpr(node.Right)
-		ctx.addInstr(&PrintInstr{
-			Expr: right,
-			Type: node.Type})
+		ctx.addInstr(&PrintInstr{Expr: right, Type: node.Type})
 		if node.NewLine {
 			ctx.addInstr(&PrintInstr{
 				Expr: &CharConstExpr{'\n', 1},

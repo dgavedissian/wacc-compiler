@@ -1,298 +1,259 @@
 /[ \t\n]/	{
-				/* Skip blanks and tabs. */
-			}
+  /* Skip blanks and tabs. */
+}
 
-
-/[0-9]+/	{
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = yylex.Text()
-				return INT_LIT
-			}
+/[0-9]+/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = yylex.Text()
+  return INT_LIT
+}
 /(false|true)/ {
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = yylex.Text()
-				return BOOL_LIT
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = yylex.Text()
+  return BOOL_LIT
+}
 /"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ {
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = ProcessStr(yylex.Text())
-				return STRING_LIT
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = processEscapedCharacters(yylex.Text())
+  return STRING_LIT
+}
 /'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ {
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = ProcessStr(yylex.Text())
-				return CHAR_LIT
-			}
-/null/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = yylex.Text()
-				return PAIR_LIT
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = processEscapedCharacters(yylex.Text())
+  return CHAR_LIT
+}
+/null/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = yylex.Text()
+  return PAIR_LIT
+}
 
-/begin/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return BEGIN
-			}
-/end/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return END
-			}
+/begin/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return BEGIN
+}
+/end/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return END
+}
 
-/skip/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return SKIP
-			}
-/=/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '='
-			}
-/read/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return READ
-			}
-/free/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return FREE
-			}
-/return/	{
-				lval.Position = NewPositionFromLexer(yylex)
-				return RETURN
-			}
-/exit/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return EXIT
-			}
-/print/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return PRINT
-			}
+/skip/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return SKIP
+}
+/=/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '='
+}
+/read/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return READ
+}
+/free/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return FREE
+}
+/return/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return RETURN
+}
+/exit/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return EXIT
+}
+/print/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return PRINT
+}
 /println/	{
-				lval.Position = NewPositionFromLexer(yylex)
-				return PRINTLN
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  return PRINTLN
+}
 /newpair/	{
-				lval.Position = NewPositionFromLexer(yylex)
-				return NEWPAIR
-			}
-/call/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return CALL
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  return NEWPAIR
+}
+/call/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return CALL
+}
 
-/int/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return INT
-			}
-/bool/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return BOOL
-			}
-/char/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return CHAR
-			}
-/string/	{
-				lval.Position = NewPositionFromLexer(yylex)
-				return STRING
-			}
-/pair/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return PAIR
-			}
-/is/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return IS
-			}
+/int/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return INT
+}
+/bool/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return BOOL
+}
+/char/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return CHAR
+}
+/string/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return STRING
+}
+/pair/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return PAIR
+}
+/is/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return IS
+}
 /external/ {
-        lval.Position = NewPositionFromLexer(yylex)
-        return EXTERNAL
-      }
+  lval.Position = NewPositionFromLexer(yylex)
+  return EXTERNAL
+}
 
-/if/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return IF
-			}
-/then/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return THEN
-			}
-/else/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ELSE
-			}
-/fi/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return FI
-			}
+/if/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return IF
+}
+/then/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return THEN
+}
+/else/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return ELSE
+}
+/fi/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return FI
+}
 
-/while/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return WHILE
-			}
-/do/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return DO
-			}
-/done/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return DONE
-			}
+/while/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return WHILE
+}
+/do/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return DO
+}
+/done/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return DONE
+}
 
-/;/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ';'
-			}
-/,/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ','
-			}
+/;/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return ';'
+}
+/,/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return ','
+}
 
-/!/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '!'
-			}
-/len/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return LEN
-			}
-/ord/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ORD
-			}
-/chr/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return CHR
-			}
-/fst/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return FST
-			}
-/snd/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return SND
-			}
+/!/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return '!'
+}
+/len/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return LEN
+}
+/ord/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return ORD
+}
+/chr/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return CHR
+}
+/fst/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return FST
+}
+/snd/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return SND
+}
 
-/\*/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '*'
-			}
-/\//		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '/'
-			}
-/%/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '%'
-			}
-/\+/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '+'
-			}
-/\-/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '-'
-			}
-/</			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '<'
-			}
-/>/			{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '>'
-			}
-/<=/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return LE
-			}
-/>=/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return GE
-			}
-/==/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return EQ
-			}
-/!=/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return NE
-			}
-/&&/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return AND
-			}
-/\|\|/  	{
-				lval.Position = NewPositionFromLexer(yylex)
-				return OR
-			}
+/\*/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '*'
+}
+/\// {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '/'
+}
+/%/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return '%'
+}
+/\+/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '+'
+}
+/\-/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '-'
+}
+/</ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '<'
+}
+/>/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '>'
+}
+/<=/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return LE
+}
+/>=/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return GE
+}
+/==/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return EQ
+}
+/!=/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return NE
+}
+/&&/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return AND
+}
+/\|\|/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return OR
+}
 
 /[_a-zA-Z][_a-zA-Z0-9]*/ {
-				lval.Position = NewPositionFromLexer(yylex)
-				lval.Value = yylex.Text(); return IDENT
-			}
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = yylex.Text(); return IDENT
+}
 
-/\[/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '['
-			}
-/\]/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ']'
-			}
-/\(/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return '('
-			}
-/\)/		{
-				lval.Position = NewPositionFromLexer(yylex)
-				return ')'
-			}
+/\[/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '['
+}
+/\]/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return ']'
+}
+/\(/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return '('
+}
+/\)/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return ')'
+}
 
 /#[^\n]*\n/	{
-				/* Comments should be ignored */
-			}
+  /* Comments should be ignored */
+}
 
-/./ 		{
-				lex.Error("Invalid Char")
-			}
+/./ {
+  lex.Error("invalid Char")
+}
 
 //
 package frontend
 
-var lex *Lexer
-
-func ProcessStr(s string) string {
-	s = s[1:len(s) - 1]
-
-	// Replace escaped characters with their unicode equivalent
-	output := ""
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' {
-			i++
-			switch s[i] {
-				case '0': output += "\000"
-				case 'b': output += "\b"
-				case 't': output += "\t"
-				case 'n': output += "\n"
-				case 'f': output += "\f"
-				case 'r': output += "\r"
-				case '\047': output += "\047"
-				case '\042': output += "\042"
-				case '\\': output += "\\"
-				default: panic("Encountered an unknown escape sequence, this should never happen")
-			}
-		} else {
-			output += string(s[i])
-		}
-	}
-	return output
-}
-
-// Callback for goyacc
-func (l *Lexer) Error(s string) {
-	if len(l.stack) > 0 {
-		unexpectedToken := l.Text()
-		SyntaxError(l.Line(), "%s -- unexpected '%s'", s, unexpectedToken)
-	} else {
-		SyntaxError(-1, "%s -- unexpected '<EOF>'", s)
-	}
-}

@@ -12,35 +12,28 @@ import (
 const SYNTAX_ERROR = 100
 const SEMANTIC_ERROR = 200
 
-const POINTER_LINE_CHAR = '-'
+const POINTER_LINE_CHAR = '~'
 const POINTER_POINTER_CHAR = '^'
 
-var ERROR_COLOUR = ansi.ColorCode("red+h:black")
-var LINE_COLOUR = ansi.ColorCode("yellow:black")
-var BAD_LINE_COLOUR = ansi.ColorCode("yellow+h:black")
-var POINTER_COLOUR = ansi.ColorCode("green+h:black")
+var ERROR_COLOUR = ansi.ColorCode("red+h")
+var LINE_COLOUR = ansi.ColorCode("reset")
+var BAD_LINE_COLOUR = ansi.ColorCode("yellow")
+var POINTER_COLOUR = ansi.ColorCode("reset")
 var RESET = ansi.ColorCode("reset")
 
-const CONTEXT_TO_PRINT = 3
+const CONTEXT_TO_PRINT = 2
 
 var exitCode int
-
-type ErrorContext struct {
-	exitCode int
-}
 
 func ExitCode() int {
 	return exitCode
 }
 
-func SyntaxError(lineNo int, s string, a ...interface{}) {
+func SyntaxError(position *Position, s string, a ...interface{}) {
 	errorStr := fmt.Sprintf(s, a...)
 	fmt.Print(ERROR_COLOUR)
-	if lineNo > 0 {
-		fmt.Printf("Line %d: %s\n", lineNo, errorStr)
-	} else {
-		fmt.Printf("%s\n", errorStr)
-	}
+	fmt.Printf("%v:%v:%v: syntax error: %v\n", position.Name(), position.Line(), position.Column(), errorStr)
+	dumpLineData(position)
 	fmt.Print(RESET)
 	exitCode = SYNTAX_ERROR
 }
@@ -48,12 +41,8 @@ func SyntaxError(lineNo int, s string, a ...interface{}) {
 func SemanticError(position *Position, s string, a ...interface{}) {
 	errorStr := fmt.Sprintf(s, a...)
 	fmt.Print(ERROR_COLOUR)
-	if position != nil {
-		fmt.Printf("Line %d: %s\n", position.Line(), errorStr)
-		dumpLineData(position)
-	} else {
-		fmt.Printf("%s\n", errorStr)
-	}
+	fmt.Printf("%v:%v:%v: semantic error: %v\n", position.Name(), position.Line(), position.Column(), errorStr)
+	dumpLineData(position)
 	fmt.Print(RESET)
 	exitCode = SEMANTIC_ERROR
 }
@@ -77,7 +66,7 @@ func SetUpErrorOutput(r io.Reader) io.Reader {
 func dumpLineData(position *Position) {
 	lineToPrint := position.Line() - 1
 
-	if len(errBuffer) <= lineToPrint {
+	if lineToPrint < 0 || len(errBuffer) <= lineToPrint {
 		return
 	}
 
@@ -94,12 +83,12 @@ func dumpLineData(position *Position) {
 	caret := string(POINTER_POINTER_CHAR)
 	fmt.Println(POINTER_COLOUR + dashes + caret)
 
-	for currentLine := lineToPrint + 1; currentLine < lineToPrint+CONTEXT_TO_PRINT; currentLine += 1 {
+	for currentLine := lineToPrint + 1; currentLine <= lineToPrint+CONTEXT_TO_PRINT; currentLine += 1 {
 		if currentLine >= len(errBuffer) {
 			continue
 		}
 		fmt.Println(LINE_COLOUR + errBuffer[currentLine])
 	}
 
-	fmt.Println(RESET)
+	fmt.Print(RESET)
 }

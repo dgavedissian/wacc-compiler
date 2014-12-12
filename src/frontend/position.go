@@ -52,10 +52,17 @@ func ComparePositions(a, b *Position) int {
 type Pos *Position
 
 func NewPositionFromLexer(l *Lexer) *Position {
-	return &Position{
-		name:   "<unknown>",
-		line:   l.Line() + 1,
-		column: l.Column() + 1,
-		length: len(l.Text()),
+	if len(l.stack) > 0 {
+		return &Position{
+			name:   "<unknown>",
+			line:   l.Line() + 1,
+			column: l.Column() + 1,
+			length: len(l.Text())}
+	} else {
+		return &Position{
+			name:   "<unknown",
+			line:   0,
+			column: 0,
+			length: 0}
 	}
 }
