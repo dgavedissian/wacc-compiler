@@ -2,7 +2,6 @@
   /* Skip blanks and tabs. */
 }
 
-
 /[0-9]+/ {
   lval.Position = NewPositionFromLexer(yylex)
   lval.Value = yylex.Text()
@@ -15,12 +14,12 @@
 }
 /"([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))*"/ {
   lval.Position = NewPositionFromLexer(yylex)
-  lval.Value = ProcessStr(yylex.Text())
+  lval.Value = processEscapedCharacters(yylex.Text())
   return STRING_LIT
 }
 /'([^"\\]| |(\\(0|b|t|n|f|r|'|"|\\)))'/ {
   lval.Position = NewPositionFromLexer(yylex)
-  lval.Value = ProcessStr(yylex.Text())
+  lval.Value = processEscapedCharacters(yylex.Text())
   return CHAR_LIT
 }
 /null/ {
@@ -254,42 +253,3 @@
 //
 package frontend
 
-var lex *Lexer
-
-func ProcessStr(s string) string {
-	s = s[1:len(s) - 1]
-
-	// Replace escaped characters with their unicode equivalent
-	output := ""
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' {
-			i++
-			switch s[i] {
-				case '0': output += "\000"
-				case 'b': output += "\b"
-				case 't': output += "\t"
-				case 'n': output += "\n"
-				case 'f': output += "\f"
-				case 'r': output += "\r"
-				case '\047': output += "\047"
-				case '\042': output += "\042"
-				case '\\': output += "\\"
-				default: panic("Encountered an unknown escape sequence, this should never happen")
-			}
-		} else {
-			output += string(s[i])
-		}
-	}
-	return output
-}
-
-// Error callback for nex
-func (l *Lexer) Error(s string) {
-  pos := NewPositionFromLexer(l)
-	if len(l.stack) > 0 {
-		unexpectedToken := l.Text()
-		SyntaxError(pos, "unexpected '%s'", unexpectedToken)
-	} else {
-		SyntaxError(pos, "unexpected '<EOF>'")
-	}
-}
