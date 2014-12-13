@@ -4,9 +4,6 @@ import (
 	"strconv"
 )
 
-const LOWER_BOUND = -(1 << 31)
-const UPPER_BOUND = (1 << 31) - 1
-
 func VerifyAnyStatementsReturn(stmts []Stmt) bool {
 	for i := len(stmts) - 1; i >= 0; i-- {
 		if VerifyStatementReturns(stmts[i]) {
@@ -49,7 +46,7 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 			// Negate n as the lexer always generates abs(n)
 			// It is possible to just check the abs, but this adds clarity.
 			n = -n
-			return n < LOWER_BOUND
+			return n < INT_MIN
 		}
 		return false
 
@@ -69,7 +66,7 @@ func StaticExprOverflows(expr Expr) bool {
 	case *BasicLit:
 		if expr.Type.Equals(BasicType{INT}) {
 			n := IntLiteralToIntConst(*expr)
-			return n > UPPER_BOUND
+			return n > INT_MAX
 		}
 		return false
 

@@ -4,6 +4,39 @@ import "io"
 
 var lex *Lexer
 
+const INT_MIN = -(1 << 31)
+const INT_MAX = (1 << 31) - 1
+
+// Error callback for nex
+func (l *Lexer) Error(s string) {
+	pos := NewPositionFromLexer(l)
+	if len(l.stack) > 0 {
+		unexpectedToken := l.Text()
+		SyntaxError(pos, "unexpected '%s'", unexpectedToken)
+	} else {
+		SyntaxError(pos, "unexpected '<EOF>'")
+	}
+}
+
+func GenerateAST(input io.Reader) (*ProgStmt, bool) {
+	// Generate AST
+	lex = NewLexer(SetUpErrorOutput(input))
+	yyParse(lex)
+
+	// Syntax errors will have
+	if ExitCode() != 0 {
+		return nil, true
+	}
+	program := top.Stmt.(*ProgStmt)
+
+	return program, false
+}
+
+func VerifySemantics(ast *ProgStmt) bool {
+	verifyProgram(ast)
+	return ExitCode() == 0
+}
+
 func processEscapedCharacters(s string) string {
 	s = s[1 : len(s)-1]
 
@@ -39,34 +72,4 @@ func processEscapedCharacters(s string) string {
 		}
 	}
 	return output
-}
-
-// Error callback for nex
-func (l *Lexer) Error(s string) {
-	pos := NewPositionFromLexer(l)
-	if len(l.stack) > 0 {
-		unexpectedToken := l.Text()
-		SyntaxError(pos, "unexpected '%s'", unexpectedToken)
-	} else {
-		SyntaxError(pos, "unexpected '<EOF>'")
-	}
-}
-
-func GenerateAST(input io.Reader) (*ProgStmt, bool) {
-	// Generate AST
-	lex = NewLexer(SetUpErrorOutput(input))
-	yyParse(lex)
-
-	// Syntax errors will have
-	if ExitCode() != 0 {
-		return nil, true
-	}
-	program := top.Stmt.(*ProgStmt)
-
-	return program, false
-}
-
-func VerifySemantics(ast *ProgStmt) bool {
-	verifyProgram(ast)
-	return ExitCode() == 0
 }
