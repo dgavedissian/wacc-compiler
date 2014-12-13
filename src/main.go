@@ -10,8 +10,8 @@ import (
 	"./frontend"
 )
 
-const OK_CODE = 0
-const INTERRUPT_CODE = 1
+const INTERRUPT_CODE = 0
+const OK_CODE = 1
 
 func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics bool) func(*os.File) (string, int) {
 	compiler := func(input *os.File) (string, int) {
