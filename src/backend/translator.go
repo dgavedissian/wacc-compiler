@@ -82,6 +82,11 @@ func (ctx *IFContext) popScope() {
 	// Determine stack size
 	stackSize := len(ctx.scope[ctx.depth-1]) * regWidth
 
+	// Ensure stack is double-word aligned (5.2.1.2)
+	if (stackSize % 8) != 0 {
+		stackSize += 8 - (stackSize % 8)
+	}
+
 	ctx.addInstr(&PopScopeInstr{stackSize})
 	ctx.scopePushInstr[ctx.depth-1].StackSize = stackSize
 	ctx.scope = ctx.scope[:ctx.depth-1]
