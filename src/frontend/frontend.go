@@ -1,6 +1,9 @@
 package frontend
 
-import "io"
+import (
+	"io"
+	"unicode/utf8"
+)
 
 var lex *Lexer
 
@@ -42,10 +45,12 @@ func processEscapedCharacters(s string) string {
 
 	// Replace escaped characters with their unicode equivalent
 	output := ""
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' {
-			i++
-			switch s[i] {
+	for i, w := 0, 0; i < len(s); i += w {
+		runeValue, width := utf8.DecodeRuneInString(s[i:])
+		if runeValue == '\\' {
+			i += width
+			runeValue, width = utf8.DecodeRuneInString(s[i:])
+			switch runeValue {
 			case '0':
 				output += "\000"
 			case 'b':
@@ -68,8 +73,9 @@ func processEscapedCharacters(s string) string {
 				panic("Encountered an unknown escape sequence, this should never happen")
 			}
 		} else {
-			output += string(s[i])
+			output += string(runeValue)
 		}
+		w = width
 	}
 	return output
 }

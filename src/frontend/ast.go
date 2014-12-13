@@ -574,7 +574,7 @@ func (BasicLit) exprNode()        {}
 func (x BasicLit) Pos() *Position { return x.ValuePos }
 func (x BasicLit) End() *Position { return x.ValuePos.End() }
 func (x BasicLit) Repr() string {
-	return "Lit(" + x.Type.Repr() + ", " + x.Value + ")"
+	return fmt.Sprintf("Lit(%v, %v)", x.Type.Repr(), x.Value)
 }
 
 // Array literal

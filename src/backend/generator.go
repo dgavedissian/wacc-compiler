@@ -394,9 +394,9 @@ func (i *PopInstr) generateCode(ctx *GeneratorContext) {
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
 	for k, v := range ifCtx.dataStore {
 		wideString := ""
-		for _, c := range v.Value {
+		for _, r := range v.Value {
 			bs := make([]byte, 4)
-			utf8.EncodeRune(bs, c)
+			utf8.EncodeRune(bs, r)
 			for _, b := range bs {
 				wideString += fmt.Sprintf("\\%03o", b)
 			}
