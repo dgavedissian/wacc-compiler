@@ -46,6 +46,7 @@ func (ctx *IFContext) beginFunction(name string) {
 func (ctx *IFContext) beginMain() {
 	ctx.main = ctx.makeNode(&LabelInstr{"main"})
 	ctx.current = ctx.main
+	ctx.addInstr(&LocaleInstr{})
 }
 
 func (ctx *IFContext) appendNode(n *InstrNode) {

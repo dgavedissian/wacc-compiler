@@ -307,6 +307,9 @@ type PopScopeInstr struct {
 	StackSize int
 }
 
+type LocaleInstr struct {
+}
+
 func (DeclareInstr) instr() {}
 func (e DeclareInstr) Repr() string {
 	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
@@ -320,6 +323,11 @@ func (e PushScopeInstr) Repr() string {
 func (PopScopeInstr) instr() {}
 func (e PopScopeInstr) Repr() string {
 	return fmt.Sprintf("POP SCOPE %v", e.StackSize)
+}
+
+func (LocaleInstr) instr() {}
+func (e LocaleInstr) Repr() string {
+	return fmt.Sprintf("SET LOCALE")
 }
 
 //

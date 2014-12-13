@@ -557,3 +557,4 @@ func (*HeapAllocInstr) allocateRegisters(*RegisterAllocatorContext)            {
 func (*PushInstr) allocateRegisters(*RegisterAllocatorContext)                 {}
 func (*PopInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
 func (*CheckNullDereferenceInstr) allocateRegisters(*RegisterAllocatorContext) {}
+func (*LocaleInstr) allocateRegisters(*RegisterAllocatorContext)               {}

@@ -3,7 +3,6 @@ package backend
 import (
 	"fmt"
 	"math"
-	"unicode/utf8"
 
 	"../frontend"
 )
@@ -391,17 +390,25 @@ func (i *PopInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("pop {%v}", i.Op.Repr())
 }
 
+func (i *LocaleInstr) generateCode(ctx *GeneratorContext) {
+	ctx.pushCode("mov r0, #6")
+	ctx.pushCode("ldr r1, =_wacc_null")
+	ctx.pushCode("bl setlocale")
+}
+
 func (ctx *GeneratorContext) generateData(ifCtx *IFContext) {
+	encodeRuneToUTF16 := func(r rune) string {
+		return fmt.Sprintf("\\%03o\\%03o\\000\\000", r%0x100, (r>>8)%0x100)
+	}
+
 	for k, v := range ifCtx.dataStore {
 		wideString := ""
+		length := 0
 		for _, r := range v.Value {
-			bs := make([]byte, 4)
-			utf8.EncodeRune(bs, r)
-			for _, b := range bs {
-				wideString += fmt.Sprintf("\\%03o", b)
-			}
+			wideString += encodeRuneToUTF16(r)
+			length += 1
 		}
-		ctx.data += fmt.Sprintf("%s:\n\t.word %v\n\t.ascii \"%s\"\n", k, len(v.Value), wideString)
+		ctx.data += fmt.Sprintf("%s:\n\t.word %v\n\t.ascii \"%s\"\n", k, length, wideString)
 	}
 }
 
@@ -439,7 +446,7 @@ scanf_fmt_int:
 printf_fmt_float:
 	.ascii "%\000\000\000f\000\000\000\000\000\000\000"
 printf_fmt_char:
-	.ascii "%\000\000\000c\000\000\000\000\000\000\000"
+	.ascii "%\000\000\000l\000\000\000c\000\000\000\000\000\000\000"
 scanf_fmt_char:
 	.ascii " \000\000\000%\000\000\000c\000\000\000\000\000\000\000"
 printf_fmt_str:
@@ -464,7 +471,9 @@ _wacc_array_index_large_msg:
 	.asciz "ArrayIndexOutOfBoundsError: index too large\n"
 _wacc_null_dereference_msg:
 	.asciz "NullReferenceError: dereference a null reference\n"
-`
+_wacc_null:
+	.ascii "\000"
+	`
 	ctx.generateData(ifCtx)
 
 	// Add the label of each function to the global list
