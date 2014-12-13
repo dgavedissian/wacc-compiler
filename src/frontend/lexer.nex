@@ -7,7 +7,7 @@
   lval.Value = yylex.Text()
   return INT_LIT
 }
-/[0-9]+.[0-9]+/ {
+/[0-9]+\.[0-9]+/ {
   lval.Position = NewPositionFromLexer(yylex)
   lval.Value = yylex.Text()
   return FLOAT_LIT
