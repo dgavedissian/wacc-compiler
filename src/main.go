@@ -23,7 +23,7 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 
 		semanticOk := frontend.VerifySemantics(ast)
 
-		if !semanticOk {
+		if checkSemantics && !semanticOk {
 			return "", frontend.SEMANTIC_ERROR
 		}
 
@@ -31,6 +31,10 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 			fmt.Println("Abstract Syntax Tree:")
 			fmt.Println(ast.Repr())
 			fmt.Println()
+		}
+
+		if astonly {
+			return "", INTERRUPT_CODE
 		}
 
 		intermediateForm := backend.TranslateToIF(ast)
