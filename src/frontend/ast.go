@@ -65,6 +65,7 @@ type ErrorType struct {
 //
 type ProgStmt struct {
 	BeginPos *Position // position of "begin" keyword
+	Structs  []*Struct
 	Funcs    []*Function
 	Body     []Stmt
 	EndPos   *Position // position of "end keyword
@@ -133,6 +134,18 @@ type ScopeStmt struct {
 	BeginPos *Position
 	Body     []Stmt
 	EndPos   *Position
+}
+
+type Struct struct {
+	Struct  *Position
+	Ident   *IdentExpr
+	Members []*StructMember
+}
+
+type StructMember struct {
+	MemberPos *Position
+	Type      Type
+	Ident     *IdentExpr
 }
 
 type Function struct {
@@ -238,6 +251,18 @@ func ReprNodes(nodeList interface{}) string {
 		return reprNodesInt(realNodeList)
 
 	case []Expr:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+
+	case []*Struct:
+		for _, n := range nodeList {
+			realNodeList = append(realNodeList, n)
+		}
+		return reprNodesInt(realNodeList)
+
+	case []*StructMember:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
 		}
@@ -365,8 +390,26 @@ func (s ProgStmt) End() *Position {
 	return s.EndPos.End()
 }
 func (s ProgStmt) Repr() string {
-	return "Prog(" + ReprNodes(s.Funcs) + ")(" +
-		ReprNodes(s.Body) + ")"
+	return fmt.Sprintf("Prog(%v, %v, %v)",
+		ReprNodes(s.Structs), ReprNodes(s.Funcs), ReprNodes(s.Body))
+}
+
+// Struct Statement
+func (s Struct) Pos() *Position { return s.Struct }
+func (s Struct) End() *Position {
+	return s.Members[len(s.Members)-1].End()
+}
+func (s Struct) Repr() string {
+	return fmt.Sprintf("Struct(%v, %v)",
+		s.Ident.Repr(), ReprNodes(s.Members))
+}
+
+// Struct Member
+func (s StructMember) Pos() *Position { return s.MemberPos }
+func (s StructMember) End() *Position { return s.MemberPos }
+func (s StructMember) Repr() string {
+	return fmt.Sprintf("Member(%v, %v)",
+		s.Type.Repr(), s.Ident.Repr())
 }
 
 // Function Statement

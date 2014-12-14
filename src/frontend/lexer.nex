@@ -78,6 +78,10 @@
   lval.Position = NewPositionFromLexer(yylex)
   return NEWPAIR
 }
+/newstruct/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return NEWSTRUCT
+}
 /call/ {
   lval.Position = NewPositionFromLexer(yylex)
   return CALL
@@ -114,6 +118,10 @@
 /external/ {
   lval.Position = NewPositionFromLexer(yylex)
   return EXTERNAL
+}
+/struct/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return STRUCT
 }
 
 /if/ {

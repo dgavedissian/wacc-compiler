@@ -7,12 +7,20 @@
 %union {
   Expr   Expr
   Value  string
+
+  Structs []*Struct
+  Struct *Struct
+  StructMembers []*StructMember
+  StructMember *StructMember
+
   Funcs  []*Function
-  Func   *Function
-  Stmts  []Stmt
-  Stmt   Stmt
+  Func   *Function 
   Params []Param
   Param  Param
+  
+  Stmts  []Stmt
+  Stmt   Stmt
+  
   Type   Type
   lines  int
   Exprs  []Expr
@@ -28,9 +36,9 @@
 %token INT_LIT FLOAT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
 %token IDENT
 %token UNARY_OPER BINARY_OPER
-%token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR CALL
+%token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR NEWSTRUCT CALL
 %token INT FLOAT BOOL CHAR STRING PAIR
-%token IS EXTERNAL
+%token IS EXTERNAL STRUCT
 %token IF THEN ELSE FI
 %token WHILE DO DONE
 %token LEN ORD CHR FST SND
@@ -42,7 +50,19 @@ top
     ;
 
 program
-    : BEGIN body END { $$.Stmt = &ProgStmt{$1.Position, $2.Funcs, $2.Stmts, $3.Position} }
+    : BEGIN struct_list END { $$.Stmt = &ProgStmt{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
+    ;
+
+struct_list
+    : struct struct_list {
+        $$.Stmts = $2.Stmts
+        $$.Funcs = $2.Funcs
+        $$.Structs = append([]*Struct{$1.Struct}, $2.Structs...)
+      }
+    | body {
+        $$.Stmts = $1.Stmts
+        $$.Funcs = $1.Funcs
+      }
     ;
 
 body
@@ -51,6 +71,24 @@ body
         $$.Funcs = append([]*Function{$1.Func}, $2.Funcs...)
       }
     | statement_list { $$.Stmts = $1.Stmts }
+    ;
+
+/* Structs */
+struct
+    : STRUCT identifier IS struct_member_list END {
+        $$.Struct = &Struct{$1.Position, $2.Expr.(*IdentExpr), $4.StructMembers}
+      }
+    ;
+
+struct_member_list
+    : struct_member ';' struct_member_list {
+        $$.StructMembers = append([]*StructMember{$1.StructMember}, $3.StructMembers...)
+      }
+    | struct_member { $$.StructMembers = []*StructMember{$1.StructMember} }
+    ;
+
+struct_member
+    : type identifier { $$.StructMember = &StructMember{$1.Position, $1.Type, $2.Expr.(*IdentExpr)} }
     ;
 
 /* Functions */
