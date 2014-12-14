@@ -150,6 +150,9 @@ assign_lhs
 
 assign_rhs
     : expression {$$.Expr = $1.Expr}
+    | NEWSTRUCT '(' identifier ',' optional_arg_list ')' {
+        $$.Expr = &NewStructCmd{$1.Position, $3.Expr.(*IdentExpr), $5.Exprs, $6.Position}
+      }
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &NewPairCmd{$1.Position, $3.Expr, $5.Expr, $6.Position}
       }
@@ -178,6 +181,7 @@ arg_list
 /* Types */
 type
     : base_type
+    | struct_type
     | pair_type
     | type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
@@ -188,6 +192,10 @@ base_type
     | BOOL   { $$.Type = BasicType{BOOL} }
     | CHAR   { $$.Type = BasicType{CHAR} }
     | STRING { $$.Type = BasicType{STRING} }
+    ;
+
+struct_type
+    : identifier { $$.Type = StructType{$1.Value} }
     ;
 
 array_type

@@ -43,6 +43,10 @@ type BasicType struct {
 	TypeId int
 }
 
+type StructType struct {
+	TypeId string
+}
+
 type ArrayType struct {
 	BaseType Type
 }
@@ -221,6 +225,13 @@ type BinaryExpr struct {
 //
 // Commands: Expressions which are only used in assignments
 //
+type NewStructCmd struct {
+	ValuePos     *Position
+	Ident        *IdentExpr
+	Args         []Expr
+	RightBracket *Position
+}
+
 type NewPairCmd struct {
 	ValuePos     *Position
 	Left         Expr
@@ -333,6 +344,15 @@ func (bt BasicType) Repr() string {
 		panic(fmt.Sprintf("BasicType.Repr: Undefined repr for %d?", bt.TypeId))
 	}
 }
+
+// Struct Type
+func (st StructType) Equals(t2 Type) bool {
+	if st2, ok := t2.(StructType); ok {
+		return st.TypeId == st2.TypeId
+	}
+	return false
+}
+func (st StructType) Repr() string { return st.TypeId }
 
 // Array Type
 func (at ArrayType) Equals(t2 Type) bool {
@@ -660,6 +680,17 @@ func (x BinaryExpr) Repr() string {
 //
 // Commands: Expressions which are only used in assignments
 //
+
+// Structs
+func (NewStructCmd) exprNode()        {}
+func (x NewStructCmd) Pos() *Position { return x.ValuePos }
+func (x NewStructCmd) End() *Position {
+	return x.RightBracket.End()
+}
+func (x NewStructCmd) Repr() string {
+	return fmt.Sprintf("NewPair(%v, %v)",
+		x.Ident.Repr(), ReprNodes(x.Args))
+}
 
 // Pairs
 func (NewPairCmd) exprNode()        {}
