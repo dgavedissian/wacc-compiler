@@ -282,6 +282,9 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 	case *NewPairCmd:
 		return PairType{ctx.DeriveType(expr.Left), ctx.DeriveType(expr.Right)}
 
+	case *NewStructCmd:
+		return StructType{expr.Ident.Name}
+
 	case *CallCmd:
 		if f, ok := ctx.LookupFunction(expr.Ident); ok {
 			// Verify number of arguments

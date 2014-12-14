@@ -688,7 +688,7 @@ func (x NewStructCmd) End() *Position {
 	return x.RightBracket.End()
 }
 func (x NewStructCmd) Repr() string {
-	return fmt.Sprintf("NewPair(%v, %v)",
+	return fmt.Sprintf("NewStruct(%v, %v)",
 		x.Ident.Repr(), ReprNodes(x.Args))
 }
 
