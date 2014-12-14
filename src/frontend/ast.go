@@ -221,6 +221,13 @@ type BinaryExpr struct {
 //
 // Commands: Expressions which are only used in assignments
 //
+type NewStructCmd struct {
+	ValuePos     *Position
+	Ident        *IdentExpr
+	Args         []Expr
+	RightBracket *Position
+}
+
 type NewPairCmd struct {
 	ValuePos     *Position
 	Left         Expr
@@ -660,6 +667,17 @@ func (x BinaryExpr) Repr() string {
 //
 // Commands: Expressions which are only used in assignments
 //
+
+// Structs
+func (NewStructCmd) exprNode()        {}
+func (x NewStructCmd) Pos() *Position { return x.ValuePos }
+func (x NewStructCmd) End() *Position {
+	return x.RightBracket.End()
+}
+func (x NewStructCmd) Repr() string {
+	return fmt.Sprintf("NewPair(%v, %v)",
+		x.Ident.Repr(), ReprNodes(x.Args))
+}
 
 // Pairs
 func (NewPairCmd) exprNode()        {}
