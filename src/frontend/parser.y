@@ -50,7 +50,7 @@ top
     ;
 
 program
-    : BEGIN struct_list END { $$.Stmt = &ProgStmt{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
+    : BEGIN struct_list END { $$.Stmt = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
     ;
 
 struct_list

@@ -21,7 +21,7 @@ func (l *Lexer) Error(s string) {
 	}
 }
 
-func GenerateAST(input io.Reader) (*ProgStmt, bool) {
+func GenerateAST(input io.Reader) (*Program, bool) {
 	// Generate AST
 	lex = NewLexer(SetUpErrorOutput(input))
 	yyParse(lex)
@@ -30,12 +30,12 @@ func GenerateAST(input io.Reader) (*ProgStmt, bool) {
 	if ExitCode() != 0 {
 		return nil, true
 	}
-	program := top.Stmt.(*ProgStmt)
+	program := top.Stmt.(*Program)
 
 	return program, false
 }
 
-func VerifySemantics(ast *ProgStmt) bool {
+func VerifySemantics(ast *Program) bool {
 	verifyProgram(ast)
 	return ExitCode() == 0
 }

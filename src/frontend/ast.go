@@ -67,12 +67,40 @@ type ErrorType struct {
 //
 // Statements
 //
-type ProgStmt struct {
+type Program struct {
 	BeginPos *Position // position of "begin" keyword
 	Structs  []*Struct
 	Funcs    []*Function
 	Body     []Stmt
 	EndPos   *Position // position of "end keyword
+}
+
+type Struct struct {
+	Struct  *Position
+	Ident   *IdentExpr
+	Members []*StructMember
+}
+
+type StructMember struct {
+	MemberPos *Position
+	Type      Type
+	Ident     *IdentExpr
+}
+
+type Function struct {
+	Func     *Position
+	Type     Type
+	Ident    *IdentExpr
+	Params   []Param
+	Body     []Stmt
+	External bool
+}
+
+type Param struct {
+	Start  *Position
+	Type   Type
+	Ident  *IdentExpr
+	Finish *Position
 }
 
 type SkipStmt struct {
@@ -138,34 +166,6 @@ type ScopeStmt struct {
 	BeginPos *Position
 	Body     []Stmt
 	EndPos   *Position
-}
-
-type Struct struct {
-	Struct  *Position
-	Ident   *IdentExpr
-	Members []*StructMember
-}
-
-type StructMember struct {
-	MemberPos *Position
-	Type      Type
-	Ident     *IdentExpr
-}
-
-type Function struct {
-	Func     *Position
-	Type     Type
-	Ident    *IdentExpr
-	Params   []Param
-	Body     []Stmt
-	External bool
-}
-
-type Param struct {
-	Start  *Position
-	Type   Type
-	Ident  *IdentExpr
-	Finish *Position
 }
 
 //
@@ -403,13 +403,13 @@ func (ErrorType) Repr() string {
 // Statements
 //
 
-// Program Statement
-func (ProgStmt) stmtNode()        {}
-func (s ProgStmt) Pos() *Position { return s.BeginPos }
-func (s ProgStmt) End() *Position {
+// Program
+func (Program) stmtNode()        {}
+func (s Program) Pos() *Position { return s.BeginPos }
+func (s Program) End() *Position {
 	return s.EndPos.End()
 }
-func (s ProgStmt) Repr() string {
+func (s Program) Repr() string {
 	return fmt.Sprintf("Prog(%v, %v, %v)",
 		ReprNodes(s.Structs), ReprNodes(s.Funcs), ReprNodes(s.Body))
 }

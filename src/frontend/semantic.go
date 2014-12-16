@@ -11,7 +11,7 @@ type Context struct {
 //
 // Semantic Checking
 //
-func verifyProgram(program *ProgStmt) {
+func verifyProgram(program *Program) {
 	ctx := &Context{make(map[string]*Function), nil, nil, 0}
 
 	// Verify functions
