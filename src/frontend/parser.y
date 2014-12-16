@@ -205,6 +205,7 @@ pair_type
 pair_elem_type
     : base_type
     | array_type
+    | pair_type
     | PAIR        { $$.Type = BasicType{PAIR} }
     ;
 
