@@ -344,6 +344,8 @@ func (bt BasicType) Repr() string {
 		return "string"
 	case PAIR: // null
 		return "pair"
+	case VOID:
+		return "void"
 	default:
 		panic(fmt.Sprintf("BasicType.Repr: Undefined repr for %d?", bt.TypeId))
 	}

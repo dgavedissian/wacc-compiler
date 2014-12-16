@@ -37,7 +37,7 @@
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR NEWSTRUCT CALL
-%token INT FLOAT BOOL CHAR STRING PAIR
+%token INT FLOAT BOOL CHAR STRING PAIR VOID
 %token IS EXTERNAL STRUCT
 %token IF THEN ELSE FI
 %token WHILE DO DONE
@@ -97,8 +97,14 @@ func
         VerifyFunctionReturns($7.Stmts)
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
       }
+    | VOID identifier '(' optional_param_list ')' IS statement_list END {
+        $$.Func = &Function{$1.Position, &BasicType{VOID}, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
+      }
     | type identifier '(' optional_param_list ')' IS EXTERNAL {
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, nil, true} 
+      }
+    | VOID identifier '(' optional_param_list ')' IS EXTERNAL {
+        $$.Func = &Function{$1.Position, &BasicType{VOID}, $2.Expr.(*IdentExpr), $4.Params, nil, true} 
       }
     ;
 
