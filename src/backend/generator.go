@@ -16,6 +16,10 @@ type GeneratorContext struct {
 	currentFunction string
 }
 
+func (ctx *GeneratorContext) generateStackOffset(stack *StackLocationExpr) int {
+	return ctx.stackDistance - regWidth*stack.Id
+}
+
 func (ctx *GeneratorContext) pushLabel(label string) {
 	ctx.text += fmt.Sprintf("%v:\n", label)
 }
@@ -33,9 +37,7 @@ func (i *LabelInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushLabel(i.Label)
 }
 
-func (ctx *GeneratorContext) generateStackOffset(stack *StackLocationExpr) int {
-	return ctx.stackDistance - regWidth*stack.Id
-}
+func (i *EvalInstr) generateCode(*GeneratorContext) {}
 
 func (i *ReadInstr) generateCode(ctx *GeneratorContext) {
 	ctx.pushCode("mov r1, #0")

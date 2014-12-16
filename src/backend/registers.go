@@ -445,6 +445,14 @@ func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
+func (i *EvalInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	// Allocate registers and throw away the result
+	dst := ctx.allocateRegister()
+	i.Expr.allocateRegisters(ctx, dst)
+	// TODO: Remove this instruction
+	ctx.freeRegister(dst)
+}
+
 func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	switch expr := i.Dst.(type) {
 	case *VarExpr:

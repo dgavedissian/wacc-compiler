@@ -278,6 +278,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 	case *frontend.SkipStmt:
 		ctx.addInstr(&NoOpInstr{})
 
+	case *frontend.EvalStmt:
+		ctx.addInstr(&EvalInstr{ctx.translateExpr(node.Expr)})
+
 	case *frontend.DeclStmt:
 		v := &VarExpr{node.Ident.Name}
 		ctx.addType(v.Name, node.Type)

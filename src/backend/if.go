@@ -255,6 +255,10 @@ type LabelInstr struct {
 	Label string
 }
 
+type EvalInstr struct {
+	Expr Expr
+}
+
 type ReadInstr struct {
 	Dst  Expr // LValueExpr
 	Type frontend.Type
@@ -440,6 +444,11 @@ func (NoOpInstr) Repr() string { return "NOOP" }
 func (LabelInstr) instr() {}
 func (i LabelInstr) Repr() string {
 	return fmt.Sprintf("LABEL %s", i.Label)
+}
+
+func (EvalInstr) instr() {}
+func (i EvalInstr) Repr() string {
+	return fmt.Sprintf("EVAL %v", i.Expr.Repr())
 }
 
 func (ReadInstr) instr() {}

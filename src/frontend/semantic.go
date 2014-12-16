@@ -1,5 +1,7 @@
 package frontend
 
+import "fmt"
+
 // Context
 type Context struct {
 	functions       map[string]*Function
@@ -327,6 +329,12 @@ func (ctx *Context) VerifyStatementList(statementList []Stmt) {
 
 func (ctx *Context) VerifyStatement(statement Stmt) {
 	switch statement := statement.(type) {
+	case *SkipStmt:
+		// Do nothing
+
+	case *EvalStmt:
+		ctx.DeriveType(statement.Expr)
+
 	case *DeclStmt:
 		t1, t2 := statement.Type, ctx.DeriveType(statement.Right)
 		if !t1.Equals(t2) {
@@ -411,5 +419,8 @@ func (ctx *Context) VerifyStatement(statement Stmt) {
 		ctx.PushScope()
 		ctx.VerifyStatementList(statement.Body)
 		ctx.PopScope()
+
+	default:
+		panic(fmt.Sprintf("IMPLEMENT_ME: Unchecked statement: %T", statement))
 	}
 }

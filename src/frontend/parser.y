@@ -134,6 +134,7 @@ statement
     | EXIT expression                 { $$.Stmt = &ExitStmt{$1.Position, $2.Expr} }
     | PRINT expression                { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, false, nil} }
     | PRINTLN expression              { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, true, nil} }
+    | call                            { $$.Stmt = &EvalStmt{$1.Expr} }
     | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{$1.Position, $2.Stmts, $3.Position} }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{$1.Position, $2.Expr, $4.Stmts, $6.Stmts, $7.Position}
@@ -157,9 +158,15 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &NewPairCmd{$1.Position, $3.Expr, $5.Expr, $6.Position}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position} }
+    | call
     | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position, nil} }
     | pair_elem
+    ;
+
+call
+    : CALL identifier '(' optional_arg_list ')' {
+        $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position}
+      }
     ;
 
 identifier

@@ -107,6 +107,10 @@ type SkipStmt struct {
 	Skip *Position // position of "skip" keyword
 }
 
+type EvalStmt struct {
+	Expr Expr
+}
+
 type DeclStmt struct {
 	TypePos *Position // Position of the type keyword
 	Type    Type
@@ -461,6 +465,12 @@ func (s SkipStmt) End() *Position {
 	return s.Skip.End()
 }
 func (s SkipStmt) Repr() string { return "Skip" }
+
+// Eval Statement
+func (EvalStmt) stmtNode()        {}
+func (s EvalStmt) Pos() *Position { return s.Expr.Pos() }
+func (s EvalStmt) End() *Position { return s.Expr.End() }
+func (s EvalStmt) Repr() string   { return fmt.Sprintf("Eval(%v)", s.Expr.Repr()) }
 
 // Declaration statement
 func (DeclStmt) stmtNode()        {}
