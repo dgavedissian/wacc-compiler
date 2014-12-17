@@ -1,6 +1,9 @@
 package frontend
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Context
 type Context struct {
@@ -8,6 +11,55 @@ type Context struct {
 	currentFunction *Function
 	types           []map[string]Type
 	depth           int
+}
+
+//
+// Name manging
+//
+func (ctx *Context) encodeType(t Type) string {
+	switch t := t.(type) {
+	case BasicType:
+		if t.TypeId == STRING {
+			// Match char[]
+			return "ac"
+		} else {
+			return string([]rune(t.Repr())[0])
+		}
+
+	case ArrayType:
+		return "a" + ctx.encodeType(t.BaseType)
+
+	case PairType:
+		// We can't encode the sub-pair types here in case null is given
+		return "p"
+
+	default:
+		panic(fmt.Sprintf("Unhandled type in encodeType: %T", t))
+	}
+}
+
+func (ctx *Context) encodeFunctionName(ident *IdentExpr, types []Type) string {
+	name := ident.Name
+	for _, t := range types {
+		name += ctx.encodeType(t)
+	}
+	return name
+}
+
+func (ctx *Context) paramsToTypes(params []Param) []Type {
+	out := []Type{}
+	for _, p := range params {
+		out = append(out, p.Type)
+	}
+	return out
+}
+
+func (ctx *Context) genTypeSignature(ident string, types []Type) string {
+	typeList := []string{}
+	for _, t := range types {
+		typeList = append(typeList, t.Repr())
+	}
+	return fmt.Sprintf("%v(%v)", ident, strings.Join(typeList, ", "))
 }
 
 //
@@ -42,14 +94,17 @@ func verifyProgram(program *Program) {
 //
 // Functions
 //
-func (ctx *Context) LookupFunction(ident *IdentExpr) (*Function, bool) {
-	f, ok := ctx.functions[ident.Name]
+func (ctx *Context) LookupFunction(name string) (*Function, bool) {
+	f, ok := ctx.functions[name]
 	return f, ok
 }
 
 func (ctx *Context) AddFunction(f *Function) {
-	if _, ok := ctx.LookupFunction(f.Ident); ok {
-		SemanticError(f.Pos(), "function '%s' already exists in this program", f.Ident.Name)
+	types := ctx.paramsToTypes(f.Params)
+	originalName := f.Ident.Name
+	f.Ident.Name = ctx.encodeFunctionName(f.Ident, types)
+	if _, ok := ctx.LookupFunction(f.Ident.Name); ok {
+		SemanticError(f.Pos(), "function '%v' already exists in this program", ctx.genTypeSignature(originalName, types))
 	} else {
 		ctx.functions[f.Ident.Name] = f
 	}
@@ -288,17 +343,27 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		return StructType{expr.Ident.Name}
 
 	case *CallCmd:
-		if f, ok := ctx.LookupFunction(expr.Ident); ok {
+		// Derive parameter types
+		paramTypes := []Type{}
+		for _, e := range expr.Args {
+			t := ctx.DeriveType(e)
+			paramTypes = append(paramTypes, t)
+		}
+
+		// Encode function name
+		originalName := expr.Ident.Name
+		expr.Ident.Name = ctx.encodeFunctionName(expr.Ident, paramTypes)
+		if f, ok := ctx.LookupFunction(expr.Ident.Name); ok {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
-				SemanticError(expr.Pos(), "wrong number of arguments to '%s' specified (expected: %d; actual: %d)", f.Ident.Name, argsLen, paramLen)
+				SemanticError(expr.Pos(), "wrong number of arguments to '%s' specified (expected: %d; actual: %d)", originalName, argsLen, paramLen)
 				return ErrorType{}
 			}
 
 			// Verify argument types
 			for i := 0; i < argsLen; i++ {
-				argType, paramType := ctx.DeriveType(expr.Args[i]), f.Params[i].Type
+				argType, paramType := paramTypes[i], f.Params[i].Type
 				if !argType.Equals(paramType) {
 					SemanticError(expr.Pos(), "parameter type mismatch (expected: %s; actual: %s)", paramType.Repr(), argType.Repr())
 					return ErrorType{}
@@ -308,7 +373,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			// Return function type
 			return f.Type
 		} else {
-			SemanticError(expr.Pos(), "use of undefined function '%s'", expr.Ident.Name)
+			SemanticError(expr.Pos(), "use of undefined function '%v'", ctx.genTypeSignature(originalName, paramTypes))
 			return ErrorType{}
 		}
 
