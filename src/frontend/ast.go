@@ -277,12 +277,6 @@ func ReprNodes(nodeList interface{}) string {
 		}
 		return reprNodesInt(realNodeList)
 
-	case []*Import:
-		for _, n := range nodeList {
-			realNodeList = append(realNodeList, n)
-		}
-		return reprNodesInt(realNodeList)
-
 	case []*Struct:
 		for _, n := range nodeList {
 			realNodeList = append(realNodeList, n)
@@ -428,9 +422,8 @@ func (s Program) End() *Position {
 	return s.EndPos.End()
 }
 func (s Program) Repr() string {
-	return fmt.Sprintf("Program\n\t%v\n\t%v\n\t%v\n\t%v",
-		ReprNodes(s.Imports), ReprNodes(s.Structs), ReprNodes(s.Funcs),
-		ReprNodes(s.Body))
+	return fmt.Sprintf("Program\n\t%v\n\t%v\n\t%v",
+		ReprNodes(s.Structs), ReprNodes(s.Funcs), ReprNodes(s.Body))
 }
 
 // Import
