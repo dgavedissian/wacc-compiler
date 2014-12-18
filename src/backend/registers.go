@@ -391,6 +391,22 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 	ctx.freeRegister(helperReg)
 }
 
+func (e *NewStructExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	helperReg := ctx.allocateRegister()
+
+	// Allocate struct on the heap
+	numArgs := len(e.Args)
+	ctx.pushInstr(&HeapAllocInstr{dst, numArgs * regWidth})
+
+	// Fill structure
+	for n, arg := range e.Args {
+		arg.allocateRegisters(ctx, helperReg)
+		ctx.pushInstr(&MoveInstr{&MemExpr{dst, n * regWidth}, helperReg})
+	}
+
+	ctx.freeRegister(helperReg)
+}
+
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
 

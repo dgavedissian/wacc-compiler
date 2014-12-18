@@ -102,6 +102,11 @@ type BinaryExpr struct {
 	Type     frontend.Type
 }
 
+type NewStructExpr struct {
+	Label *LocationExpr
+	Args  []Expr
+}
+
 type NewPairExpr struct {
 	Left  Expr
 	Right Expr
@@ -207,6 +212,23 @@ func (e BinaryExpr) Repr() string {
 	return fmt.Sprintf("BINARY %v %v (%v) (%v)", e.Type.Repr(), e.Operator, e.Left.Repr(), e.Right.Repr())
 }
 func (e BinaryExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
+
+func (NewStructExpr) expr() {}
+func (e NewStructExpr) Repr() string {
+	args := make([]string, len(e.Args))
+	for i, arg := range e.Args {
+		args[i] = arg.Repr()
+	}
+	return fmt.Sprintf("NEWSTRUCT %v %v",
+		e.Label.Label, strings.Join(args, ", "))
+}
+func (e NewStructExpr) Weight() int {
+	x := 1
+	for _, arg := range e.Args {
+		x += arg.Weight()
+	}
+	return x
+}
 
 func (NewPairExpr) expr() {}
 func (e NewPairExpr) Repr() string {

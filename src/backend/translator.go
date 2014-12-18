@@ -218,6 +218,15 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 		}
 		return a
 
+	case *frontend.NewStructCmd:
+		translatedArgs := make([]Expr, len(expr.Args))
+		for i, arg := range expr.Args {
+			translatedArgs[i] = ctx.translateExpr(arg)
+		}
+		return &NewStructExpr{
+			Label: &LocationExpr{expr.Ident.Name},
+			Args:  translatedArgs}
+
 	case *frontend.NewPairCmd:
 		return &NewPairExpr{
 			Left:  ctx.translateExpr(expr.Left),
