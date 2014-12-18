@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"log"
 )
 
 type Optimizer interface {
@@ -239,11 +240,40 @@ func (ctx *fpWhileUnrollerContext) Optimize(ifCtx *IFContext) {
 }
 
 type fpInlinerContext struct {
-	ifCtx *IFContext
+	ifCtx           *IFContext
+	replacementCode map[string][]Instr
+}
+
+func (ctx *fpInlinerContext) checkInlinable(node *InstrNode) {
+
+}
+
+func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
+	for node != nil {
+		if instr, ok := node.Instr.(*CallInstr); ok {
+			replacementCode, ok := ctx.replacementCode[instr.Label.Label]
+			if !ok {
+				node = node.Next
+				continue
+			}
+			log.Println(replacementCode)
+		}
+		node = node.Next
+	}
 }
 
 func (ctx *fpInlinerContext) Optimize(ifCtx *IFContext) {
+	ctx.ifCtx = ifCtx
+	ctx.replacementCode = make(map[string][]Instr)
 
+	for _, path := range ifCtx.functions {
+		ctx.checkInlinable(path)
+	}
+
+	for _, path := range ifCtx.functions {
+		ctx.inlineInPath(path)
+	}
+	ctx.inlineInPath(ifCtx.main)
 }
 
 func OptimiseFirstPassIF(ifCtx *IFContext) {
