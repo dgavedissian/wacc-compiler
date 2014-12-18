@@ -203,6 +203,7 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 	lastNode = loopStart
 	for i := ctx.lvStart; i < ctx.lvEnd; i += ctx.lvIncrement {
 		for _, instr := range instrList {
+			instr = instr.Copy()
 			if jmpInstr, ok := instr.(*JmpInstr); ok {
 				if _, isIn := knownLabels[jmpInstr.Dst.Instr.(*LabelInstr).Label]; isIn {
 					jmpInstr.Dst.Instr = &LabelInstr{
@@ -218,7 +219,6 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 				}
 			}
 			if labelInstr, ok := instr.(*LabelInstr); ok {
-				instr = new(LabelInstr)
 				instr.(*LabelInstr).Label = fmt.Sprintf("%s_loop_%d", labelInstr.Label, i)
 			}
 			thisNode := new(InstrNode)
