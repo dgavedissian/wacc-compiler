@@ -8,21 +8,11 @@ import (
 const INT_MIN = -(1 << 31)
 const INT_MAX = (1 << 31) - 1
 
-// Empty error callback for nex
-func (l *Lexer) Error(s string) {}
-
-// Decorate Nex Lexer
-type WACCLexer struct {
-	lexer   *Lexer
-	program *Program
-	err     bool
-}
-
-func (l *WACCLexer) Lex(lval *yySymType) int { return l.lexer.Lex(lval) }
-func (l *WACCLexer) Error(e string) {
-	pos := NewPositionFromLexer(l.lexer)
-	if len(l.lexer.stack) > 0 {
-		unexpectedToken := l.lexer.Text()
+// Error callback for nex
+func (l *Lexer) Error(s string) {
+	pos := NewPositionFromLexer(l)
+	if len(l.stack) > 0 {
+		unexpectedToken := l.Text()
 		SyntaxError(pos, "unexpected '%s'", unexpectedToken)
 	} else {
 		SyntaxError(pos, "unexpected '<EOF>'")
@@ -32,9 +22,8 @@ func (l *WACCLexer) Error(e string) {
 
 func GenerateAST(input io.Reader) (*Program, bool) {
 	// Generate AST
-	yyDebug = 2
 	generateAST := func(input io.Reader) (*Program, bool) {
-		lexer := &WACCLexer{NewLexer(SetUpErrorOutput(input)), nil, false}
+		lexer := NewLexer(SetUpErrorOutput(input))
 		yyParse(lexer)
 		if lexer.err {
 			return nil, false
@@ -42,11 +31,7 @@ func GenerateAST(input io.Reader) (*Program, bool) {
 		return lexer.program, true
 	}
 	program, ok := generateAST(input)
-	if !ok {
-		return nil, true
-	}
-
-	return program, false
+	return program, !ok
 }
 
 func VerifySemantics(ast *Program) bool {

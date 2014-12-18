@@ -9,12 +9,13 @@ SCRIPTS_DIR  := scripts
 EXAMPLES_DIR := examples
 
 # Tools
-FIND	:= find
-RM	    := rm -rf
-GOPATH  := $$HOME/go
-NEX     := $(GOPATH)/bin/nex
-GO      := GOPATH=$(GOPATH) go
-GOGET   := $(GO) get
+FIND   := find
+RM     := rm -rf
+GOPATH := $$HOME/go
+NEX    := $(GOPATH)/bin/nex
+SED    := sed -i
+GO     := GOPATH=$(GOPATH) go
+GOGET  := $(GO) get
 
 FRONTEND_FILES := \
 	$(FRONTEND_DIR)/ast.go \
@@ -59,6 +60,8 @@ $(FRONTEND_DIR)/parser.go: $(DEPS_INSTALLED) $(FRONTEND_DIR)/parser.y
 
 $(FRONTEND_DIR)/lexer.go: $(DEPS_INSTALLED) $(FRONTEND_DIR)/lexer.nex
 	$(NEX) -e=true -o $(FRONTEND_DIR)/lexer.go $(FRONTEND_DIR)/lexer.nex
+	$(SED) 's/\/\/\ \[NEX_END_OF_LEXER_STRUCT\]/program *Program\nerr bool/g' $(FRONTEND_DIR)/lexer.go
+
 
 $(DEPS_INSTALLED): $(GO_INSTALLED)
 	$(GOGET) gitlab.doc.ic.ac.uk/np1813/nex && \

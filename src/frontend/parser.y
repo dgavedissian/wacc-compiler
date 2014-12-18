@@ -43,7 +43,7 @@
 
 top
     : BEGIN struct_list END {
-        yylex.(*WACCLexer).program = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position}
+        yylex.(*Lexer).program = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position}
       }
     ;
 
@@ -89,7 +89,7 @@ struct_member
 func
     : type identifier '(' optional_param_list ')' IS statement_list END {
         if !VerifyFunctionReturns($7.Stmts) {
-          yylex.(*WACCLexer).err = true
+          yylex.(*Lexer).err = true
         }
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
       }
@@ -265,7 +265,7 @@ unary_expression
 multiplicative_expression
     : unary_expression {
         if !VerifyNoOverflows($1.Expr) {
-          yylex.(*WACCLexer).err = true
+          yylex.(*Lexer).err = true
         }
         $$.Expr = $1.Expr
     }
