@@ -111,6 +111,10 @@
   lval.Position = NewPositionFromLexer(yylex)
   return PAIR
 }
+/void/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return VOID
+}
 /is/ {
   lval.Position = NewPositionFromLexer(yylex)
   return IS

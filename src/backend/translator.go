@@ -27,7 +27,7 @@ type IFContext struct {
 	currentCounter int
 }
 
-func TranslateToIF(program *frontend.ProgStmt) *IFContext {
+func TranslateToIF(program *frontend.Program) *IFContext {
 	ctx := new(IFContext)
 	ctx.functions = make(map[string]*InstrNode)
 	ctx.translate(program)
@@ -246,7 +246,7 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 
 func (ctx *IFContext) translate(node frontend.Stmt) {
 	switch node := node.(type) {
-	case *frontend.ProgStmt:
+	case *frontend.Program:
 		// Functions
 		for _, f := range node.Funcs {
 			if !f.External {
@@ -286,6 +286,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 	case *frontend.SkipStmt:
 		ctx.addInstr(&NoOpInstr{})
+
+	case *frontend.EvalStmt:
+		ctx.addInstr(&EvalInstr{ctx.translateExpr(node.Expr)})
 
 	case *frontend.DeclStmt:
 		v := &VarExpr{node.Ident.Name}

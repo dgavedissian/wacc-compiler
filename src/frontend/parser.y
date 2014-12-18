@@ -37,7 +37,7 @@
 %token IDENT
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR NEWSTRUCT CALL
-%token INT FLOAT BOOL CHAR STRING PAIR
+%token INT FLOAT BOOL CHAR STRING PAIR VOID
 %token IS EXTERNAL STRUCT
 %token IF THEN ELSE FI
 %token WHILE DO DONE
@@ -50,7 +50,7 @@ top
     ;
 
 program
-    : BEGIN struct_list END { $$.Stmt = &ProgStmt{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
+    : BEGIN struct_list END { $$.Stmt = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
     ;
 
 struct_list
@@ -97,8 +97,14 @@ func
         VerifyFunctionReturns($7.Stmts)
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
       }
+    | VOID identifier '(' optional_param_list ')' IS statement_list END {
+        $$.Func = &Function{$1.Position, &BasicType{VOID}, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
+      }
     | type identifier '(' optional_param_list ')' IS EXTERNAL {
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, nil, true} 
+      }
+    | VOID identifier '(' optional_param_list ')' IS EXTERNAL {
+        $$.Func = &Function{$1.Position, &BasicType{VOID}, $2.Expr.(*IdentExpr), $4.Params, nil, true} 
       }
     ;
 
@@ -134,6 +140,7 @@ statement
     | EXIT expression                 { $$.Stmt = &ExitStmt{$1.Position, $2.Expr} }
     | PRINT expression                { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, false, nil} }
     | PRINTLN expression              { $$.Stmt = &PrintStmt{$1.Position, $2.Expr, true, nil} }
+    | call                            { $$.Stmt = &EvalStmt{$1.Expr} }
     | BEGIN statement_list END        { $$.Stmt = &ScopeStmt{$1.Position, $2.Stmts, $3.Position} }
     | IF expression THEN statement_list ELSE statement_list FI {
         $$.Stmt = &IfStmt{$1.Position, $2.Expr, $4.Stmts, $6.Stmts, $7.Position}
@@ -157,9 +164,15 @@ assign_rhs
     | NEWPAIR '(' expression ',' expression ')' {
         $$.Expr = &NewPairCmd{$1.Position, $3.Expr, $5.Expr, $6.Position}
       }
-    | CALL identifier '(' optional_arg_list ')' { $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position} }
+    | call
     | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position, nil} }
     | pair_elem
+    ;
+
+call
+    : CALL identifier '(' optional_arg_list ')' {
+        $$.Expr = &CallCmd{$1.Position, $2.Expr.(*IdentExpr), $4.Exprs, $5.Position}
+      }
     ;
 
 identifier
@@ -205,6 +218,7 @@ pair_type
 pair_elem_type
     : base_type
     | array_type
+    | pair_type
     | PAIR        { $$.Type = BasicType{PAIR} }
     ;
 
