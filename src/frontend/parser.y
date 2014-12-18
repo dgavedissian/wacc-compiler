@@ -8,6 +8,9 @@
   Expr   Expr
   Value  string
 
+  Imports []*Import
+  Import *Import
+
   Structs []*Struct
   Struct *Struct
   StructMembers []*StructMember
@@ -38,7 +41,7 @@
 %token UNARY_OPER BINARY_OPER
 %token SKIP READ FREE RETURN EXIT PRINT PRINTLN NEWPAIR NEWSTRUCT CALL
 %token INT FLOAT BOOL CHAR STRING PAIR VOID
-%token IS EXTERNAL STRUCT
+%token IMPORT IS EXTERNAL STRUCT
 %token IF THEN ELSE FI
 %token WHILE DO DONE
 %token LEN ORD CHR FST SND
@@ -50,27 +53,49 @@ top
     ;
 
 program
-    : BEGIN struct_list END { $$.Stmt = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
+    : BEGIN import_list END {
+        $$.Stmt = &Program{$1.Position, $2.Imports, $2.Structs, $2.Funcs, $2.Stmts, $3.Position}
+      }
     ;
+
+import_list
+    : import import_list {
+        $$.Imports = append([]*Import{$1.Import}, $2.Imports...)
+        $$.Structs = $2.Structs
+        $$.Funcs = $2.Funcs
+        $$.Stmts = $2.Stmts
+      }
+    | struct_list {
+        $$.Structs = $1.Structs
+        $$.Funcs = $1.Funcs
+        $$.Stmts = $1.Stmts
+      }
 
 struct_list
     : struct struct_list {
-        $$.Stmts = $2.Stmts
-        $$.Funcs = $2.Funcs
         $$.Structs = append([]*Struct{$1.Struct}, $2.Structs...)
+        $$.Funcs = $2.Funcs
+        $$.Stmts = $2.Stmts
       }
-    | body {
-        $$.Stmts = $1.Stmts
+    | function_list {
         $$.Funcs = $1.Funcs
+        $$.Stmts = $1.Stmts
       }
     ;
 
-body
-    : func body {
-        $$.Stmts = $2.Stmts
+function_list
+    : function function_list {
         $$.Funcs = append([]*Function{$1.Func}, $2.Funcs...)
+        $$.Stmts = $2.Stmts
       }
     | statement_list { $$.Stmts = $1.Stmts }
+    ;
+
+/* Imports */
+import
+    : IMPORT identifier {
+        $$.Import = &Import{$1.Position, $2.Expr.(*IdentExpr)}
+      }
     ;
 
 /* Structs */
@@ -92,7 +117,7 @@ struct_member
     ;
 
 /* Functions */
-func
+function
     : type identifier '(' optional_param_list ')' IS statement_list END {
         VerifyFunctionReturns($7.Stmts)
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
