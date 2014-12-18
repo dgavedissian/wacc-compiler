@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"log"
 )
 
 type Optimizer interface {
@@ -22,8 +21,6 @@ type fpWhileUnrollerContext struct {
 }
 
 func (ctx *fpWhileUnrollerContext) conditionalIsSimple(expr Expr) (*VarExpr, int, bool) {
-	log.Printf("%#v", expr)
-
 	switch expr := expr.(type) {
 	case *UnaryExpr:
 		if expr.Operator != "!" {
@@ -127,34 +124,27 @@ func (ctx *fpWhileUnrollerContext) checkLoopVariableIncrements(node *InstrNode) 
 }
 
 func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpCondInstr, endPoint *LabelInstr) {
-	log.Printf("ATTEMPTING TO OPTIMIZE %#v until %#v", whileCond, endPoint)
-
 	ctx.loopEnd = endPoint.Label
 
 	var ok bool
 
 	// firstly, check to see whether the conditional is a "simple" conditional
 	if ctx.loopVariable, ctx.lvEnd, ok = ctx.conditionalIsSimple(whileCond.Cond); !ok {
-		log.Println("Conditional decreed not-simple.")
 		return
 	}
 
 	// now check whether or not the loop variable is initialised before the loop
 	if ctx.lvStart, ok = ctx.checkInitialisesLoopVariable(node); !ok {
-		log.Println("Loop variable not inited to constant.")
 		return
 	}
 
 	if ctx.lvIncrement, ok = ctx.checkLoopVariableIncrements(node); !ok || ctx.lvIncrement == 0 {
-		log.Println("Loop variable not solely incremented.")
 		return
 	}
 
-	log.Println("Loop variable increments by", ctx.lvIncrement)
 	loopLength := (ctx.lvEnd - ctx.lvStart) / ctx.lvIncrement
 
 	if loopLength > OPTIMISER_LOOPUNROLL_MAX {
-		log.Println("Loop is %d long - too long to unroll.", loopLength)
 		return
 	}
 
@@ -162,7 +152,6 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 	// first, remove the conditional jump
 	node.Prev.Next, node.Next.Prev = node.Next, node.Prev
 	node = node.Next
-	log.Printf("%#v", node)
 
 	// now remove the jump back and compile a list of instructions
 	var instrList []Instr
@@ -186,11 +175,7 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 		}
 	}
 
-	log.Printf("%#v", n) // n is the label
 	n = n.Prev
-	log.Printf("%#v", n) // n is the jump
-	log.Println(knownLabels)
-
 	n.Prev.Next, n.Next.Prev = n.Next, n.Prev // omit the jump
 	n = n.Prev                                // n is the popscope
 
@@ -229,13 +214,9 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 	}
 	lastNode.Next, loopEnd.Prev = loopEnd, lastNode
 
-	log.Println(instrList)
-
 }
 
 func (ctx *fpWhileUnrollerContext) optimizePath(initialInstr *InstrNode) {
-	log.Println("LOOKING FOR WHILES")
-
 	node := initialInstr
 	for node != nil {
 		if instr, ok := node.Instr.(*JmpCondInstr); ok {
@@ -248,7 +229,6 @@ func (ctx *fpWhileUnrollerContext) optimizePath(initialInstr *InstrNode) {
 }
 
 func (ctx *fpWhileUnrollerContext) Optimize(ifCtx *IFContext) {
-	log.Println("WHILE UNROLLING START")
 	ctx.ifCtx = ifCtx
 
 	for _, path := range ifCtx.functions {
@@ -258,8 +238,17 @@ func (ctx *fpWhileUnrollerContext) Optimize(ifCtx *IFContext) {
 	ctx.optimizePath(ifCtx.main)
 }
 
+type fpInlinerContext struct {
+	ifCtx *IFContext
+}
+
+func (ctx *fpInlinerContext) Optimize(ifCtx *IFContext) {
+
+}
+
 func OptimiseFirstPassIF(ifCtx *IFContext) {
 	new(fpWhileUnrollerContext).Optimize(ifCtx)
+	new(fpInlinerContext).Optimize(ifCtx)
 }
 
 func OptimiseSecondPassIF(ifCtx *IFContext) {
