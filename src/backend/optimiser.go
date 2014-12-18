@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -178,9 +179,13 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 		n = n.Next
 	}
 	instrList = instrList[1 : len(instrList)-2]
+	var knownLabels map[string]bool
 	for _, x := range instrList {
-		log.Printf("%#v", x)
+		if labelInstr, ok := x.(*LabelInstr); ok {
+			knownLabels[labelInstr.Label] = true
+		}
 	}
+
 	log.Printf("%#v", n) // n is the label
 	n = n.Prev
 	log.Printf("%#v", n) // n is the jump
@@ -197,6 +202,24 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 	lastNode = loopStart
 	for i := ctx.lvStart; i < ctx.lvEnd; i += ctx.lvIncrement {
 		for _, instr := range instrList {
+			if jmpInstr, ok := instr.(*JmpInstr); ok {
+				if _, isIn := knownLabels[jmpInstr.Dst.Instr.(*LabelInstr).Label]; isIn {
+					jmpInstr.Dst.Instr = &LabelInstr{
+						Label: fmt.Sprintf("%s_loop_%d", jmpInstr.Dst.Instr.(*LabelInstr).Label, i),
+					}
+				}
+			}
+			if jmpCondInstr, ok := instr.(*JmpCondInstr); ok {
+				if _, isIn := knownLabels[jmpCondInstr.Dst.Instr.(*LabelInstr).Label]; isIn {
+					jmpCondInstr.Dst.Instr = &LabelInstr{
+						Label: fmt.Sprintf("%s_loop_%d", jmpCondInstr.Dst.Instr.(*LabelInstr).Label, i),
+					}
+				}
+			}
+			if labelInstr, ok := instr.(*LabelInstr); ok {
+				instr = new(LabelInstr)
+				instr.(*LabelInstr).Label = fmt.Sprintf("%s_loop_%d", labelInstr.Label, i)
+			}
 			thisNode := new(InstrNode)
 			thisNode.Instr = instr
 			thisNode.Prev, lastNode.Next = lastNode, thisNode
