@@ -5,8 +5,6 @@ import (
 	"unicode/utf8"
 )
 
-var lex *Lexer
-
 const INT_MIN = -(1 << 31)
 const INT_MAX = (1 << 31) - 1
 
@@ -23,7 +21,7 @@ func (l *Lexer) Error(s string) {
 
 func GenerateAST(input io.Reader) (*Program, bool) {
 	// Generate AST
-	lex = NewLexer(SetUpErrorOutput(input))
+	lex := NewLexer(SetUpErrorOutput(input))
 	yyParse(lex)
 
 	// Syntax errors will have

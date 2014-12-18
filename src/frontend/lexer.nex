@@ -272,7 +272,7 @@
 }
 
 /./ {
-  lex.Error("invalid Char")
+  yylex.Error("invalid Char")
 }
 
 //
