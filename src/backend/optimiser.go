@@ -179,7 +179,7 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 		n = n.Next
 	}
 	instrList = instrList[1 : len(instrList)-2]
-	var knownLabels map[string]bool
+	knownLabels := make(map[string]bool)
 	for _, x := range instrList {
 		if labelInstr, ok := x.(*LabelInstr); ok {
 			knownLabels[labelInstr.Label] = true
@@ -189,6 +189,7 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 	log.Printf("%#v", n) // n is the label
 	n = n.Prev
 	log.Printf("%#v", n) // n is the jump
+	log.Println(knownLabels)
 
 	n.Prev.Next, n.Next.Prev = n.Next, n.Prev // omit the jump
 	n = n.Prev                                // n is the popscope
