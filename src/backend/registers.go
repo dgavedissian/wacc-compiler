@@ -218,6 +218,9 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 		ctx.pushInstr(&CheckNullDereferenceInstr{r})
 		return &MemExpr{r, offset}
 
+	case *StackArgumentExpr, *StackLocationExpr, *MemExpr:
+		return e
+
 	default:
 		panic(fmt.Sprintf("Unhandled lvalue %T", expr))
 	}

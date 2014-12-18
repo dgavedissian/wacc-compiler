@@ -45,8 +45,10 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 			fmt.Println()
 		}
 
+		backend.OptimiseFirstPassIF(intermediateForm)
+		backend.DrawIFGraph(intermediateForm)
 		backend.AllocateRegisters(intermediateForm)
-		backend.OptimiseIF(intermediateForm)
+		backend.OptimiseSecondPassIF(intermediateForm)
 
 		if verbose {
 			fmt.Println("Second pass intermediate form")

@@ -35,3 +35,7 @@ const (
 	RuntimeCheckArrayBoundsLabel string = "_wacc_check_array_bounds"
 	RuntimeCheckNullPointerLabel string = "_wacc_check_null_pointer"
 )
+
+const (
+	OPTIMISER_LOOPUNROLL_MAX int = 10
+)
