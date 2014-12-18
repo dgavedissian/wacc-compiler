@@ -51,7 +51,10 @@ func (ctx *fpWhileUnrollerContext) checkInitialisesLoopVariable(node *InstrNode)
 			if left, ok := instr.Dst.(*VarExpr); ok {
 				if ctx.loopVariable.Name == left.Name {
 					lvRight, ok := instr.Src.(*IntConstExpr)
-					return lvRight.Value, ok
+					if !ok {
+						return 0, false
+					}
+					return lvRight.Value, true
 				}
 			}
 		}
