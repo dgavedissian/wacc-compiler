@@ -35,7 +35,6 @@ func SyntaxError(position *Position, s string, a ...interface{}) {
 	fmt.Printf("%v:%v:%v: syntax error: %v\n", position.Name(), position.Line(), position.Column(), errorStr)
 	dumpLineData(position)
 	fmt.Print(RESET)
-	exitCode = SYNTAX_ERROR
 }
 
 func SemanticError(position *Position, s string, a ...interface{}) {

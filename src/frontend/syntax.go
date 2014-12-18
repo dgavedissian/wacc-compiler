@@ -75,17 +75,21 @@ func StaticExprOverflows(expr Expr) bool {
 	}
 }
 
-func VerifyNoOverflows(expr Expr) {
+func VerifyNoOverflows(expr Expr) bool {
 	if StaticExprOverflows(expr) {
 		SyntaxError(expr.Pos(), "integer literal does not fit in an int variable")
+		return false
 	}
+	return true
 }
 
 // Iterate in reverse through body. If any of the top level statements return,
 // it returns on all code paths. If none of the top level statements return,
 // error.
-func VerifyFunctionReturns(stmtList []Stmt) {
+func VerifyFunctionReturns(stmtList []Stmt) bool {
 	if !VerifyAnyStatementsReturn(stmtList) {
 		SyntaxError(stmtList[0].Pos(), "function does not have a return or exit statement on every control path")
+		return false
 	}
+	return true
 }

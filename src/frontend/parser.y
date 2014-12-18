@@ -28,10 +28,6 @@
   Position *Position
 }
 
-%{
-  var top yySymType
-%}
-
 %token BEGIN END
 %token INT_LIT FLOAT_LIT BOOL_LIT CHAR_LIT STRING_LIT PAIR_LIT
 %token IDENT
@@ -46,11 +42,9 @@
 %%
 
 top
-    : program { top = $1 }
-    ;
-
-program
-    : BEGIN struct_list END { $$.Stmt = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position} }
+    : BEGIN struct_list END {
+        yylex.(*WACCLexer).program = &Program{$1.Position, $2.Structs, $2.Funcs, $2.Stmts, $3.Position}
+      }
     ;
 
 struct_list
@@ -94,7 +88,9 @@ struct_member
 /* Functions */
 func
     : type identifier '(' optional_param_list ')' IS statement_list END {
-        VerifyFunctionReturns($7.Stmts)
+        if !VerifyFunctionReturns($7.Stmts) {
+          yylex.(*WACCLexer).err = true
+        }
         $$.Func = &Function{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Params, $7.Stmts, false}
       }
     | VOID identifier '(' optional_param_list ')' IS statement_list END {
@@ -268,7 +264,9 @@ unary_expression
 
 multiplicative_expression
     : unary_expression {
-        VerifyNoOverflows($1.Expr)
+        if !VerifyNoOverflows($1.Expr) {
+          yylex.(*WACCLexer).err = true
+        }
         $$.Expr = $1.Expr
     }
     | multiplicative_expression '*' unary_expression { $$.Expr = &BinaryExpr{$1.Expr, $2.Position, "*", $3.Expr, nil} }

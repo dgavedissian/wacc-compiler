@@ -247,7 +247,8 @@
 
 /[_a-zA-Z][_a-zA-Z0-9]*/ {
   lval.Position = NewPositionFromLexer(yylex)
-  lval.Value = yylex.Text(); return IDENT
+  lval.Value = yylex.Text();
+  return IDENT
 }
 
 /\[/ {
