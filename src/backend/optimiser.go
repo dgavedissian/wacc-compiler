@@ -141,7 +141,7 @@ func (ctx *fpWhileUnrollerContext) optimizeLoop(node *InstrNode, whileCond *JmpC
 		return
 	}
 
-	if ctx.lvIncrement, ok = ctx.checkLoopVariableIncrements(node); !ok {
+	if ctx.lvIncrement, ok = ctx.checkLoopVariableIncrements(node); !ok || ctx.lvIncrement == 0 {
 		log.Println("Loop variable not solely incremented.")
 		return
 	}
