@@ -15,14 +15,12 @@ const OK_CODE = 1
 
 func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics bool) func(*os.File) (string, int) {
 	compiler := func(input *os.File) (string, int) {
-		ast, asterr := frontend.GenerateAST(input)
-
-		if asterr {
+		ast, astOk := frontend.GenerateAST(input)
+		if !astOk {
 			return "", frontend.SYNTAX_ERROR
 		}
 
 		semanticOk := frontend.VerifySemantics(ast)
-
 		if checkSemantics && !semanticOk {
 			return "", frontend.SEMANTIC_ERROR
 		}

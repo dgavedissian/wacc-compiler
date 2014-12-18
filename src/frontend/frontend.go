@@ -30,13 +30,7 @@ func GenerateAST(input io.Reader) (*Program, bool) {
 		}
 		return lexer.program, true
 	}
-	program, ok := generateAST(input)
-	return program, !ok
-}
-
-func VerifySemantics(ast *Program) bool {
-	verifyProgram(ast)
-	return ExitCode() == 0
+	return generateAST(input)
 }
 
 func processEscapedCharacters(s string) string {
