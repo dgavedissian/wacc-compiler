@@ -32,11 +32,14 @@ func (ctx *fpWhileUnrollerContext) conditionalIsSimple(expr Expr) (*VarExpr, int
 	case *BinaryExpr:
 		right, rightOk := expr.Right.(*IntConstExpr)
 		left, leftOk := expr.Left.(*VarExpr)
+		if !rightOk || !leftOk {
+			return nil, 0, false
+		}
 		rightValue := right.Value
 		if expr.Operator == "<=" {
 			rightValue = rightValue + 1
 		}
-		return left, rightValue, leftOk && rightOk && (expr.Operator == "<" || expr.Operator == "<=")
+		return left, rightValue, expr.Operator == "<" || expr.Operator == "<="
 	default:
 		return nil, 0, false
 	}
