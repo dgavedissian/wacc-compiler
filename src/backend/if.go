@@ -12,6 +12,8 @@ import (
 // Expressions
 //
 type Expr interface {
+	Copy() Expr
+
 	expr()
 	Repr() string
 	Weight() int
@@ -115,18 +117,22 @@ type CallExpr struct {
 func (TypeExpr) expr()          {}
 func (e TypeExpr) Repr() string { return "TYPE" }
 func (TypeExpr) Weight() int    { return 0 }
+func (e TypeExpr) Copy() Expr   { return &TypeExpr{e.Type} }
 
 func (IntConstExpr) expr()          {}
 func (e IntConstExpr) Repr() string { return fmt.Sprintf("INT %v", e.Value) }
 func (IntConstExpr) Weight() int    { return 1 }
+func (e IntConstExpr) Copy() Expr   { return &IntConstExpr{e.Value} }
 
 func (FloatConstExpr) expr()          {}
 func (e FloatConstExpr) Repr() string { return fmt.Sprintf("FLOAT %v", e.Value) }
 func (FloatConstExpr) Weight() int    { return 1 }
+func (e FloatConstExpr) Copy() Expr   { return &FloatConstExpr{e.Value} }
 
 func (BoolConstExpr) expr()          {}
 func (e BoolConstExpr) Repr() string { return fmt.Sprintf("BOOL %v", e.Value) }
 func (BoolConstExpr) Weight() int    { return 1 }
+func (e BoolConstExpr) Copy() Expr   { return &BoolConstExpr{e.Value} }
 
 func (CharConstExpr) expr() {}
 func (e CharConstExpr) Repr() string {
@@ -136,15 +142,18 @@ func (e CharConstExpr) Repr() string {
 		return fmt.Sprintf("CHAR %v", e.Value)
 	}
 }
-func (CharConstExpr) Weight() int { return 1 }
+func (CharConstExpr) Weight() int  { return 1 }
+func (e CharConstExpr) Copy() Expr { return &CharConstExpr{e.Value, e.Size} }
 
 func (StringConstExpr) expr()          {}
 func (e StringConstExpr) Repr() string { return fmt.Sprintf("STRING %#v", e.Value) }
 func (StringConstExpr) Weight() int    { return 1 }
+func (e StringConstExpr) Copy() Expr   { return &StringConstExpr{e.Value} }
 
 func (PointerConstExpr) expr()          {}
 func (e PointerConstExpr) Repr() string { return fmt.Sprintf("PTR 0x%x", e.Value) }
 func (PointerConstExpr) Weight() int    { return 1 }
+func (e PointerConstExpr) Copy() Expr   { return &PointerConstExpr{e.Value} }
 
 func (ArrayConstExpr) expr() {}
 func (e ArrayConstExpr) Repr() string {
@@ -154,37 +163,51 @@ func (e ArrayConstExpr) Repr() string {
 	}
 	return "ARRAY [" + strings.Join(rs, ", ") + "]"
 }
-
 func (e ArrayConstExpr) Weight() int { return len(e.Elems) }
-func (LocationExpr) expr()           {}
-func (e LocationExpr) Repr() string  { return "LABEL " + e.Label }
-func (LocationExpr) Weight() int     { return 1 }
+func (e ArrayConstExpr) Copy() Expr {
+	copyElems := make([]Expr, len(e.Elems))
+	for i, v := range e.Elems {
+		copyElems[i] = v.Copy()
+	}
+	return &ArrayConstExpr{e.Type, copyElems}
+}
+
+func (LocationExpr) expr()          {}
+func (e LocationExpr) Repr() string { return "LABEL " + e.Label }
+func (LocationExpr) Weight() int    { return 1 }
+func (e LocationExpr) Copy() Expr   { return &LocationExpr{e.Label} }
 
 func (VarExpr) expr()          {}
 func (e VarExpr) Repr() string { return "VAR " + e.Name }
 func (VarExpr) Weight() int    { return 1 }
+func (e VarExpr) Copy() Expr   { return &VarExpr{e.Name} }
 
 func (MemExpr) expr()          {}
 func (e MemExpr) Repr() string { return fmt.Sprintf("MEM %v +%v", e.Address.Repr(), e.Offset) }
 func (MemExpr) Weight() int    { return 1 }
+func (e MemExpr) Copy() Expr   { return &MemExpr{e.Address, e.Offset} }
 
 func (RegisterExpr) expr()          {}
 func (e RegisterExpr) Repr() string { return fmt.Sprintf("r%d", e.Id) }
 func (RegisterExpr) Weight() int    { return 1 }
+func (e RegisterExpr) Copy() Expr   { return &RegisterExpr{e.Id} }
 
 func (StackLocationExpr) expr()          {}
 func (e StackLocationExpr) Repr() string { return fmt.Sprintf("STACK_%d", e.Id) }
 func (StackLocationExpr) Weight() int    { return 1 }
+func (e StackLocationExpr) Copy() Expr   { return &StackLocationExpr{e.Id} }
 
 func (StackArgumentExpr) expr()          {}
 func (e StackArgumentExpr) Repr() string { return fmt.Sprintf("STARG_%d", e.Id) }
 func (StackArgumentExpr) Weight() int    { return 1 }
+func (e StackArgumentExpr) Copy() Expr   { return &StackArgumentExpr{e.Id} }
 
 func (ArrayElemExpr) expr() {}
 func (e ArrayElemExpr) Repr() string {
 	return fmt.Sprintf("ARRAY ELEM %v IN %v", e.Index.Repr(), e.Array.Repr())
 }
-func (ArrayElemExpr) Weight() int { return 1 }
+func (ArrayElemExpr) Weight() int  { return 1 }
+func (e ArrayElemExpr) Copy() Expr { return &ArrayElemExpr{e.Array.Copy(), e.Index.Copy()} }
 
 func (PairElemExpr) expr() {}
 func (e PairElemExpr) Repr() string {
@@ -194,25 +217,29 @@ func (e PairElemExpr) Repr() string {
 		return fmt.Sprintf("SND %v", e.Operand.Repr())
 	}
 }
-func (PairElemExpr) Weight() int { return 1 }
+func (PairElemExpr) Weight() int  { return 1 }
+func (e PairElemExpr) Copy() Expr { return &PairElemExpr{e.Fst, e.Operand.Copy().(*VarExpr)} }
 
 func (UnaryExpr) expr() {}
 func (e UnaryExpr) Repr() string {
 	return fmt.Sprintf("UNARY %v %v (%v)", e.Type.Repr(), e.Operator, e.Operand.Repr())
 }
 func (e UnaryExpr) Weight() int { return e.Operand.Weight() + 1 }
+func (e UnaryExpr) Copy() Expr  { return &UnaryExpr{e.Operator, e.Operand.Copy(), e.Type} }
 
 func (BinaryExpr) expr() {}
 func (e BinaryExpr) Repr() string {
 	return fmt.Sprintf("BINARY %v %v (%v) (%v)", e.Type.Repr(), e.Operator, e.Left.Repr(), e.Right.Repr())
 }
 func (e BinaryExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
+func (e BinaryExpr) Copy() Expr  { return &BinaryExpr{e.Operator, e.Left.Copy(), e.Right.Copy(), e.Type} }
 
 func (NewPairExpr) expr() {}
 func (e NewPairExpr) Repr() string {
 	return fmt.Sprintf("NEWPAIR %v %v", e.Left.Repr(), e.Right.Repr())
 }
 func (e NewPairExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
+func (e NewPairExpr) Copy() Expr  { return &NewPairExpr{e.Left.Copy(), e.Right.Copy()} }
 
 func (CallExpr) expr() {}
 func (e CallExpr) Repr() string {
@@ -229,6 +256,13 @@ func (e CallExpr) Weight() int {
 	}
 	return x
 }
+func (e CallExpr) Copy() Expr {
+	newArgs := make([]Expr, len(e.Args))
+	for i, v := range e.Args {
+		newArgs[i] = v.Copy()
+	}
+	return &CallExpr{e.Label.Copy().(*LocationExpr), newArgs}
+}
 
 //
 // Instructions
@@ -240,9 +274,19 @@ type InstrNode struct {
 	Prev       *InstrNode
 }
 
+func (i *InstrNode) Copy() *InstrNode {
+	return &InstrNode{
+		Instr:      i.Instr.Copy(),
+		stackSpace: i.stackSpace,
+		Next:       i.Next,
+		Prev:       i.Prev,
+	}
+}
+
 type Instr interface {
 	instr()
 	Repr() string
+	Copy() Instr
 
 	allocateRegisters(*RegisterAllocatorContext)
 	generateCode(*GeneratorContext)
@@ -318,20 +362,32 @@ func (DeclareInstr) instr() {}
 func (e DeclareInstr) Repr() string {
 	return fmt.Sprintf("DECLARE %v OF TYPE %v", e.Var.Name, e.Type.Repr())
 }
+func (e DeclareInstr) Copy() Instr {
+	return &DeclareInstr{e.Var.Copy().(*VarExpr), e.Type}
+}
 
 func (PushScopeInstr) instr() {}
 func (e PushScopeInstr) Repr() string {
 	return fmt.Sprintf("PUSH SCOPE %v", e.StackSize)
+}
+func (e PushScopeInstr) Copy() Instr {
+	return &PushScopeInstr{}
 }
 
 func (PopScopeInstr) instr() {}
 func (e PopScopeInstr) Repr() string {
 	return fmt.Sprintf("POP SCOPE %v", e.StackSize)
 }
+func (e PopScopeInstr) Copy() Instr {
+	return &PopScopeInstr{}
+}
 
 func (LocaleInstr) instr() {}
 func (e LocaleInstr) Repr() string {
 	return fmt.Sprintf("SET LOCALE")
+}
+func (e LocaleInstr) Copy() Instr {
+	return &LocaleInstr{}
 }
 
 //
@@ -440,56 +496,67 @@ type CheckNullDereferenceInstr struct {
 
 func (NoOpInstr) instr()       {}
 func (NoOpInstr) Repr() string { return "NOOP" }
+func (NoOpInstr) Copy() Instr  { return &NoOpInstr{} }
 
 func (LabelInstr) instr() {}
 func (i LabelInstr) Repr() string {
 	return fmt.Sprintf("LABEL %s", i.Label)
 }
+func (i LabelInstr) Copy() Instr { return &LabelInstr{i.Label} }
 
 func (EvalInstr) instr() {}
 func (i EvalInstr) Repr() string {
 	return fmt.Sprintf("EVAL %v", i.Expr.Repr())
 }
+func (i EvalInstr) Copy() Instr { return &EvalInstr{i.Expr.Copy()} }
 
 func (ReadInstr) instr() {}
 func (i ReadInstr) Repr() string {
 	return fmt.Sprintf("READ %v %s", i.Type.Repr(), i.Dst.Repr())
 }
+func (i ReadInstr) Copy() Instr { return &ReadInstr{i.Dst.Copy(), i.Type} }
 
 func (FreeInstr) instr() {}
 func (i FreeInstr) Repr() string {
 	return fmt.Sprintf("FREE %s", i.Object.Repr())
 }
+func (i FreeInstr) Copy() Instr { return &FreeInstr{i.Object.Copy()} }
 
 func (ReturnInstr) instr() {}
 func (i ReturnInstr) Repr() string {
 	return fmt.Sprintf("RETURN %s", i.Expr.Repr())
 }
+func (i ReturnInstr) Copy() Instr { return &ReturnInstr{i.Expr.Copy()} }
 
 func (ExitInstr) instr() {}
 func (i ExitInstr) Repr() string {
 	return fmt.Sprintf("EXIT %s", i.Expr.Repr())
 }
+func (i ExitInstr) Copy() Instr { return &ExitInstr{i.Expr.Copy()} }
 
 func (PrintInstr) instr() {}
 func (i PrintInstr) Repr() string {
 	return fmt.Sprintf("PRINT %v %s", i.Type.Repr(), i.Expr.Repr())
 }
+func (i PrintInstr) Copy() Instr { return &PrintInstr{i.Expr.Copy(), i.Type} }
 
 func (MoveInstr) instr() {}
 func (i MoveInstr) Repr() string {
 	return fmt.Sprintf("MOVE (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
 }
+func (i MoveInstr) Copy() Instr { return &MoveInstr{i.Dst.Copy(), i.Src.Copy()} }
 
 func (JmpInstr) instr() {}
 func (i JmpInstr) Repr() string {
 	return fmt.Sprintf("JMP (%s)", i.Dst.Instr.(*LabelInstr).Repr())
 }
+func (i JmpInstr) Copy() Instr { return &JmpInstr{i.Dst.Copy()} }
 
 func (JmpCondInstr) instr() {}
 func (i JmpCondInstr) Repr() string {
-	return fmt.Sprintf("J%s (%s)", i.Cond, i.Dst.Instr.(*LabelInstr).Repr())
+	return fmt.Sprintf("J%s (%s)", i.Cond.Repr(), i.Dst.Instr.(*LabelInstr).Repr())
 }
+func (i JmpCondInstr) Copy() Instr { return &JmpCondInstr{i.Dst.Copy(), i.Cond.Copy()} }
 
 func (*AddInstr) instr() {}
 func (i *AddInstr) Repr() string {
@@ -504,6 +571,9 @@ func (i *AddInstr) Repr() string {
 	} else {
 		return fmt.Sprintf("%vADD %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 	}
+}
+func (i *AddInstr) Copy() Instr {
+	return &AddInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr), i.Op2Shift, i.Type}
 }
 
 func (*SubInstr) instr() {}
@@ -520,6 +590,9 @@ func (i *SubInstr) Repr() string {
 		return fmt.Sprintf("%vSUB %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 	}
 }
+func (i *SubInstr) Copy() Instr {
+	return &SubInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr), i.Op2Shift, i.Type}
+}
 
 func (*MulInstr) instr() {}
 func (i *MulInstr) Repr() string {
@@ -530,6 +603,9 @@ func (i *MulInstr) Repr() string {
 	}
 
 	return fmt.Sprintf("%vMUL %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+func (i *MulInstr) Copy() Instr {
+	return &MulInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr), i.Type}
 }
 
 func (*DivInstr) instr() {}
@@ -542,20 +618,32 @@ func (i *DivInstr) Repr() string {
 
 	return fmt.Sprintf("%vDIV %v %v %v", prefix, i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
+func (i *DivInstr) Copy() Instr {
+	return &DivInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr), i.Type}
+}
 
 func (*AndInstr) instr() {}
 func (i *AndInstr) Repr() string {
 	return fmt.Sprintf("AND %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
+}
+func (i *AndInstr) Copy() Instr {
+	return &AndInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr)}
 }
 
 func (*OrInstr) instr() {}
 func (i *OrInstr) Repr() string {
 	return fmt.Sprintf("OR %v %v %v", i.Dst.Repr(), i.Op1.Repr(), i.Op2.Repr())
 }
+func (i *OrInstr) Copy() Instr {
+	return &OrInstr{i.Dst.Copy().(*RegisterExpr), i.Op1.Copy().(*RegisterExpr), i.Op2.Copy().(*RegisterExpr)}
+}
 
 func (NotInstr) instr() {}
 func (i NotInstr) Repr() string {
 	return fmt.Sprintf("NOT (%s) (%s)", i.Dst.Repr(), i.Src.Repr())
+}
+func (i NotInstr) Copy() Instr {
+	return &NotInstr{i.Dst.Copy(), i.Src.Copy()}
 }
 
 func (NegInstr) instr() {}
@@ -568,35 +656,56 @@ func (i NegInstr) Repr() string {
 
 	return fmt.Sprintf("%vNEG %v", prefix, i.Expr.Repr())
 }
+func (i NegInstr) Copy() Instr {
+	return &NegInstr{i.Expr.Copy(), i.Type}
+}
 
 func (CmpInstr) instr() {}
 func (i CmpInstr) Repr() string {
 	return fmt.Sprintf("CMP %v (%v) (%v) (%v)", i.Operator, i.Dst.Repr(), i.Left.Repr(), i.Right.Repr())
+}
+func (i CmpInstr) Copy() Instr {
+	return &CmpInstr{i.Left.Copy(), i.Right.Copy(), i.Dst.Copy(), i.Operator}
 }
 
 func (*CallInstr) instr() {}
 func (i *CallInstr) Repr() string {
 	return fmt.Sprintf("CALL %v", i.Label.Label)
 }
+func (i *CallInstr) Copy() Instr {
+	return &CallInstr{i.Label.Copy().(*LocationExpr)}
+}
 
 func (*HeapAllocInstr) instr() {}
 func (i *HeapAllocInstr) Repr() string {
 	return fmt.Sprintf("ALLOC %v SIZE %v", i.Dst.Repr(), i.Size)
+}
+func (i *HeapAllocInstr) Copy() Instr {
+	return &HeapAllocInstr{i.Dst.Copy().(*RegisterExpr), i.Size}
 }
 
 func (*PushInstr) instr() {}
 func (i *PushInstr) Repr() string {
 	return fmt.Sprintf("PUSH %v", i.Op)
 }
+func (i *PushInstr) Copy() Instr {
+	return &PushInstr{i.Op.Copy().(*RegisterExpr)}
+}
 
 func (*PopInstr) instr() {}
 func (i *PopInstr) Repr() string {
 	return fmt.Sprintf("POP %v", i.Op)
 }
+func (i *PopInstr) Copy() Instr {
+	return &PopInstr{i.Op.Copy().(*RegisterExpr)}
+}
 
 func (CheckNullDereferenceInstr) instr() {}
 func (i CheckNullDereferenceInstr) Repr() string {
 	return fmt.Sprintf("CHECK NULL %v", i.Ptr.Repr())
+}
+func (i CheckNullDereferenceInstr) Copy() Instr {
+	return &CheckNullDereferenceInstr{i.Ptr.Copy()}
 }
 
 /*
