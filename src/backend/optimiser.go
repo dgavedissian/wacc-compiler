@@ -470,6 +470,9 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 		expr.Right = ctx.fixLabelsExpr(funcName, prefix, expr.Right)
 	case *PairElemExpr:
 		expr.Operand = ctx.fixLabelsExpr(funcName, prefix, expr.Operand).(*VarExpr)
+	case *ArrayElemExpr:
+		expr.Array = ctx.fixLabelsExpr(funcName, prefix, expr.Array)
+		expr.Index = ctx.fixLabelsExpr(funcName, prefix, expr.Index)
 	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr, *PointerConstExpr:
 	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
 	default:
