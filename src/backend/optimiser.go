@@ -489,6 +489,11 @@ func (ctx *fpInlinerContext) Optimize(ifCtx *IFContext) {
 		ctx.inlineInPath(path)
 	}
 	ctx.inlineInPath(ifCtx.main)
+
+	// now we remove our inlined functions
+	for n, _ := range ctx.replacementCode {
+		delete(ifCtx.functions, n)
+	}
 }
 
 func OptimiseFirstPassIF(ifCtx *IFContext) {
