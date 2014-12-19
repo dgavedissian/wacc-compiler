@@ -224,6 +224,15 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 		ctx.pushInstr(&CheckNullDereferenceInstr{r})
 		return &MemExpr{r, offset}
 
+	case *StructElemExpr:
+
+		offset := expr.ElemOffset
+
+		v := ctx.lookupVariable(expr.StructIdent)
+		ctx.pushInstr(&MoveInstr{r, v})
+		ctx.pushInstr(&CheckNullDereferenceInstr{r})
+		return &MemExpr{r, offset}
+
 	case *StackArgumentExpr, *StackLocationExpr, *MemExpr:
 		return e
 
@@ -315,6 +324,12 @@ func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Reg
 	ctx.freeRegister(helperReg)
 }
 
+func (e *StructElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	helperReg := ctx.allocateRegister()
+	ctx.pushInstr(&MoveInstr{Dst: dst, Src: ctx.translateLValue(e, helperReg)})
+	ctx.freeRegister(helperReg)
+}
+
 func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	e.Operand.allocateRegisters(ctx, dst)
 
@@ -400,6 +415,22 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 	ctx.freeRegister(helperReg)
 }
 
+func (e *NewStructExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	helperReg := ctx.allocateRegister()
+
+	// Allocate struct on the heap
+	numArgs := len(e.Args)
+	ctx.pushInstr(&HeapAllocInstr{dst, numArgs * regWidth})
+
+	// Fill structure
+	for n, arg := range e.Args {
+		arg.allocateRegisters(ctx, helperReg)
+		ctx.pushInstr(&MoveInstr{&MemExpr{dst, n * regWidth}, helperReg})
+	}
+
+	ctx.freeRegister(helperReg)
+}
+
 func (e *NewPairExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
 
@@ -473,6 +504,11 @@ func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 		ctx.freeRegister(dst)
 
 	case *PairElemExpr:
+		dst := ctx.allocateRegister()
+		i.Dst = ctx.translateLValue(expr, dst)
+		ctx.freeRegister(dst)
+
+	case *StructElemExpr:
 		dst := ctx.allocateRegister()
 		i.Dst = ctx.translateLValue(expr, dst)
 		ctx.freeRegister(dst)

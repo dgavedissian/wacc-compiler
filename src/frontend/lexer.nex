@@ -1,5 +1,5 @@
 /[ \t\n]/	{
-  /* Skip blanks and tabs. */
+  /* Skip blanks, tabs and newlines. */
 }
 
 /[0-9]+/ {
@@ -195,6 +195,11 @@
 /snd/	{
   lval.Position = NewPositionFromLexer(yylex)
   return SND
+}
+
+/\./ {
+    lval.Position = NewPositionFromLexer(yylex)
+    return '.'
 }
 
 /\*/ {

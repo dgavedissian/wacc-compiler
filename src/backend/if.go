@@ -91,6 +91,12 @@ type PairElemExpr struct {
 	Operand *VarExpr
 }
 
+type StructElemExpr struct {
+	StructIdent *VarExpr
+	ElemIdent   *VarExpr
+	ElemOffset  int
+}
+
 type UnaryExpr struct {
 	Operator string
 	Operand  Expr
@@ -102,6 +108,11 @@ type BinaryExpr struct {
 	Left     Expr
 	Right    Expr
 	Type     frontend.Type
+}
+
+type NewStructExpr struct {
+	Label *LocationExpr
+	Args  []Expr
 }
 
 type NewPairExpr struct {
@@ -220,6 +231,19 @@ func (e PairElemExpr) Repr() string {
 func (PairElemExpr) Weight() int  { return 1 }
 func (e PairElemExpr) Copy() Expr { return &PairElemExpr{e.Fst, e.Operand.Copy().(*VarExpr)} }
 
+func (StructElemExpr) expr() {}
+func (e StructElemExpr) Repr() string {
+	return fmt.Sprintf("%v %v", e.StructIdent.Repr(), e.ElemIdent.Repr())
+}
+func (StructElemExpr) Weight() int { return 1 }
+func (e StructElemExpr) Copy() Expr {
+	return &StructElemExpr{
+		e.StructIdent.Copy().(*VarExpr),
+		e.ElemIdent.Copy().(*VarExpr),
+		e.ElemOffset,
+	}
+}
+
 func (UnaryExpr) expr() {}
 func (e UnaryExpr) Repr() string {
 	return fmt.Sprintf("UNARY %v %v (%v)", e.Type.Repr(), e.Operator, e.Operand.Repr())
@@ -233,6 +257,30 @@ func (e BinaryExpr) Repr() string {
 }
 func (e BinaryExpr) Weight() int { return e.Left.Weight() + e.Right.Weight() + 1 }
 func (e BinaryExpr) Copy() Expr  { return &BinaryExpr{e.Operator, e.Left.Copy(), e.Right.Copy(), e.Type} }
+
+func (NewStructExpr) expr() {}
+func (e NewStructExpr) Repr() string {
+	args := make([]string, len(e.Args))
+	for i, arg := range e.Args {
+		args[i] = arg.Repr()
+	}
+	return fmt.Sprintf("NEWSTRUCT %v %v",
+		e.Label.Label, strings.Join(args, ", "))
+}
+func (e NewStructExpr) Weight() int {
+	x := 1
+	for _, arg := range e.Args {
+		x += arg.Weight()
+	}
+	return x
+}
+func (e NewStructExpr) Copy() Expr {
+	newArgs := make([]Expr, len(e.Args))
+	for i, v := range e.Args {
+		newArgs[i] = v.Copy()
+	}
+	return &NewStructExpr{e.Label.Copy().(*LocationExpr), newArgs}
+}
 
 func (NewPairExpr) expr() {}
 func (e NewPairExpr) Repr() string {

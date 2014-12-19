@@ -1,9 +1,10 @@
 package backend
 
 import (
-	"../frontend"
 	"fmt"
 	"strings"
+
+	"../frontend"
 )
 
 type Optimizer interface {
@@ -267,6 +268,12 @@ func (ctx *fpInlinerContext) exprDoesCall(expr Expr) bool {
 		return ctx.exprDoesCall(expr.Left) || ctx.exprDoesCall(expr.Right)
 	case *NewPairExpr:
 		return ctx.exprDoesCall(expr.Left) || ctx.exprDoesCall(expr.Right)
+	case *NewStructExpr:
+		doesCall := true
+		for _, e := range expr.Args {
+			doesCall = doesCall || ctx.exprDoesCall(e)
+		}
+		return doesCall
 	case *PairElemExpr:
 		return ctx.exprDoesCall(expr.Operand)
 	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr, *PointerConstExpr:
@@ -274,7 +281,7 @@ func (ctx *fpInlinerContext) exprDoesCall(expr Expr) bool {
 	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
 		return false
 	default:
-		panic("Can't work out whether this calls")
+		panic(fmt.Sprintf("Can't work out whether this calls: %T", expr))
 	}
 }
 

@@ -151,7 +151,6 @@ statement_list
 statement
     : SKIP                            { $$.Stmt = &SkipStmt{$1.Position} }
     | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
-    | IDENT identifier '=' assign_rhs { $$.Stmt = &DeclStmt{$1.Position, StructType{$1.Value}, $2.Expr.(*IdentExpr), $4.Expr} }
     | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
     | READ assign_lhs                 { $$.Stmt = &ReadStmt{$1.Position, $2.Expr.(LValueExpr), nil} }
     | FREE expression                 { $$.Stmt = &FreeStmt{$1.Position, $2.Expr} }
@@ -173,6 +172,7 @@ assign_lhs
     : identifier     { $$.Expr = $1.Expr }
     | identifier '[' expression ']' { $$.Expr = &ArrayElemExpr{$1.Position, $1.Expr.(LValueExpr), $3.Expr, $4.Position} }
     | pair_elem      { $$.Expr = $1.Expr }
+    | struct_elem { $$.Expr = $1.Expr }
     ;
 
 assign_rhs
@@ -186,6 +186,7 @@ assign_rhs
     | call
     | '[' array_liter ']' { $$.Expr = &ArrayLit{$1.Position, $2.Exprs, $3.Position, nil} }
     | pair_elem
+    | struct_elem
     ;
 
 call
@@ -215,6 +216,7 @@ arg_list
 type
     : base_type
     | pair_type
+    | STRUCT IDENT { $$.Type = StructType{$2.Value} }
     | type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
@@ -244,6 +246,10 @@ pair_elem_type
 pair_elem
     : FST expression { $$.Expr = &PairElemExpr{$1.Position, FST, $2.Expr.(*IdentExpr), $2.Position} }
     | SND expression { $$.Expr = &PairElemExpr{$1.Position, SND, $2.Expr.(*IdentExpr), $2.Position} }
+
+struct_elem
+    : identifier '.' identifier { $$.Expr = &StructElemExpr{$1.Position, $1.Expr.(*IdentExpr), $3.Expr.(*IdentExpr), 0, $3.Position} }
+    ;
 
 array_liter
     : array_contents

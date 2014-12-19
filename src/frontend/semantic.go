@@ -7,6 +7,7 @@ import (
 
 // Context
 type Context struct {
+	structs         map[string]*Struct
 	functions       map[string]*Function
 	currentFunction *Function
 	types           []map[string]Type
@@ -66,8 +67,14 @@ func (ctx *Context) genTypeSignature(ident string, types []Type) string {
 //
 // Semantic Checking
 //
-func VerifySemantics(program *Program) bool {
-	ctx := &Context{make(map[string]*Function), nil, nil, 0, false}
+func VerifyProgram(program *Program) bool {
+	ctx := &Context{make(map[string]*Struct), make(map[string]*Function), nil, nil, 0, false}
+
+	// Add structs to the context to ensureeeach struct has a unique identifier
+	// and so we can lookup structs later
+	for _, s := range program.Structs {
+		ctx.AddStruct(s)
+	}
 
 	// Verify functions
 	// This needs to be done in two passes. Firstly, add the functions to the
@@ -96,6 +103,25 @@ func VerifySemantics(program *Program) bool {
 }
 
 //
+// Structs
+//
+
+func (ctx *Context) LookupStruct(name string) (*Struct, bool) {
+	s, ok := ctx.structs[name]
+	return s, ok
+}
+
+func (ctx *Context) AddStruct(s *Struct) {
+	name := s.Ident.Name
+	if _, ok := ctx.LookupStruct(name); ok {
+		SemanticError(s.Pos(), "struct '%v' already exists in this program", name)
+		ctx.err = true
+	} else {
+		ctx.structs[name] = s
+	}
+}
+
+//
 // Functions
 //
 func (ctx *Context) LookupFunction(name string) (*Function, bool) {
@@ -106,8 +132,19 @@ func (ctx *Context) LookupFunction(name string) (*Function, bool) {
 func (ctx *Context) AddFunction(f *Function) {
 	types := ctx.paramsToTypes(f.Params)
 	originalName := f.Ident.Name
-	f.Ident.Name = ctx.encodeFunctionName(f.Ident, types)
-	if _, ok := ctx.LookupFunction(f.Ident.Name); ok {
+	if !f.External {
+		f.Ident.Name = ctx.encodeFunctionName(f.Ident, types)
+	}
+
+	// Lookup function
+	var ok bool
+	if !f.External {
+		_, ok = ctx.LookupFunction(f.Ident.Name)
+	} else {
+		_, ok = ctx.LookupFunction(f.Ident.Name)
+	}
+
+	if ok {
 		SemanticError(f.Pos(), "function '%v' already exists in this program", ctx.genTypeSignature(originalName, types))
 		ctx.err = true
 	} else {
@@ -205,6 +242,39 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			}
 		} else {
 			SemanticError(expr.Pos(), "operand of pair selector must be a pair type (actual: %v)", t.Repr())
+			ctx.err = true
+			return ErrorType{}
+		}
+
+	case *StructElemExpr:
+		// StructElemExpr is of the form x.y
+		t := ctx.DeriveType(expr.StructIdent)
+
+		// Check x has a struct type
+		if st, ok := t.(StructType); ok {
+
+			// Check that x is a struct that exists
+			if s, ok := ctx.LookupStruct(st.TypeId); ok {
+
+				// Check that y is a member of x's
+				for i, m := range s.Members {
+					if m.Ident.Name == expr.ElemIdent.Name {
+						expr.ElemNum = i
+						return m.Type
+					}
+				}
+				SemanticError(expr.ElemIdent.Pos(), "the struct %v does not contain member %v",
+					expr.Repr(), expr.ElemIdent.Repr())
+				ctx.err = true
+				return ErrorType{}
+
+			} else {
+				SemanticError(expr.Pos(), "no such struct exists: %v", expr.Repr())
+				ctx.err = true
+				return ErrorType{}
+			}
+		} else {
+			SemanticError(expr.Pos(), "can only access members from struct type (actual: %v)", t.Repr())
 			ctx.err = true
 			return ErrorType{}
 		}
@@ -376,8 +446,15 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 		// Encode function name
 		originalName := expr.Ident.Name
-		expr.Ident.Name = ctx.encodeFunctionName(expr.Ident, paramTypes)
-		if f, ok := ctx.LookupFunction(expr.Ident.Name); ok {
+		encodedName := ctx.encodeFunctionName(expr.Ident, paramTypes)
+		f, ok := ctx.LookupFunction(encodedName)
+		if ok {
+			expr.Ident.Name = encodedName
+		} else {
+			// If not found, try again with original name
+			f, ok = ctx.LookupFunction(expr.Ident.Name)
+		}
+		if ok {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
@@ -409,6 +486,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		ctx.err = true
 		return ErrorType{}
 	}
+	return ErrorType{}
 }
 
 //

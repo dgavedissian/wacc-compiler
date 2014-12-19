@@ -201,6 +201,14 @@ type PairElemExpr struct {
 	EndPos       *Position
 }
 
+type StructElemExpr struct {
+	FrontPos    *Position
+	StructIdent *IdentExpr
+	ElemIdent   *IdentExpr
+	ElemNum     int
+	EndPos      *Position
+}
+
 //
 // Expressions
 //
@@ -619,6 +627,15 @@ func (e PairElemExpr) Pos() *Position { return e.SelectorPos }
 func (e PairElemExpr) End() *Position { return e.EndPos.End() }
 func (e PairElemExpr) Repr() string {
 	return fmt.Sprintf("PairElem(%v, %v)", e.SelectorType, e.Operand)
+}
+
+// Struct elem accessor expression
+func (StructElemExpr) lvalueExprNode()  {}
+func (StructElemExpr) exprNode()        {}
+func (e StructElemExpr) Pos() *Position { return e.FrontPos }
+func (e StructElemExpr) End() *Position { return e.EndPos }
+func (e StructElemExpr) Repr() string {
+	return fmt.Sprintf("StructElem(%v, %v)", e.StructIdent.Repr(), e.ElemIdent.Repr())
 }
 
 //
