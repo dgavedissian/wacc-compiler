@@ -439,12 +439,17 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr Expr) Expr {
 	switch expr := expr.(type) {
 	case *CallExpr:
-		if !strings.HasPrefix(expr.Label.Label, fmt.Sprintf("_%s_", funcName)) {
+		if _, ok := ctx.ifCtx.functions[expr.Label.Label]; !strings.HasPrefix(expr.Label.Label, fmt.Sprintf("_%s_", funcName)) && !ok {
 			expr.Label.Label = prefix + expr.Label.Label
 		}
+		expr.Label = ctx.fixLabelsExpr(funcName, prefix, expr.Label).(*LocationExpr)
 		newArgs := make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
 			newArgs[i] = ctx.fixLabelsExpr(funcName, prefix, arg)
+		}
+	case *LocationExpr:
+		if !strings.HasPrefix(expr.Label, fmt.Sprintf("_%s_", funcName)) {
+			expr.Label = prefix + expr.Label
 		}
 	case *VarExpr:
 		if !strings.HasPrefix(expr.Name, fmt.Sprintf("_%s_", funcName)) {
