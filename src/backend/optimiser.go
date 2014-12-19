@@ -311,8 +311,20 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 
 	instrList := make([]Instr, 0)
 	node = initNode
+	seenFirstNode := false
+	argCount := 0
 	for node != nil {
 		instr := node.Instr.Copy()
+		if node == firstNode {
+			seenFirstNode = true
+		}
+		if !seenFirstNode {
+			if moveInstr, ok := instr.(*MoveInstr); ok {
+				moveInstr.Src = &VarExpr{fmt.Sprintf("_%s_arg_%d", funcName, argCount)}
+				argCount += 1
+			}
+		}
+
 		if returnInstr, ok := instr.(*ReturnInstr); ok {
 			// replace!
 			instr = &MoveInstr{
