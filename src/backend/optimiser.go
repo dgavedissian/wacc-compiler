@@ -407,6 +407,7 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 	case *JmpInstr:
 		lbl := instr.Dst.Instr.(*LabelInstr).Label
 		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
+			log.Println("CORRECTING", lbl, prefix+lbl)
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + lbl,
@@ -416,6 +417,7 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 	case *JmpCondInstr:
 		lbl := instr.Dst.Instr.(*LabelInstr).Label
 		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
+			log.Println("CORRECTING", lbl, prefix+lbl)
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + lbl,
@@ -444,7 +446,6 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 			log.Println("REWRITING", expr.Label.Label)
 			expr.Label.Label = prefix + expr.Label.Label
 		}
-		expr.Label = ctx.fixLabelsExpr(funcName, prefix, expr.Label).(*LocationExpr)
 		newArgs := make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
 			newArgs[i] = ctx.fixLabelsExpr(funcName, prefix, arg)
