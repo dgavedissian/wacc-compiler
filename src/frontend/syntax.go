@@ -4,9 +4,6 @@ import (
 	"strconv"
 )
 
-const LOWER_BOUND = -(1 << 31)
-const UPPER_BOUND = (1 << 31) - 1
-
 func VerifyAnyStatementsReturn(stmts []Stmt) bool {
 	for i := len(stmts) - 1; i >= 0; i-- {
 		if VerifyStatementReturns(stmts[i]) {
@@ -49,7 +46,7 @@ func StaticUnaryMinusOverflows(unaryExpr UnaryExpr) bool {
 			// Negate n as the lexer always generates abs(n)
 			// It is possible to just check the abs, but this adds clarity.
 			n = -n
-			return n < LOWER_BOUND
+			return n < INT_MIN
 		}
 		return false
 
@@ -69,7 +66,7 @@ func StaticExprOverflows(expr Expr) bool {
 	case *BasicLit:
 		if expr.Type.Equals(BasicType{INT}) {
 			n := IntLiteralToIntConst(*expr)
-			return n > UPPER_BOUND
+			return n > INT_MAX
 		}
 		return false
 
@@ -78,17 +75,21 @@ func StaticExprOverflows(expr Expr) bool {
 	}
 }
 
-func VerifyNoOverflows(expr Expr) {
+func VerifyNoOverflows(expr Expr) bool {
 	if StaticExprOverflows(expr) {
 		SyntaxError(expr.Pos(), "integer literal does not fit in an int variable")
+		return false
 	}
+	return true
 }
 
 // Iterate in reverse through body. If any of the top level statements return,
 // it returns on all code paths. If none of the top level statements return,
 // error.
-func VerifyFunctionReturns(stmtList []Stmt) {
+func VerifyFunctionReturns(stmtList []Stmt) bool {
 	if !VerifyAnyStatementsReturn(stmtList) {
 		SyntaxError(stmtList[0].Pos(), "function does not have a return or exit statement on every control path")
+		return false
 	}
+	return true
 }

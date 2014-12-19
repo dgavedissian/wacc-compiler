@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"log"
 
 	"../frontend"
 )
@@ -27,7 +26,6 @@ type RegisterAllocatorContext struct {
 	registerUseList [12]bool
 
 	// Current location in the list
-	prevNode    *InstrNode
 	currentNode *InstrNode
 
 	// String data store
@@ -106,24 +104,32 @@ func (ctx *RegisterAllocatorContext) lookupType(v *VarExpr) frontend.Type {
 
 func (ctx *RegisterAllocatorContext) createVariable(d *DeclareInstr) *StackLocationExpr {
 	n := ctx.scope[ctx.depth-1].next
-	log.Printf("New variable at scope %d (stack pos %d)\n", ctx.depth-1, n)
 	ctx.scope[ctx.depth-1].variableMap[d.Var.Name] = &Variable{n, d.Type, false}
 	ctx.scope[ctx.depth-1].next++
 	return &StackLocationExpr{n}
 }
 
 func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
-	ctx.prevNode.Next = &InstrNode{i, 0, ctx.currentNode}
-	ctx.prevNode = ctx.prevNode.Next
+	node := &InstrNode{i, 0, ctx.currentNode, ctx.currentNode.Prev}
+	ctx.currentNode.Prev.Next = node
+	ctx.currentNode.Prev = node
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered inside allocateRegistersForBranch:", n.Instr.(*LabelInstr).Label)
+			panic(r)
+		}
+	}()
 	ctx.pushScope()
 	ctx.currentNode = n
-	for ctx.currentNode != nil {
+	for {
 		ctx.currentNode.Instr.allocateRegisters(ctx)
-		ctx.prevNode = ctx.currentNode
 		ctx.currentNode = ctx.currentNode.Next
+		if ctx.currentNode.Next == nil {
+			break
+		}
 	}
 	n.stackSpace = ctx.scope[0].next
 	ctx.popScope()
@@ -199,7 +205,8 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 			Dst:      arrayPtr,
 			Op1:      arrayPtr,
 			Op2:      index,
-			Op2Shift: &LSL{2}})
+			Op2Shift: &LSL{2},
+			Type:     frontend.BasicType{frontend.INT}})
 
 		ctx.freeRegister(index)
 		return &MemExpr{arrayPtr, 4}
@@ -217,6 +224,9 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 		ctx.pushInstr(&CheckNullDereferenceInstr{r})
 		return &MemExpr{r, offset}
 
+	case *StackArgumentExpr, *StackLocationExpr, *MemExpr:
+		return e
+
 	default:
 		panic(fmt.Sprintf("Unhandled lvalue %T", expr))
 	}
@@ -228,6 +238,10 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 func (e *TypeExpr) allocateRegisters(*RegisterAllocatorContext, *RegisterExpr) {}
 
 func (e *IntConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	ctx.pushInstr(&MoveInstr{Dst: dst, Src: e})
+}
+
+func (e *FloatConstExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	ctx.pushInstr(&MoveInstr{Dst: dst, Src: e})
 }
 
@@ -320,7 +334,7 @@ func (e *UnaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regist
 		// Do nothing
 
 	case Neg:
-		ctx.pushInstr(&NegInstr{dst})
+		ctx.pushInstr(&NegInstr{dst, e.Type})
 
 	case Len:
 		ctx.pushInstr(&MoveInstr{dst, &MemExpr{dst, 0}})
@@ -352,16 +366,16 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 	// Allocate registers depending on operator
 	switch e.Operator {
 	case Add:
-		ctx.pushInstr(&AddInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&AddInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Sub:
-		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Mul:
-		ctx.pushInstr(&MulInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&MulInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case Div:
-		ctx.pushInstr(&DivInstr{Dst: dst, Op1: op1, Op2: op2})
+		ctx.pushInstr(&DivInstr{Dst: dst, Op1: op1, Op2: op2, Type: e.Type})
 
 	case And:
 		ctx.pushInstr(&AndInstr{Dst: dst, Op1: op1, Op2: op2})
@@ -371,9 +385,9 @@ func (e *BinaryExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Regis
 
 	case Mod:
 		op3 := ctx.allocateRegister()
-		ctx.pushInstr(&DivInstr{Dst: op3, Op1: op1, Op2: op2})
-		ctx.pushInstr(&MulInstr{Dst: op3, Op1: op3, Op2: op2})
-		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op3})
+		ctx.pushInstr(&DivInstr{Dst: op3, Op1: op1, Op2: op2, Type: e.Type})
+		ctx.pushInstr(&MulInstr{Dst: op3, Op1: op3, Op2: op2, Type: e.Type})
+		ctx.pushInstr(&SubInstr{Dst: dst, Op1: op1, Op2: op3, Type: e.Type})
 		ctx.freeRegister(op3)
 
 	case LT, GT, LE, GE, EQ, NE:
@@ -439,6 +453,14 @@ func (e *CallExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Registe
 func (i *NoOpInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
 
 func (i *LabelInstr) allocateRegisters(ctx *RegisterAllocatorContext) {}
+
+func (i *EvalInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
+	// Allocate registers and throw away the result
+	dst := ctx.allocateRegister()
+	i.Expr.allocateRegisters(ctx, dst)
+	// TODO: Remove this instruction
+	ctx.freeRegister(dst)
+}
 
 func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 	switch expr := i.Dst.(type) {
@@ -552,3 +574,4 @@ func (*HeapAllocInstr) allocateRegisters(*RegisterAllocatorContext)            {
 func (*PushInstr) allocateRegisters(*RegisterAllocatorContext)                 {}
 func (*PopInstr) allocateRegisters(*RegisterAllocatorContext)                  {}
 func (*CheckNullDereferenceInstr) allocateRegisters(*RegisterAllocatorContext) {}
+func (*LocaleInstr) allocateRegisters(*RegisterAllocatorContext)               {}

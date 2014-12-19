@@ -23,19 +23,12 @@ var RESET = ansi.ColorCode("reset")
 
 const CONTEXT_TO_PRINT = 2
 
-var exitCode int
-
-func ExitCode() int {
-	return exitCode
-}
-
 func SyntaxError(position *Position, s string, a ...interface{}) {
 	errorStr := fmt.Sprintf(s, a...)
 	fmt.Print(ERROR_COLOUR)
 	fmt.Printf("%v:%v:%v: syntax error: %v\n", position.Name(), position.Line(), position.Column(), errorStr)
 	dumpLineData(position)
 	fmt.Print(RESET)
-	exitCode = SYNTAX_ERROR
 }
 
 func SemanticError(position *Position, s string, a ...interface{}) {
@@ -44,7 +37,6 @@ func SemanticError(position *Position, s string, a ...interface{}) {
 	fmt.Printf("%v:%v:%v: semantic error: %v\n", position.Name(), position.Line(), position.Column(), errorStr)
 	dumpLineData(position)
 	fmt.Print(RESET)
-	exitCode = SEMANTIC_ERROR
 }
 
 var errBuffer []string

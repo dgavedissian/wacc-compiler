@@ -27,7 +27,7 @@ type IFContext struct {
 	currentCounter int
 }
 
-func TranslateToIF(program *frontend.ProgStmt) *IFContext {
+func TranslateToIF(program *frontend.Program) *IFContext {
 	ctx := new(IFContext)
 	ctx.functions = make(map[string]*InstrNode)
 	ctx.translate(program)
@@ -35,7 +35,7 @@ func TranslateToIF(program *frontend.ProgStmt) *IFContext {
 }
 
 func (ctx *IFContext) makeNode(i Instr) *InstrNode {
-	return &InstrNode{i, 0, nil}
+	return &InstrNode{i, 0, nil, nil}
 }
 
 func (ctx *IFContext) beginFunction(name string) {
@@ -46,11 +46,18 @@ func (ctx *IFContext) beginFunction(name string) {
 func (ctx *IFContext) beginMain() {
 	ctx.main = ctx.makeNode(&LabelInstr{"main"})
 	ctx.current = ctx.main
+	ctx.addInstr(&LocaleInstr{})
 }
 
 func (ctx *IFContext) appendNode(n *InstrNode) {
+	n.Prev = ctx.current
 	ctx.current.Next = n
 	ctx.current = ctx.current.Next
+}
+
+func (ctx *IFContext) removeNode(n *InstrNode) {
+	n.Prev.Next = n.Next
+	n.Next.Prev = n.Prev
 }
 
 func (ctx *IFContext) addInstr(i Instr) *InstrNode {
@@ -74,6 +81,11 @@ func (ctx *IFContext) pushScope() {
 func (ctx *IFContext) popScope() {
 	// Determine stack size
 	stackSize := len(ctx.scope[ctx.depth-1]) * regWidth
+
+	// Ensure stack is double-word aligned (5.2.1.2)
+	if (stackSize % 8) != 0 {
+		stackSize += 8 - (stackSize % 8)
+	}
 
 	ctx.addInstr(&PopScopeInstr{stackSize})
 	ctx.scopePushInstr[ctx.depth-1].StackSize = stackSize
@@ -132,6 +144,11 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			return &IntConstExpr{value}
 		}
 
+		if expr.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+			value, _ := strconv.ParseFloat(expr.Value, 32)
+			return &FloatConstExpr{float32(value)}
+		}
+
 		if expr.Type.Equals(frontend.BasicType{frontend.BOOL}) {
 			if expr.Value == "true" {
 				return &BoolConstExpr{true}
@@ -167,12 +184,16 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			&VarExpr{expr.Operand.Name}}
 
 	case *frontend.UnaryExpr:
-		/* Fold negating ints */
+		/* Fold negated constants */
 		if expr.Operator == Neg {
 			if x, ok := expr.Operand.(*frontend.BasicLit); ok {
 				if x.Type.Equals(frontend.BasicType{frontend.INT}) {
 					n, _ := strconv.Atoi(x.Value)
 					return &IntConstExpr{-n}
+				}
+				if x.Type.Equals(frontend.BasicType{frontend.FLOAT}) {
+					n, _ := strconv.ParseFloat(x.Value, 32)
+					return &FloatConstExpr{-float32(n)}
 				}
 			}
 		}
@@ -216,32 +237,34 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 
 func (ctx *IFContext) translate(node frontend.Stmt) {
 	switch node := node.(type) {
-	case *frontend.ProgStmt:
+	case *frontend.Program:
 		// Functions
 		for _, f := range node.Funcs {
-			ctx.beginFunction(f.Ident.Name)
+			if !f.External {
+				ctx.beginFunction(f.Ident.Name)
+				ctx.pushScope()
 
-			ctx.pushScope()
-
-			for regNum, p := range f.Params {
-				if regNum < 4 {
-					ctx.addType(p.Ident.Name, p.Type)
-					ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
-					ctx.addInstr(&MoveInstr{Dst: &VarExpr{p.Ident.Name}, Src: &RegisterExpr{regNum}})
-				} else {
-					ctx.addType(p.Ident.Name, p.Type)
-					ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
-					ctx.addInstr(&MoveInstr{
-						Dst: &VarExpr{p.Ident.Name},
-						Src: &StackArgumentExpr{(len(f.Params) - 5) - (regNum - 4)},
-					})
+				for regNum, p := range f.Params {
+					if regNum < 4 {
+						ctx.addType(p.Ident.Name, p.Type)
+						ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
+						ctx.addInstr(&MoveInstr{Dst: &VarExpr{p.Ident.Name}, Src: &RegisterExpr{regNum}})
+					} else {
+						ctx.addType(p.Ident.Name, p.Type)
+						ctx.addInstr(&DeclareInstr{&VarExpr{p.Ident.Name}, p.Type})
+						ctx.addInstr(&MoveInstr{
+							Dst: &VarExpr{p.Ident.Name},
+							Src: &StackArgumentExpr{(len(f.Params) - 5) - (regNum - 4)},
+						})
+					}
 				}
-			}
 
-			for _, n := range f.Body {
-				ctx.translate(n)
+				// Translate body
+				for _, n := range f.Body {
+					ctx.translate(n)
+				}
+				ctx.popScope()
 			}
-			ctx.popScope()
 		}
 
 		// Main
@@ -254,6 +277,9 @@ func (ctx *IFContext) translate(node frontend.Stmt) {
 
 	case *frontend.SkipStmt:
 		ctx.addInstr(&NoOpInstr{})
+
+	case *frontend.EvalStmt:
+		ctx.addInstr(&EvalInstr{ctx.translateExpr(node.Expr)})
 
 	case *frontend.DeclStmt:
 		v := &VarExpr{node.Ident.Name}

@@ -7,6 +7,11 @@
   lval.Value = yylex.Text()
   return INT_LIT
 }
+/[0-9]+\.[0-9]+/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  lval.Value = yylex.Text()
+  return FLOAT_LIT
+}
 /(false|true)/ {
   lval.Position = NewPositionFromLexer(yylex)
   lval.Value = yylex.Text()
@@ -73,6 +78,10 @@
   lval.Position = NewPositionFromLexer(yylex)
   return NEWPAIR
 }
+/newstruct/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return NEWSTRUCT
+}
 /call/ {
   lval.Position = NewPositionFromLexer(yylex)
   return CALL
@@ -81,6 +90,10 @@
 /int/	{
   lval.Position = NewPositionFromLexer(yylex)
   return INT
+}
+/float/	{
+  lval.Position = NewPositionFromLexer(yylex)
+  return FLOAT
 }
 /bool/ {
   lval.Position = NewPositionFromLexer(yylex)
@@ -98,9 +111,26 @@
   lval.Position = NewPositionFromLexer(yylex)
   return PAIR
 }
+/void/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return VOID
+}
+
+/import/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return IMPORT
+}
 /is/ {
   lval.Position = NewPositionFromLexer(yylex)
   return IS
+}
+/external/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return EXTERNAL
+}
+/struct/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return STRUCT
 }
 
 /if/ {
@@ -222,7 +252,8 @@
 
 /[_a-zA-Z][_a-zA-Z0-9]*/ {
   lval.Position = NewPositionFromLexer(yylex)
-  lval.Value = yylex.Text(); return IDENT
+  lval.Value = yylex.Text();
+  return IDENT
 }
 
 /\[/ {
@@ -247,7 +278,7 @@
 }
 
 /./ {
-  lex.Error("invalid Char")
+  yylex.Error("invalid Char")
 }
 
 //

@@ -8,7 +8,7 @@ import multiprocessing
 
 def run_test(filename):
     '''Runs the test and returns the filename, return code and output'''
-    command = [compile_script_path, filename]
+    command = [compile_script_path, '--ast=true', filename]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = [s.decode("utf-8").strip('\n') for s in p.communicate()]
     returncode = p.returncode
