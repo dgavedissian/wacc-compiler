@@ -116,6 +116,12 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered inside allocateRegistersForBranch:", n.Instr.(*LabelInstr).Label)
+			panic(r)
+		}
+	}()
 	ctx.pushScope()
 	ctx.currentNode = n
 	for {

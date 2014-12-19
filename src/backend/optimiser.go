@@ -4,6 +4,7 @@ import (
 	"../frontend"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type Optimizer interface {
@@ -249,8 +250,10 @@ type fpInlinerContext struct {
 }
 
 type fpInlinerFuncArg struct {
-	Type frontend.Type
-	Name string
+	Type  frontend.Type
+	Name  string
+	Node  *InstrNode
+	extra *DeclareInstr
 }
 
 func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
@@ -263,27 +266,33 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	node := initNode
 	var firstNode *InstrNode
 	stillLookingForArguments := true
-	var buildingInstr fpInlinerFuncArg
+	var buildingInstr *fpInlinerFuncArg
+	var extraDeclarations []*DeclareInstr
 	for node != nil {
 		if stillLookingForArguments {
 			switch instr := node.Instr.(type) {
 			case *DeclareInstr:
-				buildingInstr = fpInlinerFuncArg{
+				if buildingInstr != nil {
+					extraDeclarations = append(extraDeclarations, buildingInstr.Node.Instr.(*DeclareInstr))
+				}
+				buildingInstr = &fpInlinerFuncArg{
 					Type: instr.Type,
 					Name: instr.Var.Name,
+					Node: node,
 				}
 			case *MoveInstr:
 				if registerExpr, ok := instr.Src.(*RegisterExpr); ok {
 					if registerExpr.Id < 4 {
-						ctx.functionArguments = append(ctx.functionArguments, buildingInstr)
+						ctx.functionArguments = append(ctx.functionArguments, *buildingInstr)
+						buildingInstr = nil
 					} else {
-						firstNode = node
+						firstNode = buildingInstr.Node
 						stillLookingForArguments = false
 					}
 				} else if _, ok := instr.Src.(*StackArgumentExpr); ok {
 
 				} else {
-					firstNode = node
+					firstNode = buildingInstr.Node
 					stillLookingForArguments = false
 				}
 			case *LabelInstr, *PushScopeInstr:
@@ -383,7 +392,9 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 		instr.Cond = ctx.fixLabelsExpr(funcName, prefix, instr.Cond)
 	case *PrintInstr:
 		instr.Expr = ctx.fixLabelsExpr(funcName, prefix, instr.Expr)
-	case *PushScopeInstr, *PopScopeInstr:
+	case *PushScopeInstr, *PopScopeInstr, *NoOpInstr:
+	case *FreeInstr:
+		instr.Object = ctx.fixLabelsExpr(funcName, prefix, instr.Object)
 	case *DeclareInstr:
 		instr.Var.Name = prefix + instr.Var.Name
 	default:
@@ -396,7 +407,7 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr Expr) Expr {
 	switch expr := expr.(type) {
 	case *CallExpr:
-		if expr.Label.Label[0] != '_' {
+		if !strings.HasPrefix(expr.Label.Label, fmt.Sprintf("_%s_", funcName)) {
 			expr.Label.Label = prefix + expr.Label.Label
 		}
 		newArgs := make([]Expr, len(expr.Args))
@@ -404,7 +415,7 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 			newArgs[i] = ctx.fixLabelsExpr(funcName, prefix, arg)
 		}
 	case *VarExpr:
-		if expr.Name[0] != '_' {
+		if !strings.HasPrefix(expr.Name, fmt.Sprintf("_%s_", funcName)) {
 			expr.Name = prefix + expr.Name
 		}
 	case *UnaryExpr:
@@ -412,7 +423,12 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 	case *BinaryExpr:
 		expr.Left = ctx.fixLabelsExpr(funcName, prefix, expr.Left)
 		expr.Right = ctx.fixLabelsExpr(funcName, prefix, expr.Right)
-	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr:
+	case *NewPairExpr:
+		expr.Left = ctx.fixLabelsExpr(funcName, prefix, expr.Left)
+		expr.Right = ctx.fixLabelsExpr(funcName, prefix, expr.Right)
+	case *PairElemExpr:
+		expr.Operand = ctx.fixLabelsExpr(funcName, prefix, expr.Operand).(*VarExpr)
+	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr, *PointerConstExpr:
 	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
 	default:
 		panic(fmt.Sprintf("Unrecognized exprwidget %#v", expr))
