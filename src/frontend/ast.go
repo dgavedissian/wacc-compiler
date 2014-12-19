@@ -205,6 +205,7 @@ type StructElemExpr struct {
 	FrontPos    *Position
 	StructIdent *IdentExpr
 	ElemIdent   *IdentExpr
+	ElemNum     int
 	EndPos      *Position
 }
 

@@ -248,7 +248,7 @@ pair_elem
     | SND expression { $$.Expr = &PairElemExpr{$1.Position, SND, $2.Expr.(*IdentExpr), $2.Position} }
 
 struct_elem
-    : identifier '.' identifier { $$.Expr = &StructElemExpr{$1.Position, $1.Expr.(*IdentExpr), $3.Expr.(*IdentExpr), $3.Position} }
+    : identifier '.' identifier { $$.Expr = &StructElemExpr{$1.Position, $1.Expr.(*IdentExpr), $3.Expr.(*IdentExpr), 0, $3.Position} }
     ;
 
 array_liter

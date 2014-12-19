@@ -183,6 +183,13 @@ func (ctx *IFContext) translateExpr(expr frontend.Expr) Expr {
 			expr.SelectorType == frontend.FST,
 			&VarExpr{expr.Operand.Name}}
 
+	case *frontend.StructElemExpr:
+		return &StructElemExpr{
+			&VarExpr{expr.StructIdent.Name},
+			&VarExpr{expr.ElemIdent.Name},
+			expr.ElemNum * regWidth,
+		}
+
 	case *frontend.UnaryExpr:
 		/* Fold negated constants */
 		if expr.Operator == Neg {

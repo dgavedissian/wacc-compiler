@@ -224,6 +224,15 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 		ctx.pushInstr(&CheckNullDereferenceInstr{r})
 		return &MemExpr{r, offset}
 
+	case *StructElemExpr:
+
+		offset := expr.ElemOffset
+
+		v := ctx.lookupVariable(expr.StructIdent)
+		ctx.pushInstr(&MoveInstr{r, v})
+		ctx.pushInstr(&CheckNullDereferenceInstr{r})
+		return &MemExpr{r, offset}
+
 	case *StackArgumentExpr, *StackLocationExpr, *MemExpr:
 		return e
 
@@ -310,6 +319,12 @@ func (e *ArrayElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *Re
 }
 
 func (e *PairElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
+	helperReg := ctx.allocateRegister()
+	ctx.pushInstr(&MoveInstr{Dst: dst, Src: ctx.translateLValue(e, helperReg)})
+	ctx.freeRegister(helperReg)
+}
+
+func (e *StructElemExpr) allocateRegisters(ctx *RegisterAllocatorContext, dst *RegisterExpr) {
 	helperReg := ctx.allocateRegister()
 	ctx.pushInstr(&MoveInstr{Dst: dst, Src: ctx.translateLValue(e, helperReg)})
 	ctx.freeRegister(helperReg)
@@ -489,6 +504,11 @@ func (i *ReadInstr) allocateRegisters(ctx *RegisterAllocatorContext) {
 		ctx.freeRegister(dst)
 
 	case *PairElemExpr:
+		dst := ctx.allocateRegister()
+		i.Dst = ctx.translateLValue(expr, dst)
+		ctx.freeRegister(dst)
+
+	case *StructElemExpr:
 		dst := ctx.allocateRegister()
 		i.Dst = ctx.translateLValue(expr, dst)
 		ctx.freeRegister(dst)

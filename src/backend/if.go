@@ -91,6 +91,12 @@ type PairElemExpr struct {
 	Operand *VarExpr
 }
 
+type StructElemExpr struct {
+	StructIdent *VarExpr
+	ElemIdent   *VarExpr
+	ElemOffset  int
+}
+
 type UnaryExpr struct {
 	Operator string
 	Operand  Expr
@@ -225,6 +231,19 @@ func (e PairElemExpr) Repr() string {
 func (PairElemExpr) Weight() int  { return 1 }
 func (e PairElemExpr) Copy() Expr { return &PairElemExpr{e.Fst, e.Operand.Copy().(*VarExpr)} }
 
+func (StructElemExpr) expr() {}
+func (e StructElemExpr) Repr() string {
+	return fmt.Sprintf("%v %v", e.StructIdent.Repr(), e.ElemIdent.Repr())
+}
+func (StructElemExpr) Weight() int { return 1 }
+func (e StructElemExpr) Copy() Expr {
+	return &StructElemExpr{
+		e.StructIdent.Copy().(*VarExpr),
+		e.ElemIdent.Copy().(*VarExpr),
+		e.ElemOffset,
+	}
+}
+
 func (UnaryExpr) expr() {}
 func (e UnaryExpr) Repr() string {
 	return fmt.Sprintf("UNARY %v %v (%v)", e.Type.Repr(), e.Operator, e.Operand.Repr())
@@ -254,6 +273,13 @@ func (e NewStructExpr) Weight() int {
 		x += arg.Weight()
 	}
 	return x
+}
+func (e NewStructExpr) Copy() Expr {
+	newArgs := make([]Expr, len(e.Args))
+	for i, v := range e.Args {
+		newArgs[i] = v.Copy()
+	}
+	return &NewStructExpr{e.Label.Copy().(*LocationExpr), newArgs}
 }
 
 func (NewPairExpr) expr() {}

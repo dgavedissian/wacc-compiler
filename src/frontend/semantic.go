@@ -246,8 +246,9 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			if s, ok := ctx.LookupStruct(st.TypeId); ok {
 
 				// Check that y is a member of x's
-				for _, m := range s.Members {
+				for i, m := range s.Members {
 					if m.Ident.Name == expr.ElemIdent.Name {
+						expr.ElemNum = i
 						return m.Type
 					}
 				}
