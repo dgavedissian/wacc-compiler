@@ -392,12 +392,12 @@ func (ctx *fpInlinerContext) fixLabelsExpr(prefix string, expr Expr) Expr {
 }
 
 func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
-	cnt := ctx.inlineCount
-	ctx.inlineCount += 1
-
 	for node != nil {
 		if instr, ok := node.Instr.(*MoveInstr); ok {
 			if callExpr, ok := instr.Src.(*CallExpr); ok {
+				cnt := ctx.inlineCount
+				ctx.inlineCount += 1
+
 				replacementCode, ok := ctx.replacementCode[callExpr.Label.Label]
 				if !ok {
 					node = node.Next
