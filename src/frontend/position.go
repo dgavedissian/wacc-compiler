@@ -60,7 +60,7 @@ func NewPositionFromLexer(l *Lexer) *Position {
 			length: len(l.Text())}
 	} else {
 		return &Position{
-			name:   "<unknown",
+			name:   "<unknown>",
 			line:   0,
 			column: 0,
 			length: 0}

@@ -116,6 +116,12 @@ func (ctx *RegisterAllocatorContext) pushInstr(i Instr) {
 }
 
 func (ctx *RegisterAllocatorContext) allocateRegistersForBranch(n *InstrNode) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered inside allocateRegistersForBranch:", n.Instr.(*LabelInstr).Label)
+			panic(r)
+		}
+	}()
 	ctx.pushScope()
 	ctx.currentNode = n
 	for {
@@ -217,6 +223,9 @@ func (ctx *RegisterAllocatorContext) translateLValue(e Expr, r *RegisterExpr) Ex
 		ctx.pushInstr(&MoveInstr{r, v})
 		ctx.pushInstr(&CheckNullDereferenceInstr{r})
 		return &MemExpr{r, offset}
+
+	case *StackArgumentExpr, *StackLocationExpr, *MemExpr:
+		return e
 
 	default:
 		panic(fmt.Sprintf("Unhandled lvalue %T", expr))

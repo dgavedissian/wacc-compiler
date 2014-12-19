@@ -69,10 +69,16 @@ type ErrorType struct {
 //
 type Program struct {
 	BeginPos *Position // position of "begin" keyword
+	Imports  []*Import
 	Structs  []*Struct
 	Funcs    []*Function
 	Body     []Stmt
 	EndPos   *Position // position of "end keyword
+}
+
+type Import struct {
+	Import *Position
+	Module *IdentExpr
 }
 
 type Struct struct {
@@ -354,7 +360,7 @@ func (bt BasicType) Repr() string {
 	case VOID:
 		return "void"
 	default:
-		panic(fmt.Sprintf("BasicType.Repr: Undefined repr for %d?", bt.TypeId))
+		panic(fmt.Sprintf("BasicType.Repr: Undefined repr for type id %v", bt.TypeId))
 	}
 }
 
@@ -380,7 +386,7 @@ func (at ArrayType) Equals(t2 Type) bool {
 	return false
 }
 func (at ArrayType) Repr() string {
-	return at.BaseType.Repr() + "[]"
+	return fmt.Sprintf("%v[]", at.BaseType.Repr())
 }
 
 // Pair Type
@@ -393,7 +399,7 @@ func (pt PairType) Equals(t2 Type) bool {
 	return false
 }
 func (pt PairType) Repr() string {
-	return "pair(" + pt.Fst.Repr() + ", " + pt.Snd.Repr() + ")"
+	return fmt.Sprintf("pair(%v, %v)", pt.Fst.Repr(), pt.Snd.Repr())
 }
 
 // Any Type
@@ -423,11 +429,18 @@ func (s Program) End() *Position {
 	return s.EndPos.End()
 }
 func (s Program) Repr() string {
-	return fmt.Sprintf("Prog(%v, %v, %v)",
+	return fmt.Sprintf("Program\n\t%v\n\t%v\n\t%v",
 		ReprNodes(s.Structs), ReprNodes(s.Funcs), ReprNodes(s.Body))
 }
 
-// Struct Statement
+// Import
+func (s Import) Pos() *Position { return s.Import }
+func (s Import) End() *Position { return s.Module.End() }
+func (s Import) Repr() string {
+	return fmt.Sprintf("Import(%v)", s.Module.Repr())
+}
+
+// Struct
 func (s Struct) Pos() *Position { return s.Struct }
 func (s Struct) End() *Position {
 	return s.Members[len(s.Members)-1].End()
@@ -612,7 +625,7 @@ func (PairElemExpr) exprNode()        {}
 func (e PairElemExpr) Pos() *Position { return e.SelectorPos }
 func (e PairElemExpr) End() *Position { return e.EndPos.End() }
 func (e PairElemExpr) Repr() string {
-	return fmt.Sprintf("PairElem(%d, %v)", e.SelectorType, e.Operand)
+	return fmt.Sprintf("PairElem(%v, %v)", e.SelectorType, e.Operand)
 }
 
 // Struct elem accessor expression

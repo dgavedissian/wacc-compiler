@@ -115,6 +115,11 @@
   lval.Position = NewPositionFromLexer(yylex)
   return VOID
 }
+
+/import/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return IMPORT
+}
 /is/ {
   lval.Position = NewPositionFromLexer(yylex)
   return IS
@@ -252,7 +257,8 @@
 
 /[_a-zA-Z][_a-zA-Z0-9]*/ {
   lval.Position = NewPositionFromLexer(yylex)
-  lval.Value = yylex.Text(); return IDENT
+  lval.Value = yylex.Text();
+  return IDENT
 }
 
 /\[/ {
@@ -277,7 +283,7 @@
 }
 
 /./ {
-  lex.Error("invalid Char")
+  yylex.Error("invalid Char")
 }
 
 //

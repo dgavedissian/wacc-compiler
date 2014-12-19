@@ -1,11 +1,11 @@
 package frontend
 
 import (
+	"fmt"
 	"io"
+	"os"
 	"unicode/utf8"
 )
-
-var lex *Lexer
 
 const INT_MIN = -(1 << 31)
 const INT_MAX = (1 << 31) - 1
@@ -19,25 +19,61 @@ func (l *Lexer) Error(s string) {
 	} else {
 		SyntaxError(pos, "unexpected '<EOF>'")
 	}
+	l.err = true
 }
 
-func GenerateAST(input io.Reader) (*Program, bool) {
-	// Generate AST
-	lex = NewLexer(SetUpErrorOutput(input))
-	yyParse(lex)
-
-	// Syntax errors will have
-	if ExitCode() != 0 {
-		return nil, true
+func tryOpenModule(modulePath string, module string) (io.Reader, bool) {
+	file, err := os.Open(fmt.Sprintf("%v/%v.wacc", modulePath, module))
+	if err != nil {
+		return nil, false
 	}
-	program := top.Stmt.(*Program)
-
-	return program, false
+	return file, true
 }
 
-func VerifySemantics(ast *Program) bool {
-	verifyProgram(ast)
-	return ExitCode() == 0
+func GenerateAST(modulePath string, input io.Reader) (*Program, bool) {
+	// Generate AST
+	generateAST := func(input io.Reader) (*Program, bool) {
+		lexer := NewLexer(SetUpErrorOutput(input))
+		yyParse(lexer)
+		if lexer.err {
+			return nil, false
+		}
+		return lexer.program, true
+	}
+	program, ok := generateAST(input)
+	if !ok {
+		return nil, false
+	}
+
+	// Recursively import modules
+	moduleStructs := []*Struct{}
+	moduleFunctions := []*Function{}
+	for _, i := range program.Imports {
+		// Load the module file
+		file, ok := tryOpenModule(modulePath, i.Module.Name)
+		if !ok {
+			SyntaxError(i.Pos(), "Unable to import module %v, module does not exist in the modulepath", i.Module.Name)
+			return nil, false
+		}
+
+		// Generate AST for this module
+		ast, astOk := GenerateAST(modulePath, file)
+		if !astOk {
+			return nil, false
+		}
+
+		// Add this modules functions and structs to the program
+		// TODO: Don't throw away the module main
+		moduleStructs = append(moduleStructs, ast.Structs...)
+		moduleFunctions = append(moduleFunctions, ast.Funcs...)
+	}
+
+	// Add to program, and remove imports
+	program.Imports = program.Imports[:0]
+	program.Structs = append(moduleStructs, program.Structs...)
+	program.Funcs = append(moduleFunctions, program.Funcs...)
+
+	return program, true
 }
 
 func processEscapedCharacters(s string) string {
