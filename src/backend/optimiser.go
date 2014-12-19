@@ -506,7 +506,10 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 				}
 
 				backNode := node.Prev
-				pushScopeStack[len(pushScopeStack)-1].StackSize += len(callExpr.Args) * regWidth
+
+				// TODO: unbreak usage of stack...
+				pushScopeStack[len(pushScopeStack)-1].StackSize += 48 * regWidth
+
 				for argNum, argExpr := range callExpr.Args {
 					varExpr := &VarExpr{fmt.Sprintf("_%s_arg_%d", callExpr.Label.Label, argNum)}
 					newNode := &InstrNode{
