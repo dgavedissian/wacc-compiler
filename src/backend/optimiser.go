@@ -256,6 +256,33 @@ type fpInlinerFuncArg struct {
 	extra *DeclareInstr
 }
 
+func (ctx *fpInlinerContext) exprDoesCall(expr Expr) bool {
+	switch expr := expr.(type) {
+	case *CallExpr:
+		return true
+	case *VarExpr:
+		return false
+	case *UnaryExpr:
+		return ctx.exprDoesCall(expr.Operand)
+	case *BinaryExpr:
+		return ctx.exprDoesCall(expr.Left) || ctx.exprDoesCall(expr.Right)
+	case *NewPairExpr:
+		return ctx.exprDoesCall(expr.Left) || ctx.exprDoesCall(expr.Right)
+	case *PairElemExpr:
+		return ctx.exprDoesCall(expr.Operand)
+	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr, *PointerConstExpr:
+		return false
+	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
+		return false
+	default:
+		panic("Can't work out whether this calls")
+	}
+}
+
+func (ctx *fpInlinerContext) moveDoesCall(instr *MoveInstr) bool {
+	return ctx.exprDoesCall(instr.Src)
+}
+
 func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	funcName := initNode.Instr.(*LabelInstr).Label
 	ctx.functionLabels[funcName] = make(map[string]bool)
@@ -281,6 +308,11 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 					Node: node,
 				}
 			case *MoveInstr:
+				if ctx.moveDoesCall(instr) {
+					// abort!
+					return
+				}
+
 				if registerExpr, ok := instr.Src.(*RegisterExpr); ok {
 					if registerExpr.Id < 4 {
 						ctx.functionArguments = append(ctx.functionArguments, *buildingInstr)
@@ -312,7 +344,6 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 		nodeCount += 1
 		node = node.Next
 	}
-	log.Printf("%#v", firstNode)
 
 	if nodeCount > OPTIMISER_INLINER_MAX {
 		return
