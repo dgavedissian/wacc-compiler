@@ -406,6 +406,7 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 		instr.Dst = ctx.fixLabelsExpr(funcName, prefix, instr.Dst)
 	case *JmpInstr:
 		if ctx.functionLabels[funcName][instr.Dst.Instr.(*LabelInstr).Label] {
+			log.Println("CORRECTING", instr.Dst.Instr.Repr())
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
@@ -560,11 +561,6 @@ func (ctx *fpInlinerContext) Optimize(ifCtx *IFContext) {
 		ctx.inlineInPath(path)
 	}
 	ctx.inlineInPath(ifCtx.main)
-
-	// now we remove our inlined functions
-	for n, _ := range ctx.replacementCode {
-		delete(ifCtx.functions, n)
-	}
 }
 
 func OptimiseFirstPassIF(ifCtx *IFContext) {
