@@ -192,6 +192,11 @@
   return SND
 }
 
+/\./ {
+    lval.Position = NewPositionFromLexer(yylex)
+    return '.'
+}
+
 /\*/ {
   lval.Position = NewPositionFromLexer(yylex)
   return '*'
