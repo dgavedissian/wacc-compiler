@@ -7,6 +7,7 @@ import (
 
 // Context
 type Context struct {
+	structs         map[string]*Struct
 	functions       map[string]*Function
 	currentFunction *Function
 	types           []map[string]Type
@@ -38,6 +39,22 @@ func (ctx *Context) encodeType(t Type) string {
 	}
 }
 
+func (ctx *Context) encodeStructName(ident *IdentExpr, types []Type) string {
+	name := ident.Name
+	for _, t := range types {
+		name += ctx.encodeType(t)
+	}
+	return name
+}
+
+func (ctx *Context) membersToTypes(members []*StructMember) []Type {
+	out := []Type{}
+	for _, m := range members {
+		out = append(out, m.Type)
+	}
+	return out
+}
+
 func (ctx *Context) encodeFunctionName(ident *IdentExpr, types []Type) string {
 	name := ident.Name
 	for _, t := range types {
@@ -66,7 +83,11 @@ func (ctx *Context) genTypeSignature(ident string, types []Type) string {
 // Semantic Checking
 //
 func verifyProgram(program *Program) {
-	ctx := &Context{make(map[string]*Function), nil, nil, 0}
+	ctx := &Context{make(map[string]*Struct), make(map[string]*Function), nil, nil, 0}
+
+	for _, s := range program.Structs {
+		ctx.AddStruct(s)
+	}
 
 	// Verify functions
 	// This needs to be done in two passes. Firstly, add the functions to the
@@ -89,6 +110,26 @@ func verifyProgram(program *Program) {
 	ctx.PushScope()
 	ctx.VerifyStatementList(program.Body)
 	ctx.PopScope()
+}
+
+//
+// Structs
+//
+
+func (ctx *Context) LookupStruct(name string) (*Struct, bool) {
+	s, ok := ctx.structs[name]
+	return s, ok
+}
+
+func (ctx *Context) AddStruct(s *Struct) {
+	types := ctx.membersToTypes(s.Members)
+	originalName := s.Ident.Name
+	s.Ident.Name = ctx.encodeStructName(s.Ident, types)
+	if _, ok := ctx.LookupStruct(s.Ident.Name); ok {
+		SemanticError(s.Pos(), "struct '%v' already exists in this program", ctx.genTypeSignature(originalName, types))
+	} else {
+		ctx.structs[s.Ident.Name] = s
+	}
 }
 
 //
@@ -197,6 +238,33 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 			}
 		} else {
 			SemanticError(expr.Pos(), "operand of pair selector must be a pair type (actual: %v)", t.Repr())
+			return ErrorType{}
+		}
+
+	case *StructElemExpr:
+		// StructElemExpr is of the form x.y
+
+		t := ctx.DeriveType(expr.StructIdent)
+		// Check x has a struct type
+		if _, ok := t.(StructType); ok {
+			// Check that x is a struct that exists
+			if s, ok := ctx.LookupStruct(expr.StructIdent.Name); ok {
+				// Check that y is a member of x's
+				for _, m := range s.Members {
+					if m.Repr() == expr.ElemIdent.Repr() {
+						return ctx.DeriveType(expr.ElemIdent)
+					} else {
+						SemanticError(expr.ElemIdent.Pos(), "the struct %v does not contain member %v",
+							expr.Repr(), expr.ElemIdent.Repr())
+						return ErrorType{}
+					}
+				}
+			} else {
+				SemanticError(expr.Pos(), "no such struct exists: %v", expr.Repr())
+				return ErrorType{}
+			}
+		} else {
+			SemanticError(expr.Pos(), "can only access members from struct type (actual: %v)", t.Repr())
 			return ErrorType{}
 		}
 
@@ -381,6 +449,7 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 		SemanticError(expr.Pos(), "IMPLEMENT_ME: unhandled type in DeriveType - type: %T", expr)
 		return ErrorType{}
 	}
+	return ErrorType{}
 }
 
 //
