@@ -132,8 +132,19 @@ func (ctx *Context) LookupFunction(name string) (*Function, bool) {
 func (ctx *Context) AddFunction(f *Function) {
 	types := ctx.paramsToTypes(f.Params)
 	originalName := f.Ident.Name
-	f.Ident.Name = ctx.encodeFunctionName(f.Ident, types)
-	if _, ok := ctx.LookupFunction(f.Ident.Name); ok {
+	if !f.External {
+		f.Ident.Name = ctx.encodeFunctionName(f.Ident, types)
+	}
+
+	// Lookup function
+	var ok bool
+	if !f.External {
+		_, ok = ctx.LookupFunction(f.Ident.Name)
+	} else {
+		_, ok = ctx.LookupFunction(f.Ident.Name)
+	}
+
+	if ok {
 		SemanticError(f.Pos(), "function '%v' already exists in this program", ctx.genTypeSignature(originalName, types))
 		ctx.err = true
 	} else {
@@ -237,8 +248,8 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 	case *StructElemExpr:
 		// StructElemExpr is of the form x.y
-
 		t := ctx.DeriveType(expr.StructIdent)
+
 		// Check x has a struct type
 		if st, ok := t.(StructType); ok {
 
@@ -435,8 +446,15 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 		// Encode function name
 		originalName := expr.Ident.Name
-		expr.Ident.Name = ctx.encodeFunctionName(expr.Ident, paramTypes)
-		if f, ok := ctx.LookupFunction(expr.Ident.Name); ok {
+		encodedName := ctx.encodeFunctionName(expr.Ident, paramTypes)
+		f, ok := ctx.LookupFunction(encodedName)
+		if ok {
+			expr.Ident.Name = encodedName
+		} else {
+			// If not found, try again with original name
+			f, ok = ctx.LookupFunction(expr.Ident.Name)
+		}
+		if ok {
 			// Verify number of arguments
 			argsLen, paramLen := len(expr.Args), len(f.Params)
 			if argsLen != paramLen {
