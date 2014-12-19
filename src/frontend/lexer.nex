@@ -115,6 +115,11 @@
   lval.Position = NewPositionFromLexer(yylex)
   return VOID
 }
+
+/import/ {
+  lval.Position = NewPositionFromLexer(yylex)
+  return IMPORT
+}
 /is/ {
   lval.Position = NewPositionFromLexer(yylex)
   return IS

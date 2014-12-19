@@ -1,7 +1,9 @@
 package frontend
 
 import (
+	"fmt"
 	"io"
+	"os"
 	"unicode/utf8"
 )
 
@@ -20,7 +22,15 @@ func (l *Lexer) Error(s string) {
 	l.err = true
 }
 
-func GenerateAST(input io.Reader) (*Program, bool) {
+func tryOpenModule(modulePath string, module string) (io.Reader, bool) {
+	file, err := os.Open(fmt.Sprintf("%v/%v.wacc", modulePath, module))
+	if err != nil {
+		return nil, false
+	}
+	return file, true
+}
+
+func GenerateAST(modulePath string, input io.Reader) (*Program, bool) {
 	// Generate AST
 	generateAST := func(input io.Reader) (*Program, bool) {
 		lexer := NewLexer(SetUpErrorOutput(input))
@@ -30,7 +40,40 @@ func GenerateAST(input io.Reader) (*Program, bool) {
 		}
 		return lexer.program, true
 	}
-	return generateAST(input)
+	program, ok := generateAST(input)
+	if !ok {
+		return nil, false
+	}
+
+	// Recursively import modules
+	moduleStructs := []*Struct{}
+	moduleFunctions := []*Function{}
+	for _, i := range program.Imports {
+		// Load the module file
+		file, ok := tryOpenModule(modulePath, i.Module.Name)
+		if !ok {
+			SyntaxError(i.Pos(), "Unable to import module %v, module does not exist in the modulepath", i.Module.Name)
+			return nil, false
+		}
+
+		// Generate AST for this module
+		ast, astOk := GenerateAST(modulePath, file)
+		if !astOk {
+			return nil, false
+		}
+
+		// Add this modules functions and structs to the program
+		// TODO: Don't throw away the module main
+		moduleStructs = append(moduleStructs, ast.Structs...)
+		moduleFunctions = append(moduleFunctions, ast.Funcs...)
+	}
+
+	// Add to program, and remove imports
+	program.Imports = program.Imports[:0]
+	program.Structs = append(moduleStructs, program.Structs...)
+	program.Funcs = append(moduleFunctions, program.Funcs...)
+
+	return program, true
 }
 
 func processEscapedCharacters(s string) string {
