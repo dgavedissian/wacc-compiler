@@ -7,9 +7,9 @@ begin
 
   vector v = newstruct(vector, 1, 2) ;
 
-  v.x = 2 ;
+  v.y = 2 ;
 
-  int a = v.x ;
+  int a = v.y ;
 
   println a
 

@@ -621,7 +621,7 @@ func (StructElemExpr) exprNode()        {}
 func (e StructElemExpr) Pos() *Position { return e.FrontPos }
 func (e StructElemExpr) End() *Position { return e.EndPos }
 func (e StructElemExpr) Repr() string {
-	return fmt.Sprintf("StructElem(%v, %v)", e.StructIdent, e.ElemIdent)
+	return fmt.Sprintf("StructElem(%v, %v)", e.StructIdent.Repr(), e.ElemIdent.Repr())
 }
 
 //

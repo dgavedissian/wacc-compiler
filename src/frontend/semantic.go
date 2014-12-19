@@ -39,22 +39,6 @@ func (ctx *Context) encodeType(t Type) string {
 	}
 }
 
-func (ctx *Context) encodeStructName(ident *IdentExpr, types []Type) string {
-	name := ident.Name
-	for _, t := range types {
-		name += ctx.encodeType(t)
-	}
-	return name
-}
-
-func (ctx *Context) membersToTypes(members []*StructMember) []Type {
-	out := []Type{}
-	for _, m := range members {
-		out = append(out, m.Type)
-	}
-	return out
-}
-
 func (ctx *Context) encodeFunctionName(ident *IdentExpr, types []Type) string {
 	name := ident.Name
 	for _, t := range types {
@@ -85,6 +69,8 @@ func (ctx *Context) genTypeSignature(ident string, types []Type) string {
 func verifyProgram(program *Program) {
 	ctx := &Context{make(map[string]*Struct), make(map[string]*Function), nil, nil, 0}
 
+	// Add structs to the context to ensureeeach struct has a unique identifier
+	// and so we can lookup structs later
 	for _, s := range program.Structs {
 		ctx.AddStruct(s)
 	}
@@ -122,13 +108,11 @@ func (ctx *Context) LookupStruct(name string) (*Struct, bool) {
 }
 
 func (ctx *Context) AddStruct(s *Struct) {
-	types := ctx.membersToTypes(s.Members)
-	originalName := s.Ident.Name
-	s.Ident.Name = ctx.encodeStructName(s.Ident, types)
-	if _, ok := ctx.LookupStruct(s.Ident.Name); ok {
-		SemanticError(s.Pos(), "struct '%v' already exists in this program", ctx.genTypeSignature(originalName, types))
+	name := s.Ident.Name
+	if _, ok := ctx.LookupStruct(name); ok {
+		SemanticError(s.Pos(), "struct '%v' already exists in this program", name)
 	} else {
-		ctx.structs[s.Ident.Name] = s
+		ctx.structs[name] = s
 	}
 }
 
@@ -246,19 +230,21 @@ func (ctx *Context) DeriveType(expr Expr) Type {
 
 		t := ctx.DeriveType(expr.StructIdent)
 		// Check x has a struct type
-		if _, ok := t.(StructType); ok {
+		if st, ok := t.(StructType); ok {
+
 			// Check that x is a struct that exists
-			if s, ok := ctx.LookupStruct(expr.StructIdent.Name); ok {
+			if s, ok := ctx.LookupStruct(st.TypeId); ok {
+
 				// Check that y is a member of x's
 				for _, m := range s.Members {
-					if m.Repr() == expr.ElemIdent.Repr() {
-						return ctx.DeriveType(expr.ElemIdent)
-					} else {
-						SemanticError(expr.ElemIdent.Pos(), "the struct %v does not contain member %v",
-							expr.Repr(), expr.ElemIdent.Repr())
-						return ErrorType{}
+					if m.Ident.Name == expr.ElemIdent.Name {
+						return m.Type
 					}
 				}
+				SemanticError(expr.ElemIdent.Pos(), "the struct %v does not contain member %v",
+					expr.Repr(), expr.ElemIdent.Repr())
+				return ErrorType{}
+
 			} else {
 				SemanticError(expr.Pos(), "no such struct exists: %v", expr.Repr())
 				return ErrorType{}
