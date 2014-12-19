@@ -427,6 +427,8 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 		instr.Cond = ctx.fixLabelsExpr(funcName, prefix, instr.Cond)
 	case *PrintInstr:
 		instr.Expr = ctx.fixLabelsExpr(funcName, prefix, instr.Expr)
+	case *ReadInstr:
+		instr.Dst = ctx.fixLabelsExpr(funcName, prefix, instr.Dst)
 	case *PushScopeInstr, *PopScopeInstr, *NoOpInstr:
 	case *FreeInstr:
 		instr.Object = ctx.fixLabelsExpr(funcName, prefix, instr.Object)
