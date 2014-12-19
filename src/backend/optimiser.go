@@ -243,6 +243,7 @@ func (ctx *fpWhileUnrollerContext) Optimize(ifCtx *IFContext) {
 type fpInlinerContext struct {
 	ifCtx             *IFContext
 	replacementCode   map[string][]Instr
+	functionLabels    map[string]map[string]bool
 	functionArguments []fpInlinerFuncArg
 	inlineCount       int
 }
@@ -254,6 +255,8 @@ type fpInlinerFuncArg struct {
 
 func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	funcName := initNode.Instr.(*LabelInstr).Label
+	ctx.functionLabels[funcName] = make(map[string]bool)
+	ctx.functionLabels[funcName][fmt.Sprintf("_%s_end", funcName)] = true
 	log.Println(funcName)
 
 	nodeCount := 0
@@ -288,6 +291,12 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 			default:
 				firstNode = node
 				stillLookingForArguments = false
+			}
+		}
+		if !stillLookingForArguments {
+			switch instr := node.Instr.(type) {
+			case *LabelInstr:
+				ctx.functionLabels[funcName][instr.Label] = true
 			}
 		}
 
@@ -327,15 +336,15 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	ctx.replacementCode[funcName] = instrList
 }
 
-func (ctx *fpInlinerContext) fixLabels(prefix string, instr Instr) Instr {
+func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Instr) Instr {
 	switch instr := instr.(type) {
 	case *LabelInstr:
 		instr.Label = prefix + instr.Label
 	case *MoveInstr:
-		instr.Src = ctx.fixLabelsExpr(prefix, instr.Src)
-		instr.Dst = ctx.fixLabelsExpr(prefix, instr.Dst)
+		instr.Src = ctx.fixLabelsExpr(funcName, prefix, instr.Src)
+		instr.Dst = ctx.fixLabelsExpr(funcName, prefix, instr.Dst)
 	case *JmpInstr:
-		if instr.Dst.Instr.(*LabelInstr).Label[0] != '_' {
+		if ctx.functionLabels[funcName][instr.Dst.Instr.(*LabelInstr).Label] {
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
@@ -343,16 +352,16 @@ func (ctx *fpInlinerContext) fixLabels(prefix string, instr Instr) Instr {
 			}
 		}
 	case *JmpCondInstr:
-		if instr.Dst.Instr.(*LabelInstr).Label[0] != '_' {
+		if ctx.functionLabels[funcName][instr.Dst.Instr.(*LabelInstr).Label] {
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
 				},
 			}
 		}
-		instr.Cond = ctx.fixLabelsExpr(prefix, instr.Cond)
+		instr.Cond = ctx.fixLabelsExpr(funcName, prefix, instr.Cond)
 	case *PrintInstr:
-		instr.Expr = ctx.fixLabelsExpr(prefix, instr.Expr)
+		instr.Expr = ctx.fixLabelsExpr(funcName, prefix, instr.Expr)
 	case *PushScopeInstr, *PopScopeInstr:
 	case *DeclareInstr:
 		instr.Var.Name = prefix + instr.Var.Name
@@ -363,7 +372,7 @@ func (ctx *fpInlinerContext) fixLabels(prefix string, instr Instr) Instr {
 	return instr
 }
 
-func (ctx *fpInlinerContext) fixLabelsExpr(prefix string, expr Expr) Expr {
+func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr Expr) Expr {
 	switch expr := expr.(type) {
 	case *CallExpr:
 		if expr.Label.Label[0] != '_' {
@@ -371,17 +380,17 @@ func (ctx *fpInlinerContext) fixLabelsExpr(prefix string, expr Expr) Expr {
 		}
 		newArgs := make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
-			newArgs[i] = ctx.fixLabelsExpr(prefix, arg)
+			newArgs[i] = ctx.fixLabelsExpr(funcName, prefix, arg)
 		}
 	case *VarExpr:
 		if expr.Name[0] != '_' {
 			expr.Name = prefix + expr.Name
 		}
 	case *UnaryExpr:
-		expr.Operand = ctx.fixLabelsExpr(prefix, expr.Operand)
+		expr.Operand = ctx.fixLabelsExpr(funcName, prefix, expr.Operand)
 	case *BinaryExpr:
-		expr.Left = ctx.fixLabelsExpr(prefix, expr.Left)
-		expr.Right = ctx.fixLabelsExpr(prefix, expr.Right)
+		expr.Left = ctx.fixLabelsExpr(funcName, prefix, expr.Left)
+		expr.Right = ctx.fixLabelsExpr(funcName, prefix, expr.Right)
 	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr:
 	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
 	default:
@@ -432,7 +441,7 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 
 				resultVar := instr.Dst
 				for _, instr := range replacementCode {
-					instr = ctx.fixLabels(fmt.Sprintf("_%s_ins%d_", callExpr.Label.Label, cnt), instr.Copy())
+					instr = ctx.fixLabels(callExpr.Label.Label, fmt.Sprintf("_%s_ins%d_", callExpr.Label.Label, cnt), instr.Copy())
 
 					if moveInstr, ok := instr.(*MoveInstr); ok {
 						if varExpr, ok := moveInstr.Dst.(*VarExpr); ok && varExpr.Name == fmt.Sprintf("_%s_retVal", callExpr.Label.Label) {
@@ -461,6 +470,7 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 func (ctx *fpInlinerContext) Optimize(ifCtx *IFContext) {
 	ctx.ifCtx = ifCtx
 	ctx.replacementCode = make(map[string][]Instr)
+	ctx.functionLabels = make(map[string]map[string]bool)
 
 	for _, path := range ifCtx.functions {
 		ctx.checkInlinable(path)
