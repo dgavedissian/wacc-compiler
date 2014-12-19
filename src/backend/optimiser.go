@@ -333,6 +333,15 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	}
 
 	instrList = instrList[1:] // chop off function name
+
+	// walk backwards to place the end label
+	endPoint := len(instrList) - 1
+	endLabel := &LabelInstr{
+		Label: fmt.Sprintf("_%s_end", funcName),
+	}
+	lastInstr := instrList[endPoint]
+	instrList = append(instrList[:endPoint], endLabel, lastInstr)
+
 	ctx.replacementCode[funcName] = instrList
 }
 
