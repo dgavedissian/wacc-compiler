@@ -46,7 +46,6 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 		}
 
 		backend.OptimiseFirstPassIF(intermediateForm)
-		backend.DrawIFGraph(intermediateForm)
 		backend.AllocateRegisters(intermediateForm)
 		backend.OptimiseSecondPassIF(intermediateForm)
 

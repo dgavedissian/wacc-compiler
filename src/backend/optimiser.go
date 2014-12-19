@@ -3,7 +3,6 @@ package backend
 import (
 	"../frontend"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -287,7 +286,6 @@ func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
 	funcName := initNode.Instr.(*LabelInstr).Label
 	ctx.functionLabels[funcName] = make(map[string]bool)
 	ctx.functionLabels[funcName][fmt.Sprintf("_%s_end", funcName)] = true
-	log.Println(funcName)
 
 	nodeCount := 0
 	node := initNode
@@ -407,7 +405,6 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 	case *JmpInstr:
 		lbl := instr.Dst.Instr.(*LabelInstr).Label
 		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
-			log.Println("CORRECTING", lbl, prefix+lbl)
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + lbl,
@@ -417,7 +414,6 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 	case *JmpCondInstr:
 		lbl := instr.Dst.Instr.(*LabelInstr).Label
 		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
-			log.Println("CORRECTING", lbl, prefix+lbl)
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
 					Label: prefix + lbl,
@@ -445,7 +441,6 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 	switch expr := expr.(type) {
 	case *CallExpr:
 		if _, ok := ctx.ifCtx.functions[expr.Label.Label]; !strings.HasPrefix(expr.Label.Label, fmt.Sprintf("_%s_", funcName)) && !ok {
-			log.Println("REWRITING", expr.Label.Label)
 			expr.Label.Label = prefix + expr.Label.Label
 		}
 		newArgs := make([]Expr, len(expr.Args))
@@ -557,7 +552,6 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 
 				// remove old call node
 				node.Prev.Next, node.Next.Prev = node.Next, node.Prev
-				log.Println(replacementCode)
 			}
 		}
 		node = node.Next
