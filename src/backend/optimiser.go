@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"../frontend"
 	"fmt"
 	"log"
 )
@@ -240,23 +241,218 @@ func (ctx *fpWhileUnrollerContext) Optimize(ifCtx *IFContext) {
 }
 
 type fpInlinerContext struct {
-	ifCtx           *IFContext
-	replacementCode map[string][]Instr
+	ifCtx             *IFContext
+	replacementCode   map[string][]Instr
+	functionArguments []fpInlinerFuncArg
+	inlineCount       int
 }
 
-func (ctx *fpInlinerContext) checkInlinable(node *InstrNode) {
+type fpInlinerFuncArg struct {
+	Type frontend.Type
+	Name string
+}
 
+func (ctx *fpInlinerContext) checkInlinable(initNode *InstrNode) {
+	funcName := initNode.Instr.(*LabelInstr).Label
+	log.Println(funcName)
+
+	nodeCount := 0
+	node := initNode
+	var firstNode *InstrNode
+	stillLookingForArguments := true
+	var buildingInstr fpInlinerFuncArg
+	for node != nil {
+		if stillLookingForArguments {
+			switch instr := node.Instr.(type) {
+			case *DeclareInstr:
+				buildingInstr = fpInlinerFuncArg{
+					Type: instr.Type,
+					Name: instr.Var.Name,
+				}
+			case *MoveInstr:
+				if registerExpr, ok := instr.Src.(*RegisterExpr); ok {
+					if registerExpr.Id < 4 {
+						ctx.functionArguments = append(ctx.functionArguments, buildingInstr)
+					} else {
+						firstNode = node
+						stillLookingForArguments = false
+					}
+				} else if _, ok := instr.Src.(*StackArgumentExpr); ok {
+
+				} else {
+					firstNode = node
+					stillLookingForArguments = false
+				}
+			case *LabelInstr, *PushScopeInstr:
+				// noop
+			default:
+				firstNode = node
+				stillLookingForArguments = false
+			}
+		}
+
+		nodeCount += 1
+		node = node.Next
+	}
+	log.Printf("%#v", firstNode)
+
+	if nodeCount > OPTIMISER_INLINER_MAX {
+		return
+	}
+
+	instrList := make([]Instr, 0)
+	node = initNode
+	for node != nil {
+		instr := node.Instr.Copy()
+		if returnInstr, ok := instr.(*ReturnInstr); ok {
+			// replace!
+			instr = &MoveInstr{
+				Dst: &VarExpr{fmt.Sprintf("_%s_retVal", funcName)},
+				Src: returnInstr.Expr,
+			}
+			instrList = append(instrList, instr)
+
+			instr = &JmpInstr{
+				Dst: &InstrNode{
+					Instr: &LabelInstr{fmt.Sprintf("_%s_end", funcName)},
+				},
+			}
+		}
+
+		instrList = append(instrList, instr)
+		node = node.Next
+	}
+
+	instrList = instrList[1:] // chop off function name
+	ctx.replacementCode[funcName] = instrList
+}
+
+func (ctx *fpInlinerContext) fixLabels(prefix string, instr Instr) Instr {
+	switch instr := instr.(type) {
+	case *LabelInstr:
+		instr.Label = prefix + instr.Label
+	case *MoveInstr:
+		instr.Src = ctx.fixLabelsExpr(prefix, instr.Src)
+		instr.Dst = ctx.fixLabelsExpr(prefix, instr.Dst)
+	case *JmpInstr:
+		if instr.Dst.Instr.(*LabelInstr).Label[0] != '_' {
+			instr.Dst = &InstrNode{
+				Instr: &LabelInstr{
+					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
+				},
+			}
+		}
+	case *JmpCondInstr:
+		if instr.Dst.Instr.(*LabelInstr).Label[0] != '_' {
+			instr.Dst = &InstrNode{
+				Instr: &LabelInstr{
+					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
+				},
+			}
+		}
+		instr.Cond = ctx.fixLabelsExpr(prefix, instr.Cond)
+	case *PrintInstr:
+		instr.Expr = ctx.fixLabelsExpr(prefix, instr.Expr)
+	case *PushScopeInstr, *PopScopeInstr:
+	case *DeclareInstr:
+		instr.Var.Name = prefix + instr.Var.Name
+	default:
+		panic(fmt.Sprintf("Unrecognized widget %#v", instr))
+	}
+
+	return instr
+}
+
+func (ctx *fpInlinerContext) fixLabelsExpr(prefix string, expr Expr) Expr {
+	switch expr := expr.(type) {
+	case *CallExpr:
+		if expr.Label.Label[0] != '_' {
+			expr.Label.Label = prefix + expr.Label.Label
+		}
+		newArgs := make([]Expr, len(expr.Args))
+		for i, arg := range expr.Args {
+			newArgs[i] = ctx.fixLabelsExpr(prefix, arg)
+		}
+	case *VarExpr:
+		if expr.Name[0] != '_' {
+			expr.Name = prefix + expr.Name
+		}
+	case *UnaryExpr:
+		expr.Operand = ctx.fixLabelsExpr(prefix, expr.Operand)
+	case *BinaryExpr:
+		expr.Left = ctx.fixLabelsExpr(prefix, expr.Left)
+		expr.Right = ctx.fixLabelsExpr(prefix, expr.Right)
+	case *CharConstExpr, *StringConstExpr, *ArrayConstExpr, *IntConstExpr, *BoolConstExpr:
+	case *RegisterExpr, *StackArgumentExpr, *StackLocationExpr:
+	default:
+		panic(fmt.Sprintf("Unrecognized exprwidget %#v", expr))
+	}
+
+	return expr
 }
 
 func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
+	cnt := ctx.inlineCount
+	ctx.inlineCount += 1
+
 	for node != nil {
-		if instr, ok := node.Instr.(*CallInstr); ok {
-			replacementCode, ok := ctx.replacementCode[instr.Label.Label]
-			if !ok {
-				node = node.Next
-				continue
+		if instr, ok := node.Instr.(*MoveInstr); ok {
+			if callExpr, ok := instr.Src.(*CallExpr); ok {
+				replacementCode, ok := ctx.replacementCode[callExpr.Label.Label]
+				if !ok {
+					node = node.Next
+					continue
+				}
+
+				backNode := node.Prev
+				for argNum, argExpr := range callExpr.Args {
+					varExpr := &VarExpr{fmt.Sprintf("_%s_arg_%d", callExpr.Label.Label, argNum)}
+					newNode := &InstrNode{
+						Instr: &DeclareInstr{
+							Var:  varExpr,
+							Type: ctx.functionArguments[argNum].Type,
+						},
+					}
+
+					backNode.Next, newNode.Prev = newNode, backNode
+					newNode.Next, node.Prev = node, newNode
+					backNode = newNode
+
+					newNode = &InstrNode{
+						Instr: &MoveInstr{
+							Dst: varExpr,
+							Src: argExpr,
+						},
+					}
+
+					backNode.Next, newNode.Prev = newNode, backNode
+					newNode.Next, node.Prev = node, newNode
+					backNode = newNode
+				}
+
+				resultVar := instr.Dst
+				for _, instr := range replacementCode {
+					instr = ctx.fixLabels(fmt.Sprintf("_%s_ins%d_", callExpr.Label.Label, cnt), instr.Copy())
+
+					if moveInstr, ok := instr.(*MoveInstr); ok {
+						if varExpr, ok := moveInstr.Dst.(*VarExpr); ok && varExpr.Name == fmt.Sprintf("_%s_retVal", callExpr.Label.Label) {
+							// replace this with the output
+							moveInstr.Dst = resultVar
+						}
+					}
+
+					newNode := &InstrNode{
+						Instr: instr,
+					}
+					backNode.Next, newNode.Prev = newNode, backNode
+					newNode.Next, node.Prev = node, newNode
+					backNode = newNode
+				}
+
+				// remove old call node
+				node.Prev.Next, node.Next.Prev = node.Next, node.Prev
+				log.Println(replacementCode)
 			}
-			log.Println(replacementCode)
 		}
 		node = node.Next
 	}

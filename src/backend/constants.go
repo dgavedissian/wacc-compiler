@@ -38,4 +38,5 @@ const (
 
 const (
 	OPTIMISER_LOOPUNROLL_MAX int = 10
+	OPTIMISER_INLINER_MAX    int = 20
 )
