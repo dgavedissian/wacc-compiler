@@ -422,7 +422,16 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 }
 
 func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
+	var lastPushScope *PushScopeInstr
+
 	for node != nil {
+		if pushScopeInstr, ok := node.Instr.(*PushScopeInstr); ok {
+			lastPushScope = pushScopeInstr
+		}
+		if popScopeInstr, ok := node.Instr.(*PopScopeInstr); ok {
+			popScopeInstr.StackSize = lastPushScope.StackSize
+		}
+
 		if instr, ok := node.Instr.(*MoveInstr); ok {
 			if callExpr, ok := instr.Src.(*CallExpr); ok {
 				cnt := ctx.inlineCount
@@ -443,6 +452,7 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 							Type: ctx.functionArguments[argNum].Type,
 						},
 					}
+					lastPushScope.StackSize += 4
 
 					backNode.Next, newNode.Prev = newNode, backNode
 					newNode.Next, node.Prev = node, newNode
