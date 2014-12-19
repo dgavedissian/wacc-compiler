@@ -506,7 +506,7 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 				}
 
 				backNode := node.Prev
-				pushScopeStack[len(pushScopeStack)-1].StackSize += 4
+				pushScopeStack[len(pushScopeStack)-1].StackSize += 2 * regWidth
 				for argNum, argExpr := range callExpr.Args {
 					varExpr := &VarExpr{fmt.Sprintf("_%s_arg_%d", callExpr.Label.Label, argNum)}
 					newNode := &InstrNode{
@@ -515,7 +515,7 @@ func (ctx *fpInlinerContext) inlineInPath(node *InstrNode) {
 							Type: ctx.functionArguments[argNum].Type,
 						},
 					}
-					pushScopeStack[len(pushScopeStack)-1].StackSize += 4
+					pushScopeStack[len(pushScopeStack)-1].StackSize += regWidth
 
 					backNode.Next, newNode.Prev = newNode, backNode
 					newNode.Next, node.Prev = node, newNode
