@@ -405,19 +405,20 @@ func (ctx *fpInlinerContext) fixLabels(funcName string, prefix string, instr Ins
 		instr.Src = ctx.fixLabelsExpr(funcName, prefix, instr.Src)
 		instr.Dst = ctx.fixLabelsExpr(funcName, prefix, instr.Dst)
 	case *JmpInstr:
-		if ctx.functionLabels[funcName][instr.Dst.Instr.(*LabelInstr).Label] {
-			log.Println("CORRECTING", instr.Dst.Instr.Repr())
+		lbl := instr.Dst.Instr.(*LabelInstr).Label
+		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
-					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
+					Label: prefix + lbl,
 				},
 			}
 		}
 	case *JmpCondInstr:
-		if ctx.functionLabels[funcName][instr.Dst.Instr.(*LabelInstr).Label] {
+		lbl := instr.Dst.Instr.(*LabelInstr).Label
+		if _, ok := ctx.ifCtx.functions[lbl]; !ok {
 			instr.Dst = &InstrNode{
 				Instr: &LabelInstr{
-					Label: prefix + instr.Dst.Instr.(*LabelInstr).Label,
+					Label: prefix + lbl,
 				},
 			}
 		}
@@ -440,6 +441,7 @@ func (ctx *fpInlinerContext) fixLabelsExpr(funcName string, prefix string, expr 
 	switch expr := expr.(type) {
 	case *CallExpr:
 		if _, ok := ctx.ifCtx.functions[expr.Label.Label]; !strings.HasPrefix(expr.Label.Label, fmt.Sprintf("_%s_", funcName)) && !ok {
+			log.Println("REWRITING", expr.Label.Label)
 			expr.Label.Label = prefix + expr.Label.Label
 		}
 		expr.Label = ctx.fixLabelsExpr(funcName, prefix, expr.Label).(*LocationExpr)
