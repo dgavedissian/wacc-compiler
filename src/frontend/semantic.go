@@ -67,8 +67,8 @@ func (ctx *Context) genTypeSignature(ident string, types []Type) string {
 //
 // Semantic Checking
 //
-func verifyProgram(program *Program) {
-	ctx := &Context{make(map[string]*Struct), make(map[string]*Function), nil, nil, 0}
+func VerifyProgram(program *Program) bool {
+	ctx := &Context{make(map[string]*Struct), make(map[string]*Function), nil, nil, 0, false}
 
 	// Add structs to the context to ensureeeach struct has a unique identifier
 	// and so we can lookup structs later

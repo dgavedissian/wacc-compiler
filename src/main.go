@@ -23,7 +23,7 @@ func compilerFactory(verbose bool, astonly bool, ifonly bool, checkSemantics boo
 
 		// Perform semantic checks
 		if checkSemantics {
-			semanticOk := frontend.VerifySemantics(ast)
+			semanticOk := frontend.VerifyProgram(ast)
 			if !semanticOk {
 				return "", frontend.SEMANTIC_ERROR
 			}
