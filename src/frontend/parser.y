@@ -151,7 +151,6 @@ statement_list
 statement
     : SKIP                            { $$.Stmt = &SkipStmt{$1.Position} }
     | type identifier '=' assign_rhs  { $$.Stmt = &DeclStmt{$1.Position, $1.Type, $2.Expr.(*IdentExpr), $4.Expr} }
-    | IDENT identifier '=' assign_rhs { $$.Stmt = &DeclStmt{$1.Position, StructType{$1.Value}, $2.Expr.(*IdentExpr), $4.Expr} }
     | assign_lhs '=' assign_rhs       { $$.Stmt = &AssignStmt{$1.Expr.(LValueExpr), $3.Expr} }
     | READ assign_lhs                 { $$.Stmt = &ReadStmt{$1.Position, $2.Expr.(LValueExpr), nil} }
     | FREE expression                 { $$.Stmt = &FreeStmt{$1.Position, $2.Expr} }
@@ -217,6 +216,7 @@ arg_list
 type
     : base_type
     | pair_type
+    | STRUCT IDENT { $$.Type = StructType{$2.Value} }
     | type '[' ']' { $$.Type = ArrayType{$1.Type} }
     ;
 
